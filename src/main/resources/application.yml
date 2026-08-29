@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: english-learning-platform
+
+  datasource:
+    # TODO: đổi lại đúng thông tin DB PostgreSQL của bạn (tên DB, user, password)
+    url: jdbc:postgresql://localhost:5432/english_learning_db
+    username: postgres
+    password: ${DB_PASSWORD:postgres}   # nên đặt qua biến môi trường, không hardcode password thật
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # BẮT BUỘC là "validate", không phải "update" — Flyway quản lý schema (đã chốt trong Requirements)
+    show-sql: true          # bật để bạn thấy SQL thật đang chạy, tắt đi khi không cần debug nữa
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+jwt:
+  # TODO: đổi secret này — phải là chuỗi đủ dài (tối thiểu 256 bit cho HS256, tức >= 32 ký tự)
+  # Nên đặt qua biến môi trường khi deploy thật, không commit secret thật lên GitHub
+  secret: ${JWT_SECRET:change-this-to-a-real-secret-key-at-least-32-characters-long}
+  access-token-expiration-ms: 900000      # 15 phút
+  refresh-token-expiration-ms: 604800000  # 7 ngày
