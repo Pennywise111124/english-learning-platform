@@ -22,28 +22,8 @@
     </style>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col antialiased">
-    <!-- TopNavBar -->
-    <header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm">
-        <div class="flex justify-between items-center h-16 px-gutter max-w-container-max mx-auto">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[28px]">school</span>
-                <span class="font-headline-md text-headline-md font-bold text-primary">LinguistAI</span>
-            </div>
-            <nav class="hidden md:flex gap-8 font-body-md text-body-md">
-                <a class="text-primary font-bold border-b-2 border-primary pb-1" href="chat.html">Chat</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="topics.html">Topics</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="progress.html">Progress</a>
-            </nav>
-            <div class="flex items-center gap-4">
-                <button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-all">
-                    <span class="material-symbols-outlined">notifications</span>
-                </button>
-                <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 cursor-pointer" onclick="window.location.href='profile.html'">
-                    <img alt="User profile" class="w-full h-full object-cover" src="https://picsum.photos/seed/profile/200/200"/>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- TopNavBar - Will be replaced by navbar.js -->
+    <div id="navbar-container"></div>
 
     <!-- Main Workspace -->
     <main class="flex-grow pt-[88px] pb-stack-md px-gutter max-w-container-max mx-auto w-full flex gap-gutter h-[calc(100vh-80px)]">
@@ -115,8 +95,10 @@
     <script type="module">
         import { checkAuth } from './js/auth.js';
         import * as api from './js/api.js';
+        import { initNavBar } from './js/navbar.js';
 
         checkAuth();
+        initNavBar('chat');
 
         let currentConversationId = null;
 

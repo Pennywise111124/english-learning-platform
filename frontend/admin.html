@@ -34,26 +34,9 @@
         }
     </style>
 </head>
-<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col pt-16 page-fade-in">
-    <!-- TopNavBar -->
-    <header class="fixed top-0 w-full z-50 bg-surface/80 border-b border-outline-variant/30 shadow-sm backdrop-blur-xl">
-        <div class="flex justify-between items-center h-16 px-gutter md:px-margin-desktop max-w-container-max mx-auto">
-            <div class="font-headline-md text-headline-md font-bold text-primary">
-                <a href="index.html">LinguistAI</a>
-            </div>
-            <nav class="hidden md:flex gap-gutter font-body-md">
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="chat.html">Chat</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="topics.html">Topics</a>
-                <a class="text-primary font-semibold border-b-2 border-primary" href="admin.html">Admin</a>
-            </nav>
-            <div class="flex items-center gap-4">
-                <span class="text-on-surface-variant font-label-sm bg-error/10 text-error px-3 py-1 rounded-full">ADMIN</span>
-                <button id="logoutBtn" class="text-error hover:text-error/80 transition-colors p-2 rounded-full">
-                    <span class="material-symbols-outlined">logout</span>
-                </button>
-            </div>
-        </div>
-    </header>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col page-fade-in">
+    <!-- TopNavBar - Will be replaced by navbar.js -->
+    <div id="navbar-container"></div>
 
     <!-- Main Content -->
     <main class="flex-grow w-full px-gutter md:px-margin-desktop max-w-container-max mx-auto py-stack-lg">
@@ -64,7 +47,7 @@
 
         <!-- Tabs -->
         <div class="border-b border-outline-variant mb-stack-md">
-            <nav class="flex gap-8">
+            <div class="flex gap-8" role="navigation" aria-label="Admin tabs">
                 <button id="topicsTab" class="tab-active py-3 font-body-md transition-colors">
                     Topics
                 </button>
@@ -74,7 +57,7 @@
                 <button id="quizzesTab" class="py-3 font-body-md text-on-surface-variant hover:text-on-surface transition-colors">
                     Quizzes
                 </button>
-            </nav>
+            </div>
         </div>
 
         <!-- Topics Panel -->
@@ -208,9 +191,15 @@
     <script type="module">
         import { checkAdmin, clearAuth } from './js/auth.js';
         import * as api from './js/api.js';
+        import { initNavBar } from './js/navbar.js';
 
         // Admin guard
         checkAdmin();
+
+        console.log('[Admin] Page loaded, waiting for navbar...');
+
+        // Initialize navbar first and wait for it
+        initNavBar('admin');
 
         let currentTab = 'topics';
         let editingTopicId = null;
@@ -219,8 +208,8 @@
         function switchTab(tab) {
             currentTab = tab;
 
-            // Update tab buttons
-            document.querySelectorAll('nav button').forEach(btn => {
+            // Update tab buttons - use the admin tabs container selector
+            document.querySelectorAll('[role="navigation"][aria-label="Admin tabs"] button').forEach(btn => {
                 btn.classList.remove('tab-active');
                 btn.classList.add('text-on-surface-variant');
             });
@@ -246,9 +235,22 @@
         // Load Topics
         async function loadTopics() {
             try {
+                console.log('[Admin] loadTopics() called');
                 const result = await api.adminGetTopics();
+                console.log('[Admin] Topics loaded:', result.content.length, 'topics');
                 const tbody = document.getElementById('topicsTableBody');
+
+                if (!tbody) {
+                    console.error('[Admin] topicsTableBody not found!');
+                    return;
+                }
+
                 tbody.innerHTML = '';
+
+                if (result.content.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-on-surface-variant">No topics found</td></tr>';
+                    return;
+                }
 
                 result.content.forEach(topic => {
                     const row = document.createElement('tr');
@@ -385,8 +387,25 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // Initialize
-        loadTopics();
+        // Initialize - load topics on page load
+        // Wait for DOM to be fully ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            initializePage();
+        }
+
+        function initializePage() {
+            console.log('[Admin] Initializing admin page...');
+            console.log('[Admin] Document ready state:', document.readyState);
+            console.log('[Admin] Topics panel exists?', !!document.getElementById('topicsPanel'));
+            console.log('[Admin] Topics panel visible?', !document.getElementById('topicsPanel')?.classList.contains('hidden'));
+            console.log('[Admin] tbody element exists?', !!document.getElementById('topicsTableBody'));
+
+            // Load topics immediately
+            console.log('[Admin] Calling loadTopics()...');
+            loadTopics();
+        }
     </script>
 </body>
 </html>

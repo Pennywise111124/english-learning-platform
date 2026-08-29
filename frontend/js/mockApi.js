@@ -131,14 +131,48 @@ const MOCK_PROFILE = {
   avatarUrl: "https://picsum.photos/seed/johndoe/200/200", role: "USER"
 };
 
+const MOCK_ADMIN_PROFILE = {
+  id: 999, username: "admin", email: "admin@linguistai.com",
+  avatarUrl: "https://picsum.photos/seed/admin/200/200", role: "ADMIN"
+};
+
 // ─── Exported API Functions ───────────────────────────────────────────────────
 
 export async function login(username, password) {
   await delay(rand());
+
+  // DEBUG: Log the inputs
+  console.log('[mockApi] Login attempt:', { username, password });
+  console.log('[mockApi] Checking admin:', username === "admin", password === "admin123");
+
+  // Admin account: username "admin" / password "admin123"
+  if (username === "admin" && password === "admin123") {
+    console.log('[mockApi] ✅ ADMIN LOGIN SUCCESS');
+    return {
+      accessToken: "mock.jwt.admin.token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5OTkiLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6IkFETUlOIiwiZXhwIjo5OTk5OTk5OTk5fQ.mock",
+      refreshToken: "mock.refresh.admin.token",
+      user: {
+        id: 999,
+        username: "admin",
+        email: "admin@linguistai.com",
+        role: "ADMIN",
+        avatarUrl: "https://picsum.photos/seed/admin/200/200"
+      }
+    };
+  }
+
+  // Regular user: accept any other credentials
+  console.log('[mockApi] Regular user login');
   return {
     accessToken: "mock.jwt.token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInJvbGUiOiJVU0VSIiwiZXhwIjo5OTk5OTk5OTk5fQ.mock",
     refreshToken: "mock.refresh.token",
-    user: { id: 1, username: username || "john_doe", email: "john@linguistai.com", role: "USER" }
+    user: {
+      id: 1,
+      username: username || "john_doe",
+      email: "john@linguistai.com",
+      role: "USER",
+      avatarUrl: "https://picsum.photos/seed/johndoe/200/200"
+    }
   };
 }
 
@@ -254,6 +288,24 @@ export async function sendMessage(conversationId, content) {
 
 export async function getProfile() {
   await delay(rand());
+  // Check localStorage to determine which profile to return
+  const storedUser = localStorage.getItem('linguistai_user');
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      console.log('[mockApi.getProfile] User from localStorage:', user);
+      // Return profile matching the logged-in user
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatarUrl: user.avatarUrl || (user.role === 'ADMIN' ? MOCK_ADMIN_PROFILE.avatarUrl : MOCK_PROFILE.avatarUrl),
+        role: user.role
+      };
+    } catch (e) {
+      console.error('Failed to parse user from localStorage', e);
+    }
+  }
   return { ...MOCK_PROFILE };
 }
 

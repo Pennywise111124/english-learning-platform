@@ -14,25 +14,8 @@
     <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="font-body-md text-body-md antialiased min-h-screen flex flex-col bg-background text-on-background page-fade-in">
-    <!-- TopNavBar -->
-    <nav class="bg-surface/80 backdrop-blur-xl sticky top-0 shadow-sm z-50">
-        <div class="flex justify-between items-center w-full px-margin-desktop max-w-container-max mx-auto h-16 border-b border-surface-container/80">
-            <div class="font-display-lg text-[24px] font-bold text-primary cursor-pointer" onclick="window.location.href='index.html'">LinguistAI</div>
-            <div class="hidden md:flex gap-gutter items-center">
-                <a class="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="chat.html">Chat</a>
-                <a class="text-primary font-bold border-b-2 border-primary pb-1 font-label-md text-label-md" href="topics.html">Topics</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="progress.html">Progress</a>
-            </div>
-            <div class="flex gap-unit items-center">
-                <button class="text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 active:scale-95 rounded-full p-2">
-                    <span class="material-symbols-outlined">notifications</span>
-                </button>
-                <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center ml-2 overflow-hidden cursor-pointer" onclick="window.location.href='profile.html'">
-                    <img alt="User profile" class="w-full h-full object-cover" src="https://picsum.photos/seed/profile/200/200"/>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- TopNavBar - Will be replaced by navbar.js -->
+    <div id="navbar-container"></div>
 
     <!-- Main Content -->
     <main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg">
@@ -119,8 +102,10 @@
     <script type="module">
         import { checkAuth } from './js/auth.js';
         import * as api from './js/api.js';
+        import { initNavBar } from './js/navbar.js';
 
         checkAuth();
+        initNavBar('topics');
 
         const params = new URLSearchParams(window.location.search);
         const topicId = params.get('id');
