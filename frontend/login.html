@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Login - LinguistAI</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css"/>
+    <style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col page-fade-in">
+    <main class="flex-grow flex items-center justify-center p-gutter">
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05)] w-full max-w-md p-stack-md transition-all duration-300 hover:shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]">
+            <div class="text-center mb-stack-md">
+                <h1 class="font-headline-lg text-headline-lg text-primary mb-unit">LinguistAI</h1>
+                <p class="font-body-md text-body-md text-on-surface-variant">Welcome back. Please login to your account.</p>
+            </div>
+
+            <div id="successMessage" class="hidden mb-stack-sm p-3 bg-secondary-container/20 border border-secondary rounded-lg text-secondary font-body-md text-center">
+                Registration successful! Please login.
+            </div>
+
+            <form id="loginForm" class="flex flex-col gap-stack-sm">
+                <div>
+                    <label class="block font-label-md text-label-md text-on-surface mb-unit" for="username">Username or Email address</label>
+                    <input class="w-full bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg px-4 py-3 font-body-md text-body-md text-on-background focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all duration-200 placeholder-outline-variant"
+                           id="username"
+                           name="username"
+                           placeholder="Enter your username or email"
+                           type="text"
+                           required/>
+                </div>
+                <div>
+                    <label class="block font-label-md text-label-md text-on-surface mb-unit" for="password">Password</label>
+                    <input class="w-full bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg px-4 py-3 font-body-md text-body-md text-on-background focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all duration-200 placeholder-outline-variant"
+                           id="password"
+                           name="password"
+                           placeholder="Enter your password"
+                           type="password"
+                           required/>
+                    <div class="flex justify-end mt-unit">
+                        <a class="font-label-sm text-label-sm text-primary hover:underline" href="#">Forgot password?</a>
+                    </div>
+                </div>
+
+                <button class="w-full bg-[#F43F5E] text-white font-label-md text-label-md rounded-lg py-3 mt-stack-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-sm"
+                        type="submit">
+                    Login
+                    <span class="material-symbols-outlined" style="font-size: 18px;">login</span>
+                </button>
+            </form>
+
+            <div class="text-center mt-stack-md pt-stack-sm border-t border-outline-variant/50">
+                <p class="font-body-md text-body-md text-on-surface-variant">
+                    Don't have an account? <a class="text-primary font-bold hover:underline transition-all" href="register.html">Sign up</a>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-outline-variant bg-surface mt-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center px-gutter py-stack-md max-w-container-max mx-auto">
+            <div class="font-headline-sm text-headline-sm font-bold text-primary mb-4 md:mb-0">
+                LinguistAI
+            </div>
+            <nav class="flex flex-wrap justify-center gap-gutter mb-4 md:mb-0">
+                <a class="text-on-surface-variant hover:text-primary font-label-md text-label-md hover:underline transition-all opacity-90 hover:opacity-100" href="#">Privacy Policy</a>
+                <a class="text-on-surface-variant hover:text-primary font-label-md text-label-md hover:underline transition-all opacity-90 hover:opacity-100" href="#">Terms of Service</a>
+                <a class="text-on-surface-variant hover:text-primary font-label-md text-label-md hover:underline transition-all opacity-90 hover:opacity-100" href="#">Help Center</a>
+                <a class="text-on-surface-variant hover:text-primary font-label-md text-label-md hover:underline transition-all opacity-90 hover:opacity-100" href="#">Contact Us</a>
+            </nav>
+            <div class="text-on-surface-variant font-label-md text-label-md">
+                © 2024 LinguistAI. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import * as api from './js/api.js';
+        import { saveAuth } from './js/auth.js';
+
+        // Check for registration success
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('registered') === '1') {
+            document.getElementById('successMessage').classList.remove('hidden');
+        }
+
+        // Handle login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await api.login(username, password);
+                saveAuth(response);
+                window.location.href = 'chat.html';
+            } catch (error) {
+                showToast(error.message || 'Login failed. Please try again.', 'error');
+            }
+        });
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

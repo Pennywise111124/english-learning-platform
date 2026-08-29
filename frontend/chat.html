@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>LinguistAI - English Tutor</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #c3c6d7; border-radius: 9999px; border: 2px solid #ffffff; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased">
+    <!-- TopNavBar - Will be replaced by navbar.js -->
+    <div id="navbar-container"></div>
+
+    <!-- Main Workspace -->
+    <main class="flex-grow pt-[88px] pb-stack-md px-gutter max-w-container-max mx-auto w-full flex gap-gutter h-[calc(100vh-80px)]">
+        <!-- Left Sidebar: Conversations History -->
+        <aside class="hidden md:flex w-[320px] flex-shrink-0 flex-col bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-outline-variant/20">
+                <button id="newConversationBtn" class="w-full bg-primary text-on-primary font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-primary-container hover:shadow-lg transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                    New Conversation
+                </button>
+            </div>
+            <div id="conversationsList" class="flex-grow overflow-y-auto p-2">
+                <!-- Conversations loaded dynamically -->
+            </div>
+        </aside>
+
+        <!-- Main Chat Panel -->
+        <section class="flex-grow flex flex-col bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
+            <!-- Chat Header -->
+            <div class="h-16 flex items-center justify-between px-6 border-b border-outline-variant/20 bg-surface/50">
+                <div>
+                    <h2 id="conversationTitle" class="font-headline-md text-body-lg font-semibold text-on-surface">Select or start a conversation</h2>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">Practice English with AI</p>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="messagesArea" class="flex-grow overflow-y-auto p-6 flex flex-col gap-6 bg-surface-bright chat-messages">
+                <div class="text-center text-on-surface-variant font-body-md">
+                    Select a conversation or start a new one
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 border-t border-outline-variant/20 bg-surface-container-lowest">
+                <div class="relative flex items-end gap-2">
+                    <button class="p-3 text-outline hover:text-primary hover:bg-surface-container-low rounded-full transition-colors flex-shrink-0 mb-1">
+                        <span class="material-symbols-outlined">mic</span>
+                    </button>
+                    <div class="flex-grow relative bg-surface-container-low rounded-xl border border-outline-variant/30 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden">
+                        <textarea id="messageInput" class="w-full bg-transparent border-none focus:ring-0 font-body-md text-body-md text-on-surface py-4 pl-4 pr-12 resize-none max-h-32 min-h-[56px]" placeholder="Type your message here..." rows="1"></textarea>
+                    </div>
+                    <button id="sendBtn" class="p-3 bg-primary text-on-primary rounded-full hover:bg-primary-container hover:shadow-lg transition-all active:scale-95 flex-shrink-0 mb-1 shadow-sm">
+                        <span class="material-symbols-outlined">send</span>
+                    </button>
+                </div>
+                <div class="text-center mt-2">
+                    <span class="font-label-sm text-[11px] text-outline">Press Enter to send, Shift + Enter for new line. Responses are AI-generated.</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-surface-container-lowest border-t border-outline-variant">
+        <div class="flex flex-col md:flex-row justify-between items-center py-stack-md px-margin-desktop max-w-container-max mx-auto gap-stack-md">
+            <div class="flex items-center gap-2">
+                <span class="font-headline-sm text-label-md font-bold text-on-surface">LinguistAI</span>
+                <span class="font-label-sm text-label-sm text-on-surface-variant opacity-80">© 2024 LinguistAI. All rights reserved.</span>
+            </div>
+            <nav class="flex gap-6 font-label-md text-label-md">
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Privacy</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Terms</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Support</a>
+            </nav>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { checkAuth } from './js/auth.js';
+        import * as api from './js/api.js';
+        import { initNavBar } from './js/navbar.js';
+
+        checkAuth();
+        initNavBar('chat');
+
+        let currentConversationId = null;
+
+        async function loadConversations() {
+            try {
+                const data = await api.getConversations();
+                const list = document.getElementById('conversationsList');
+                list.innerHTML = '';
+
+                if (data.content.length === 0) {
+                    list.innerHTML = '<p class="text-center text-on-surface-variant font-label-sm p-4">No conversations yet</p>';
+                    return;
+                }
+
+                data.content.forEach(conv => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full text-left px-3 py-3 rounded-lg hover:bg-surface-container-low transition-colors mb-1 flex flex-col gap-1 border-l-2 border-transparent sidebar-item';
+                    btn.innerHTML = `
+                        <span class="font-label-md text-label-md text-on-surface truncate pr-2">${conv.title}</span>
+                        <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">schedule</span>
+                            ${new Date(conv.updatedAt).toLocaleDateString()}
+                        </span>
+                    `;
+                    btn.onclick = () => loadConversation(conv.id);
+                    list.appendChild(btn);
+                });
+
+                // Load first conversation
+                if (data.content.length > 0 && !currentConversationId) {
+                    loadConversation(data.content[0].id);
+                }
+            } catch (error) {
+                console.error('Failed to load conversations:', error);
+            }
+        }
+
+        async function loadConversation(id) {
+            currentConversationId = id;
+            try {
+                const conv = await api.getConversation(id);
+                document.getElementById('conversationTitle').textContent = conv.title;
+
+                const messages = await api.getMessages(id);
+                const area = document.getElementById('messagesArea');
+                area.innerHTML = '';
+
+                messages.forEach(msg => {
+                    const div = document.createElement('div');
+                    if (msg.sender === 'USER') {
+                        div.className = 'flex gap-4 max-w-[85%] ml-auto justify-end';
+                        div.innerHTML = `
+                            <div class="flex flex-col gap-1 items-end">
+                                <span class="font-label-sm text-label-sm text-on-surface-variant mr-1">You</span>
+                                <div class="bg-primary text-on-primary font-body-md text-body-md p-4 rounded-2xl rounded-tr-sm shadow-md">
+                                    <p>${msg.content}</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        div.className = 'flex gap-4 max-w-[85%]';
+                        div.innerHTML = `
+                            <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0 mt-1">
+                                <span class="material-symbols-outlined text-[18px]">smart_toy</span>
+                            </div>
+                            <div class="flex flex-col gap-1 w-full">
+                                <span class="font-label-sm text-label-sm text-on-surface-variant ml-1">AI Tutor</span>
+                                <div class="bg-surface-dim/40 text-on-surface font-body-md text-body-md p-4 rounded-2xl rounded-tl-sm border border-outline-variant/20 shadow-sm w-full">
+                                    <p>${msg.content}</p>
+                                    ${msg.correction ? `
+                                        <div class="mt-4 bg-surface-container-high border-l-4 border-tertiary rounded-r-lg p-3 flex gap-3 items-start">
+                                            <span class="material-symbols-outlined text-tertiary text-[20px] mt-0.5">lightbulb</span>
+                                            <div class="flex flex-col gap-1">
+                                                <span class="font-label-md text-label-md font-bold text-on-surface">Grammar Tip</span>
+                                                <p class="font-body-md text-[14px] text-on-surface-variant leading-snug">
+                                                    <span class="font-medium text-primary">Corrected:</span> ${msg.correction}<br/>
+                                                    ${msg.explanation ? `<span class="text-on-surface-variant">${msg.explanation}</span>` : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    area.appendChild(div);
+                });
+
+                area.scrollTop = area.scrollHeight;
+
+                // Update sidebar active state
+                document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-surface-container-low', 'border-primary'));
+                document.querySelectorAll('.sidebar-item').forEach(el => {
+                    if (el.onclick.toString().includes(`loadConversation(${id})`)) {
+                        el.classList.add('active', 'bg-surface-container-low', 'border-primary');
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load conversation:', error);
+            }
+        }
+
+        document.getElementById('newConversationBtn').addEventListener('click', async () => {
+            try {
+                const conv = await api.createConversation();
+                await loadConversations();
+                loadConversation(conv.id);
+            } catch (error) {
+                console.error('Failed to create conversation:', error);
+            }
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            if (!content || !currentConversationId) return;
+
+            const area = document.getElementById('messagesArea');
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex gap-4 max-w-[85%] ml-auto justify-end';
+            userDiv.innerHTML = `
+                <div class="flex flex-col gap-1 items-end">
+                    <span class="font-label-sm text-label-sm text-on-surface-variant mr-1">You</span>
+                    <div class="bg-primary text-on-primary font-body-md text-body-md p-4 rounded-2xl rounded-tr-sm shadow-md">
+                        <p>${content}</p>
+                    </div>
+                </div>
+            `;
+            area.appendChild(userDiv);
+            input.value = '';
+            area.scrollTop = area.scrollHeight;
+
+            try {
+                const aiMsg = await api.sendMessage(currentConversationId, content);
+
+                // Add AI response
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'flex gap-4 max-w-[85%]';
+                aiDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0 mt-1">
+                        <span class="material-symbols-outlined text-[18px]">smart_toy</span>
+                    </div>
+                    <div class="flex flex-col gap-1 w-full">
+                        <span class="font-label-sm text-label-sm text-on-surface-variant ml-1">AI Tutor</span>
+                        <div class="bg-surface-dim/40 text-on-surface font-body-md text-body-md p-4 rounded-2xl rounded-tl-sm border border-outline-variant/20 shadow-sm w-full">
+                            <p>${aiMsg.content}</p>
+                        </div>
+                    </div>
+                `;
+                area.appendChild(aiDiv);
+                area.scrollTop = area.scrollHeight;
+            } catch (error) {
+                console.error('Failed to send message:', error);
+            }
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        loadConversations();
+    </script>
+</body>
+</html>

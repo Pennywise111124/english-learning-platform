@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Profile - LinguistAI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#213145",
+                        "primary": "#004ac6",
+                        "outline-variant": "#c3c6d7",
+                        "on-surface": "#0b1c30",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#0053db",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#f8f9ff",
+                        "on-secondary-container": "#006f66",
+                        "surface-container": "#e5eeff",
+                        "on-tertiary-container": "#ffecec",
+                        "on-surface-variant": "#434655",
+                        "tertiary": "#ad0033",
+                        "on-primary-fixed": "#00174b",
+                        "secondary-fixed": "#89f5e7",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-bright": "#f8f9ff",
+                        "on-background": "#0b1c30",
+                        "on-tertiary-fixed": "#40000d",
+                        "error": "#ba1a1a",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-container-high": "#dce9ff",
+                        "surface-variant": "#d3e4fe",
+                        "tertiary-container": "#d22348",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#00201d",
+                        "outline": "#737686",
+                        "primary-container": "#2563eb",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#eff4ff",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "on-primary-container": "#eeefff",
+                        "surface-container-highest": "#d3e4fe",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#005049",
+                        "secondary-container": "#86f2e4",
+                        "surface-dim": "#cbdbf5",
+                        "secondary-fixed-dim": "#6bd8cb",
+                        "background": "#f8f9ff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "secondary": "#006a61",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "stack-md": "24px",
+                        "unit": "8px",
+                        "gutter": "24px",
+                        "stack-sm": "12px",
+                        "container-max": "1280px",
+                        "margin-mobile": "16px",
+                        "stack-lg": "48px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen flex flex-col pt-16">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 border-b border-outline-variant/30 shadow-sm backdrop-blur-xl">
+<div class="flex justify-between items-center h-16 px-margin-desktop max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-primary">LinguistAI</div>
+<nav class="hidden md:flex gap-gutter font-body-md text-body-md">
+<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Lessons</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Vocabulary</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Progress</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Community</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-high/50 p-2 rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-primary font-bold border-b-2 border-primary pb-1 p-2 rounded-full active:scale-95 duration-200 flex items-center justify-center h-10 w-10 overflow-hidden bg-surface-container-low hover:bg-surface-container-high/50 transition-all">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full px-margin-desktop max-w-container-max mx-auto py-stack-lg">
+<div class="max-w-4xl mx-auto">
+<div class="mb-stack-md">
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Profile Settings</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Manage your account details and password.</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col md:flex-row">
+<!-- Left Column: Avatar -->
+<div class="w-full md:w-1/3 p-stack-md border-b md:border-b-0 md:border-r border-outline-variant/30 bg-surface-container-low/30 flex flex-col items-center justify-center text-center">
+<div class="w-32 h-32 rounded-full border-4 border-surface-container-lowest shadow-sm mb-4 overflow-hidden bg-surface-container-high relative group">
+<img class="w-full h-full object-cover" data-alt="A brightly lit, professional headshot of a friendly individual smiling warmly, placed as a circular profile picture avatar placeholder. The background is a soft, solid light pastel blue color. The lighting is soft and flattering, suitable for a modern SaaS platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgoh456vS93VCRxU__2nXYiKXSjI9cmDx_y7bB2yA_MQcvHvLBiS4o4EylKOuYixIKgNF0SmodUxw_UFdHnwkdIN-Lhn1aVS-bQLwGwSXeWc6RmCrywpptYbDHVG6McJYsMRT40AajFh2SK83qihZf3Y2SuowKN6jqh5UgAX172JQHq_Dvv17ZOsn3Lcoiw7DiRKjtpR6x9fT-BdzqV2CW5V50xEzEz4Hv4ZElIb3WKCEjEBIp5pLC"/>
+<div class="absolute inset-0 bg-on-surface/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined text-on-primary">photo_camera</span>
+</div>
+</div>
+<button class="font-label-md text-label-md text-primary hover:text-surface-tint border border-primary/20 bg-primary/5 hover:bg-primary/10 px-4 py-2 rounded-lg transition-colors w-full max-w-[200px]">
+                        Upload new photo
+                    </button>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-4 opacity-80">
+                        Recommended: Square JPG or PNG, max 2MB.
+                    </p>
+</div>
+<!-- Right Column: Details & Password -->
+<div class="w-full md:w-2/3 p-stack-md flex flex-col gap-stack-md">
+<!-- Account Details -->
+<section>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-4">Account Details</h2>
+<div class="flex flex-col gap-4">
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1" for="username">Username</label>
+<input class="w-full bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" id="username" type="text" value="AlexLearner24"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1" for="email">Email Address</label>
+<div class="relative">
+<input class="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant opacity-70 cursor-not-allowed" disabled="" id="email" type="email" value="alex.learner@example.com"/>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant/50" data-icon="lock">lock</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Email cannot be changed.</p>
+</div>
+</div>
+</section>
+<hr class="border-outline-variant/30"/>
+<!-- Password Settings -->
+<section>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-4">Change Password</h2>
+<div class="flex flex-col gap-4">
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1" for="current-password">Current Password</label>
+<input class="w-full bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" id="current-password" type="password"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1" for="new-password">New Password</label>
+<input class="w-full bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" id="new-password" type="password"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1" for="confirm-password">Confirm New Password</label>
+<input class="w-full bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" id="confirm-password" type="password"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Actions -->
+<div class="flex justify-end pt-4">
+<button class="bg-[#0D9488] hover:bg-[#0f766c] text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg shadow-sm hover:shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1)] transition-all active:scale-95 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="save">save</span>
+                            Save Changes
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-stack-lg mt-auto bg-surface-container-low border-t border-outline-variant/20">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop max-w-container-max mx-auto gap-gutter">
+<div class="font-headline-sm text-headline-md font-bold text-on-surface">LinguistAI</div>
+<div class="font-label-md text-label-md text-on-surface-variant text-center md:text-left">
+                © 2024 LinguistAI. Empowering your language journey.
+            </div>
+<nav class="flex gap-4 font-label-md text-label-md flex-wrap justify-center">
+<a class="text-on-surface-variant hover:text-primary hover:underline decoration-primary transition-opacity duration-200" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-primary hover:underline decoration-primary transition-opacity duration-200" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-primary hover:underline decoration-primary transition-opacity duration-200" href="#">Help Center</a>
+<a class="text-on-surface-variant hover:text-primary hover:underline decoration-primary transition-opacity duration-200" href="#">Contact Support</a>
+</nav>
+</div>
+</footer>
+</body></html>

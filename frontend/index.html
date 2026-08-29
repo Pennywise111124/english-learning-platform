@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>LinguistAI - Master English with AI</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css"/>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col">
+    <!-- TopNavBar -->
+    <header class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface/80">
+        <div class="flex justify-between items-center h-20 px-gutter max-w-container-max mx-auto">
+            <div class="font-display-lg text-headline-md font-bold text-primary cursor-pointer">
+                LinguistAI
+            </div>
+            <!-- Desktop Navigation -->
+            <nav class="hidden md:flex items-center gap-6">
+                <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors hover:opacity-80" href="#features">Features</a>
+                <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors hover:opacity-80" href="topics.html">Topics</a>
+                <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors hover:opacity-80" href="#about">About</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='login.html'" class="hidden sm:block px-6 py-3 rounded-full border-2 border-primary text-primary font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-colors active:scale-95 duration-200">
+                    Log In
+                </button>
+                <button onclick="window.location.href='register.html'" class="px-6 py-3 rounded-full bg-[#F43F5E] text-white font-label-md text-label-md hover:bg-[#E11D48] shadow-[0_10px_15px_-3px_rgba(244,63,94,0.3)] transition-all active:scale-95 duration-200">
+                    Get Started
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow pt-32 pb-24">
+        <!-- Hero Section -->
+        <section class="relative max-w-container-max mx-auto px-gutter pt-16 pb-24 text-center">
+            <!-- Decorative Background -->
+            <div class="absolute inset-0 -z-10 flex justify-center items-center overflow-hidden pointer-events-none">
+                <div class="w-[800px] h-[800px] bg-primary-fixed rounded-full blur-[120px] opacity-40"></div>
+                <div class="absolute w-[600px] h-[600px] bg-secondary-container rounded-full blur-[100px] opacity-30 translate-x-1/4 -translate-y-1/4"></div>
+            </div>
+
+            <div class="max-w-4xl mx-auto space-y-stack-md">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm mb-4">
+                    <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                    Your AI Language Tutor
+                </div>
+
+                <h1 class="font-display-lg text-display-lg text-on-surface">
+                    Master English with the <span class="text-primary">Power of AI</span>
+                </h1>
+
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                    Personalized lessons, real-time corrections, and interactive practice tailored to your goals. Experience a smarter way to reach fluency.
+                </p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-stack-sm">
+                    <button onclick="window.location.href='register.html'" class="w-full sm:w-auto px-8 py-4 rounded-full bg-[#F43F5E] text-white font-label-md text-label-md hover:bg-[#E11D48] shadow-[0_10px_15px_-3px_rgba(244,63,94,0.3)] hover:-translate-y-1 transition-all active:scale-95">
+                        Get Started
+                    </button>
+                    <button onclick="window.location.href='login.html'" class="w-full sm:w-auto px-8 py-4 rounded-full border-2 border-primary text-primary font-label-md text-label-md hover:bg-surface-container-low transition-colors active:scale-95">
+                        Log In
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hero Image -->
+            <div class="mt-stack-lg relative mx-auto max-w-5xl rounded-xl overflow-hidden shadow-2xl border border-outline-variant bg-surface glass-panel p-2">
+                <img class="w-full h-auto rounded-lg object-cover bg-surface-container-low"
+                     src="https://picsum.photos/seed/linguistai-hero/1200/600"
+                     alt="LinguistAI dashboard interface"
+                     style="aspect-ratio: 16/9;"/>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="max-w-container-max mx-auto px-gutter py-24">
+            <div class="text-center mb-16">
+                <h2 class="font-headline-lg text-headline-lg text-on-surface mb-4">Why Choose LinguistAI?</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                    Accelerate your learning with intelligent tools designed to build confidence and mastery.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1: AI Chat -->
+                <div class="group bg-surface border border-outline-variant rounded-xl p-8 hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05)] hover:border-primary-fixed-dim transition-all duration-300 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-primary-container opacity-5 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                    <div class="w-14 h-14 bg-surface-container-high rounded-lg flex items-center justify-center text-primary mb-6">
+                        <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">forum</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md text-on-surface mb-3">AI Chat Correction</h3>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Real-time grammar tips and supportive feedback as you speak. Practice conversations naturally with instant, contextual corrections.
+                    </p>
+                </div>
+
+                <!-- Feature 2: Topics -->
+                <div class="group bg-surface border border-outline-variant rounded-xl p-8 hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05)] hover:border-secondary-container transition-all duration-300 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-secondary opacity-5 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                    <div class="w-14 h-14 bg-[#e6f4f1] rounded-lg flex items-center justify-center text-secondary mb-6">
+                        <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">style</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Topic-Based Lessons</h3>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Explore varied subjects with interactive flashcards and curated vocabulary. Learn contextually through scenarios relevant to your life.
+                    </p>
+                </div>
+
+                <!-- Feature 3: Progress -->
+                <div class="group bg-surface border border-outline-variant rounded-xl p-8 hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05)] hover:border-[#F43F5E]/30 transition-all duration-300 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-[#F43F5E] opacity-5 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                    <div class="w-14 h-14 bg-[#ffebe6] rounded-lg flex items-center justify-center text-[#F43F5E] mb-6">
+                        <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Quiz & Progress Tracking</h3>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Test your knowledge and watch your fluency grow with detailed analytics. Visualize your improvement over time with clear metrics.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topics Preview Section -->
+        <section id="topics-preview" class="max-w-container-max mx-auto px-gutter py-24">
+            <div class="text-center mb-16">
+                <h2 class="font-headline-lg text-headline-lg text-on-surface mb-4">Explore Popular Topics</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                    Dive into real-world scenarios and build practical vocabulary.
+                </p>
+            </div>
+
+            <div id="topicsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Topics loaded dynamically -->
+            </div>
+
+            <div class="text-center mt-12">
+                <a href="topics.html" class="inline-block px-8 py-4 rounded-full border-2 border-primary text-primary font-label-md text-label-md hover:bg-primary hover:text-on-primary transition-colors">
+                    View All Topics
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-surface-container-low w-full py-stack-lg border-t border-outline-variant/30">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-stack-md px-gutter max-w-container-max mx-auto">
+            <div class="font-display-lg text-headline-sm font-bold text-on-surface">
+                LinguistAI
+            </div>
+            <nav class="flex flex-wrap justify-center gap-6">
+                <a class="font-body-md text-label-md text-on-surface-variant hover:text-primary hover:underline transition-all cursor-pointer" href="#">Privacy Policy</a>
+                <a class="font-body-md text-label-md text-on-surface-variant hover:text-primary hover:underline transition-all cursor-pointer" href="#">Terms of Service</a>
+                <a class="font-body-md text-label-md text-on-surface-variant hover:text-primary hover:underline transition-all cursor-pointer" href="#">Support</a>
+                <a class="font-body-md text-label-md text-on-surface-variant hover:text-primary hover:underline transition-all cursor-pointer" href="#">Contact</a>
+            </nav>
+            <div class="font-body-md text-label-md text-primary">
+                © 2024 LinguistAI. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import * as api from './js/api.js';
+
+        // Load topics preview (first 6)
+        async function loadTopics() {
+            try {
+                const data = await api.getTopics({ page: 0, size: 6 });
+                const grid = document.getElementById('topicsGrid');
+
+                data.content.forEach(topic => {
+                    const card = document.createElement('div');
+                    card.className = 'topic-card bg-surface border border-outline-variant rounded-xl overflow-hidden hover:shadow-lg cursor-pointer';
+                    card.onclick = () => window.location.href = `topic-detail.html?id=${topic.id}`;
+
+                    const badgeColors = {
+                        'BEGINNER': 'badge-beginner',
+                        'INTERMEDIATE': 'badge-intermediate',
+                        'ADVANCED': 'badge-advanced'
+                    };
+
+                    card.innerHTML = `
+                        <img src="${topic.imageUrl}" alt="${topic.title}" class="w-full h-40 object-cover"/>
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-headline-md text-headline-md text-on-surface">${topic.title}</h3>
+                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm ${badgeColors[topic.level]}">${topic.level}</span>
+                            </div>
+                            <p class="font-body-md text-body-md text-on-surface-variant">${topic.description}</p>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Failed to load topics:', error);
+            }
+        }
+
+        loadTopics();
+    </script>
+</body>
+</html>

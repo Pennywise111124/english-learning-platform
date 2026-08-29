@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Quiz - LinguistAI</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="font-body-md text-body-md antialiased min-h-screen flex flex-col bg-background text-on-background page-fade-in">
+    <!-- TopNavBar - Will be replaced by navbar.js -->
+    <div id="navbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg">
+        <!-- Quiz Selection View -->
+        <div id="quizSelectionView" class="hidden">
+            <h1 class="font-display-lg text-display-lg text-primary mb-stack-md text-center">Select a Quiz</h1>
+            <div id="quizList" class="grid grid-cols-1 gap-4">
+                <!-- Quiz list loaded dynamically -->
+            </div>
+        </div>
+
+        <!-- Quiz View -->
+        <div id="quizView" class="hidden">
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-8">
+                <!-- Progress Bar -->
+                <div class="mb-stack-md">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-label-sm text-label-sm text-on-surface-variant">Question <span id="currentQuestion">1</span> of <span id="totalQuestions">5</span></span>
+                        <span class="font-label-sm text-label-sm text-primary font-bold"><span id="progressPercent">20</span>%</span>
+                    </div>
+                    <div class="w-full bg-surface-container-low rounded-full h-2">
+                        <div id="progressBar" class="progress-bar-fill bg-primary h-2 rounded-full transition-all" style="width: 20%"></div>
+                    </div>
+                </div>
+
+                <!-- Question -->
+                <h2 id="questionText" class="font-headline-lg text-headline-lg text-on-surface mb-stack-md">Loading...</h2>
+
+                <!-- Options -->
+                <div id="optionsContainer" class="flex flex-col gap-3">
+                    <!-- Options loaded dynamically -->
+                </div>
+
+                <!-- Navigation -->
+                <div class="flex justify-between items-center mt-stack-lg pt-stack-md border-t border-outline-variant/30">
+                    <button id="prevQuestionBtn" class="px-6 py-3 bg-surface-container border border-outline-variant rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-all">
+                        Previous
+                    </button>
+                    <button id="nextQuestionBtn" class="px-6 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all">
+                        Next
+                    </button>
+                    <button id="submitQuizBtn" class="hidden px-6 py-3 bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:opacity-90 transition-all">
+                        Submit Quiz
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result View -->
+        <div id="resultView" class="hidden">
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-8 text-center">
+                <div class="flex justify-center mb-stack-md">
+                    <div id="scoreCircle" class="score-circle score-high">
+                        <div class="flex flex-col">
+                            <span id="scoreValue" class="font-display-lg text-[48px] font-bold">80</span>
+                            <span class="font-label-sm text-label-sm">SCORE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Quiz Complete!</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant mb-stack-md">
+                    You answered <span id="correctCount" class="text-secondary font-bold">4</span> out of <span id="totalCount" class="font-bold">5</span> questions correctly.
+                </p>
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="location.reload()" class="px-8 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all">
+                        Try Again
+                    </button>
+                    <button id="backToTopicBtn" class="px-8 py-3 border-2 border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-all">
+                        Back to Topic
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { checkAuth } from './js/auth.js';
+        import * as api from './js/api.js';
+        import { initNavBar } from './js/navbar.js';
+
+        checkAuth();
+        initNavBar('topics');
+
+        const params = new URLSearchParams(window.location.search);
+        const topicId = params.get('topicId');
+        const quizId = params.get('quizId');
+
+        let quiz = null;
+        let currentQuestionIndex = 0;
+        let answers = [];
+
+        if (topicId && !quizId) {
+            showQuizSelection();
+        } else if (quizId) {
+            loadQuiz(quizId);
+        } else {
+            window.location.href = 'topics.html';
+        }
+
+        async function showQuizSelection() {
+            try {
+                const quizzes = await api.getQuizzesByTopic(topicId);
+                const list = document.getElementById('quizList');
+
+                quizzes.forEach(q => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-lg cursor-pointer transition-all';
+                    card.innerHTML = `
+                        <h3 class="font-headline-md text-headline-md text-on-surface mb-2">${q.title}</h3>
+                        <p class="font-label-md text-label-md text-on-surface-variant">Click to start</p>
+                    `;
+                    card.onclick = () => {
+                        window.location.href = `quiz.html?quizId=${q.id}`;
+                    };
+                    list.appendChild(card);
+                });
+
+                document.getElementById('quizSelectionView').classList.remove('hidden');
+            } catch (error) {
+                console.error('Failed to load quizzes:', error);
+            }
+        }
+
+        async function loadQuiz(id) {
+            try {
+                quiz = await api.getQuizDetail(id);
+                answers = new Array(quiz.questions.length).fill(null);
+                document.getElementById('quizView').classList.remove('hidden');
+                document.getElementById('totalQuestions').textContent = quiz.questions.length;
+                showQuestion(0);
+            } catch (error) {
+                console.error('Failed to load quiz:', error);
+            }
+        }
+
+        function showQuestion(index) {
+            currentQuestionIndex = index;
+            const question = quiz.questions[index];
+
+            document.getElementById('currentQuestion').textContent = index + 1;
+            document.getElementById('progressPercent').textContent = Math.round(((index + 1) / quiz.questions.length) * 100);
+            document.getElementById('progressBar').style.width = `${((index + 1) / quiz.questions.length) * 100}%`;
+            document.getElementById('questionText').textContent = question.question;
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            question.options.forEach((option, i) => {
+                const btn = document.createElement('button');
+                btn.className = `quiz-option ${answers[index] === option ? 'selected' : ''}`;
+                btn.textContent = option;
+                btn.onclick = () => selectOption(index, option);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('prevQuestionBtn').style.display = index === 0 ? 'none' : 'block';
+            document.getElementById('nextQuestionBtn').style.display = index === quiz.questions.length - 1 ? 'none' : 'block';
+            document.getElementById('submitQuizBtn').style.display = index === quiz.questions.length - 1 ? 'block' : 'none';
+        }
+
+        function selectOption(questionIndex, option) {
+            answers[questionIndex] = option;
+            showQuestion(questionIndex);
+        }
+
+        document.getElementById('prevQuestionBtn').addEventListener('click', () => {
+            if (currentQuestionIndex > 0) showQuestion(currentQuestionIndex - 1);
+        });
+
+        document.getElementById('nextQuestionBtn').addEventListener('click', () => {
+            if (currentQuestionIndex < quiz.questions.length - 1) showQuestion(currentQuestionIndex + 1);
+        });
+
+        document.getElementById('submitQuizBtn').addEventListener('click', async () => {
+            try {
+                const result = await api.submitQuiz(quizId, answers.map((answer, i) => ({
+                    questionId: quiz.questions[i].id,
+                    answer: answer
+                })));
+
+                document.getElementById('scoreValue').textContent = result.score;
+                document.getElementById('correctCount').textContent = result.correctAnswers;
+                document.getElementById('totalCount').textContent = result.totalQuestions;
+
+                const scoreCircle = document.getElementById('scoreCircle');
+                scoreCircle.className = 'score-circle ' + (result.score >= 80 ? 'score-high' : result.score >= 50 ? 'score-mid' : 'score-low');
+
+                document.getElementById('quizView').classList.add('hidden');
+                document.getElementById('resultView').classList.remove('hidden');
+
+                if (topicId) {
+                    document.getElementById('backToTopicBtn').onclick = () => {
+                        window.location.href = `topic-detail.html?id=${topicId}`;
+                    };
+                }
+            } catch (error) {
+                console.error('Failed to submit quiz:', error);
+            }
+        });
+    </script>
+</body>
+</html>

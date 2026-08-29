@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>LinguistAI - Create your account</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css"/>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: theme('colors.background');
+        }
+        main {
+            flex: 1;
+        }
+    </style>
+</head>
+<body class="text-on-background font-body-md text-body-md page-fade-in">
+    <main class="flex items-center justify-center py-stack-lg px-margin-mobile md:px-margin-desktop">
+        <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-lg w-full max-w-md p-stack-md flex flex-col gap-stack-md hover:shadow-xl transition-shadow duration-300">
+            <div class="text-center">
+                <h1 class="font-headline-lg text-headline-lg text-primary mb-unit">Create your account</h1>
+                <p class="font-body-md text-body-md text-on-surface-variant">Join our community of English learners.</p>
+            </div>
+
+            <form id="registerForm" class="flex flex-col gap-stack-sm">
+                <div class="flex flex-col gap-1">
+                    <label class="font-label-md text-label-md text-on-surface" for="username">Username</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-unit py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                           id="username"
+                           name="username"
+                           placeholder="johndoe"
+                           required
+                           type="text"/>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="font-label-md text-label-md text-on-surface" for="email">Email address</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-unit py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                           id="email"
+                           name="email"
+                           placeholder="john@example.com"
+                           required
+                           type="email"/>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="font-label-md text-label-md text-on-surface" for="password">Password</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-unit py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                           id="password"
+                           name="password"
+                           placeholder="••••••••"
+                           required
+                           type="password"
+                           minlength="6"/>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="font-label-md text-label-md text-on-surface" for="confirm-password">Confirm password</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg px-unit py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                           id="confirm-password"
+                           name="confirm-password"
+                           placeholder="••••••••"
+                           required
+                           type="password"
+                           minlength="6"/>
+                    <p id="passwordError" class="hidden text-error font-label-sm text-label-sm mt-1">Passwords do not match</p>
+                </div>
+
+                <button class="mt-unit w-full bg-[#0D9488] hover:bg-[#0F766E] text-white font-label-md text-label-md py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#0D9488]/50 focus:ring-offset-2"
+                        type="submit">
+                    Sign Up
+                </button>
+            </form>
+
+            <div class="text-center mt-unit">
+                <p class="font-label-md text-label-md text-on-surface-variant">
+                    Already have an account?
+                    <a class="text-primary hover:text-primary-container font-semibold transition-colors" href="login.html">Login</a>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-surface-container-low w-full py-stack-md mt-auto border-t border-outline-variant/50">
+        <div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop max-w-container-max mx-auto gap-stack-sm">
+            <div class="font-headline-sm text-headline-sm font-bold text-on-surface">
+                LinguistAI
+            </div>
+            <div class="flex gap-gutter font-label-md text-label-md">
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-90 hover:opacity-100" href="#">Privacy Policy</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-90 hover:opacity-100" href="#">Terms of Service</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-90 hover:opacity-100" href="#">Help Center</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-90 hover:opacity-100" href="#">Contact Us</a>
+            </div>
+            <div class="font-label-md text-label-md text-on-surface-variant opacity-90">
+                © 2024 LinguistAI. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import * as api from './js/api.js';
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const errorEl = document.getElementById('passwordError');
+
+            // Client-side validation
+            if (password !== confirmPassword) {
+                errorEl.classList.remove('hidden');
+                return;
+            } else {
+                errorEl.classList.add('hidden');
+            }
+
+            try {
+                await api.register(email, username, password);
+                window.location.href = 'login.html?registered=1';
+            } catch (error) {
+                showToast(error.message || 'Registration failed. Please try again.', 'error');
+            }
+        });
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

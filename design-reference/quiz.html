@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quiz Question - LinguistAI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed-variant": "#005049",
+                    "error": "#ba1a1a",
+                    "surface-variant": "#d3e4fe",
+                    "tertiary-fixed": "#ffdadb",
+                    "on-secondary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#006f66",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#e5eeff",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "tertiary-fixed-dim": "#ffb2b7",
+                    "surface-container-highest": "#d3e4fe",
+                    "secondary": "#006a61",
+                    "surface-dim": "#cbdbf5",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "on-tertiary-fixed-variant": "#92002a",
+                    "tertiary": "#ad0033",
+                    "outline": "#737686",
+                    "secondary-container": "#86f2e4",
+                    "on-primary": "#ffffff",
+                    "on-primary-container": "#eeefff",
+                    "surface-container-low": "#eff4ff",
+                    "on-tertiary-container": "#ffecec",
+                    "on-primary-fixed": "#00174b",
+                    "on-tertiary-fixed": "#40000d",
+                    "secondary-fixed": "#89f5e7",
+                    "tertiary-container": "#d22348",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#6bd8cb",
+                    "surface-tint": "#0053db",
+                    "background": "#f8f9ff",
+                    "primary": "#004ac6",
+                    "primary-container": "#2563eb",
+                    "on-error": "#ffffff",
+                    "on-surface": "#0b1c30",
+                    "inverse-primary": "#b4c5ff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-high": "#dce9ff",
+                    "on-secondary-fixed": "#00201d",
+                    "on-surface-variant": "#434655",
+                    "surface-bright": "#f8f9ff",
+                    "inverse-surface": "#213145",
+                    "primary-fixed": "#dbe1ff",
+                    "surface": "#f8f9ff",
+                    "outline-variant": "#c3c6d7",
+                    "on-background": "#0b1c30"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "8px",
+                    "margin-desktop": "40px",
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "stack-lg": "48px",
+                    "stack-sm": "12px",
+                    "container-max": "1280px",
+                    "stack-md": "24px"
+            },
+            "fontFamily": {
+                    "label-md": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.5",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "1",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.3",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ]
+            }
+        },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col pt-16">
+<!-- TopNavBar (Shared Component) -->
+<!-- Note: Semantic Intent matches "Progress" based on it being a Quiz -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm transition-all duration-300">
+<div class="flex justify-between items-center h-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<!-- Brand -->
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">
+                LinguistAI
+            </div>
+<!-- Navigation Links (Desktop) -->
+<ul class="hidden md:flex items-center gap-6">
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md active:scale-95 duration-200" href="#">Chat</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md active:scale-95 duration-200" href="#">Topics</a></li>
+<li><a class="text-primary dark:text-primary-fixed-dim border-b-2 border-primary pb-1 hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md active:scale-95 duration-200 flex-col" href="#">Progress</a></li>
+</ul>
+<!-- Trailing Action -->
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-variant overflow-hidden active:scale-95 duration-200 transition-transform hover:ring-2 hover:ring-primary/50">
+<img alt="User avatar" class="w-full h-full object-cover" data-alt="A clean, highly detailed 3D avatar of a friendly language learner character. The avatar is set against a soft, bright, high-key lighting background typical of a modern SaaS profile picture. The color palette incorporates vibrant coral and primary blue accents, reinforcing a safe, encouraging, and psychological-safety-focused aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqEZVR6_9nF_eU-SwCatijcp49WEF1WcNaF88J1WNKdB0FIIN8V3NkVcT_TqTjNxAI8xbyz89W0pZYeZUEAsUxuADDRFRez132MkX8-nqNwHwXkKZdaTZKzFZVV0VHA41uF1qTpVO4qlIz2FKSct4PDb5Ae9P6t14Bq-X47rOfjdVm7vGPUHmxmTZJswif1BOZ4UnK7r01rLQAh4IcWiJ_9KgMTj6PKceTMo8NPIj1JYQIfQiQ6zgy"/>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-grow flex flex-col items-center justify-center px-margin-mobile md:px-margin-desktop py-stack-lg max-w-3xl mx-auto w-full gap-stack-lg relative">
+<!-- Progress Header -->
+<div class="w-full max-w-2xl flex flex-col gap-unit">
+<div class="flex justify-between items-center font-label-sm text-label-sm text-on-surface-variant">
+<span>Grammar Fundamentals</span>
+<span class="font-bold text-primary">Question 3 of 10</span>
+</div>
+<!-- Linear Progress Bar -->
+<div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 30%;"></div>
+</div>
+</div>
+<!-- Question Container (Glassmorphism inspired card) -->
+<div class="w-full max-w-2xl bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-margin-mobile md:p-margin-desktop flex flex-col gap-stack-md text-center transition-all duration-300 hover:shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<h1 class="font-headline-md text-headline-md text-on-surface">
+                Choose the correct word to complete the sentence:
+            </h1>
+<div class="bg-surface-container rounded-lg p-stack-sm border border-outline-variant/20">
+<p class="font-body-lg text-body-lg text-on-surface font-medium">
+                    "The meeting starts <span class="inline-block border-b-2 border-outline w-12 mx-1 border-dashed"></span> 9:00 AM."
+                </p>
+</div>
+<!-- Answer Grid (Bento style) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-gutter w-full mt-stack-sm">
+<!-- Selected Option -->
+<button class="relative w-full p-4 rounded-lg border-2 border-secondary bg-surface-container-low text-on-surface font-body-md text-body-md font-medium text-left transition-all flex items-center justify-between group shadow-sm ring-2 ring-secondary/20">
+<span>at</span>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+<!-- Unselected Options -->
+<button class="relative w-full p-4 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-body-md text-body-md text-left transition-all hover:border-primary/50 hover:bg-surface-container-low flex items-center justify-between group">
+<span>on</span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 transition-colors">circle</span>
+</button>
+<button class="relative w-full p-4 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-body-md text-body-md text-left transition-all hover:border-primary/50 hover:bg-surface-container-low flex items-center justify-between group">
+<span>in</span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 transition-colors">circle</span>
+</button>
+<button class="relative w-full p-4 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-body-md text-body-md text-left transition-all hover:border-primary/50 hover:bg-surface-container-low flex items-center justify-between group">
+<span>by</span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 transition-colors">circle</span>
+</button>
+</div>
+</div>
+<!-- Action Area -->
+<div class="w-full max-w-2xl flex justify-end">
+<button class="bg-[#F43F5E] hover:bg-[#E11D48] text-white font-label-md text-label-md px-8 py-3 rounded-full transition-all shadow-sm hover:shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] active:scale-95 flex items-center gap-2">
+                Submit Answer
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full border-t border-outline-variant/20 bg-surface-container-lowest dark:bg-surface-dim mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center py-stack-md px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto gap-4">
+<div class="font-headline-sm text-headline-sm font-bold text-primary">
+                LinguistAI
+            </div>
+<ul class="flex flex-wrap justify-center gap-4 text-secondary dark:text-secondary-fixed-dim font-label-sm text-label-sm">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Privacy Policy</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Terms of Service</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Help Center</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Contact Us</a></li>
+</ul>
+<div class="text-secondary dark:text-secondary-fixed-dim font-label-sm text-label-sm text-on-surface-variant">
+                © 2024 LinguistAI. Empowering your English journey.
+            </div>
+</div>
+</footer>
+</body></html>
