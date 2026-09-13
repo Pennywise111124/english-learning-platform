@@ -35,7 +35,7 @@ public class QuizService {
         this.topicRepository = topicRepository;
     }
 
-    // ══════════════════ USER-FACING (Read) ══════════════════
+    // ══════════════════ USER-FACING ══════════════════
 
     @Transactional(readOnly = true)
     public List<QuizSummaryResponse> getQuizzesByTopic(Long topicId) {
@@ -47,15 +47,6 @@ public class QuizService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * GET /api/quizzes/{id} — FR-4.5: KHÔNG được trả correctAnswer.
-     *
-     * TODO: tìm Quiz theo id (404 nếu không có), lấy List<QuizQuestion> qua
-     * quizQuestionRepository.findByQuizId(id), map từng question sang
-     * QuizQuestionPublicResponse::from (class này về mặt cấu trúc không có chỗ
-     * chứa correctAnswer — xem lại giải thích DTO tin trước), rồi dựng
-     * QuizDetailResponse.of(quiz, questionsList).
-     */
     @Transactional(readOnly = true)
     public QuizDetailResponse getQuizDetail(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId)
@@ -68,7 +59,17 @@ public class QuizService {
         return QuizDetailResponse.of(quiz, questions);
     }
 
-    // ══════════════════ ADMIN-FACING (Create/Update/Delete) ══════════════════
+    // ══════════════════ ADMIN-FACING ══════════════════
+
+    @Transactional(readOnly = true)
+    public List<AdminQuizQuestionResponse> getQuestionsForAdmin(Long quizId) {
+        if (!quizRepository.existsById(quizId)) {
+            throw new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId);
+        }
+        return quizQuestionRepository.findByQuizId(quizId).stream()
+                .map(AdminQuizQuestionResponse::from)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public QuizSummaryResponse createQuiz(Long topicId, QuizRequest request) {

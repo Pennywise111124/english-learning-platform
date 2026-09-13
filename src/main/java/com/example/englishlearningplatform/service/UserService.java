@@ -26,13 +26,14 @@ public class UserService {
         this.eventPublisher = eventPublisher;
     }
 
+    @Transactional(readOnly = true)
+    public UserResponse getMyProfile() {
+        return UserResponse.from(getCurrentUser());
+    }
+
     @Transactional
     public UserResponse updateMyAvatar(MultipartFile file) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại với username: " + username));
-
+        User user = getCurrentUser();
         String oldAvatarUrl = user.getAvatarUrl();
 
         String avatarUrl = fileStorageService.storeImage(file, "avatars");
@@ -44,5 +45,11 @@ public class UserService {
         }
 
         return UserResponse.from(updatedUser);
+    }
+
+    private User getCurrentUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại với username: " + username));
     }
 }
