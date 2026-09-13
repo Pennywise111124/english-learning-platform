@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+</head>
+
+<body>
+    <input id="token" placeholder="JWT token" style="width:500px">
+    <input id="convId" placeholder="conversationId" value="1">
+    <button onclick="connect()">Connect</button>
+    <br><br>
+    <input id="msg" placeholder="Nội dung tin nhắn" style="width:400px">
+    <button onclick="sendMsg()">Gửi</button>
+    <br><br>
+    <div>
+        <b>Typing (đang gõ):</b>
+        <div id="typing" style="border:1px solid #ccc; min-height:60px; padding:8px; white-space:pre-wrap;"></div>
+    </div>
+    <div>
+        <b>Done (message hoàn chỉnh):</b>
+        <pre id="done" style="border:1px solid #ccc; min-height:60px; padding:8px;"></pre>
+    </div>
+    <div>
+        <b>Error:</b>
+        <pre id="error" style="border:1px solid red; min-height:30px; padding:8px; color:red;"></pre>
+    </div>
+    <div>
+        <b>Log frame thô (đếm số chunk):</b>
+        <pre id="log" style="border:1px solid #999; height:200px; overflow:auto; padding:8px; font-size:11px;"></pre>
+    </div>
+
+    <script>
+        let client;
+        let chunkCount = 0;
+
+        function log(msg) {
+            document.getElementById('log').textContent += msg + "\n";
+        }
+
+        function connect() {
+            const token = document.getElementById('token').value;
+            const convId = document.getElementById('convId').value;
+
+            client = new StompJs.Client({
+                webSocketFactory: () => new SockJS('http://localhost:8080/ws/chat'),
+                connectHeaders: { Authorization: 'Bearer ' + token },
+                onConnect: () => {
+                    log('✅ CONNECTED');
+
+                    client.subscribe('/topic/conversations/' + convId + '/typing', (frame) => {
+                        chunkCount++;
+                        document.getElementById('typing').textContent += frame.body;
+                        log('[chunk #' + chunkCount + '] len=' + frame.body.length + ' raw="' + frame.body + '"');
+                    });
+
+                    client.subscribe('/topic/conversations/' + convId, (frame) => {
+                        document.getElementById('done').textContent = frame.body;
+                        log('✅ DONE frame nhận được, tổng số chunk trước đó: ' + chunkCount);
+                    });
+
+                    client.subscribe('/user/queue/errors', (frame) => {
+                        document.getElementById('error').textContent = frame.body;
+                        log('❌ ERROR frame: ' + frame.body);
+                    });
+                },
+                onStompError: (frame) => log('❌ STOMP ERROR: ' + frame.headers.message),
+                onWebSocketClose: () => log('🔌 Connection closed'),
+            });
+
+            client.activate();
+        }
+
+        function sendMsg() {
+            chunkCount = 0;
+            document.getElementById('typing').textContent = '';
+            document.getElementById('done').textContent = '';
+            document.getElementById('error').textContent = '';
+            const convId = document.getElementById('convId').value;
+            const msg = document.getElementById('msg').value;
+            client.publish({
+                destination: '/app/chat.sendMessage/' + convId,
+                body: JSON.stringify({ content: msg })
+            });
+        }
+    </script>
+</body>
+
+</html>
