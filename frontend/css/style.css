@@ -1,8 +1,174 @@
 /* ============================================================
    LinguistAI — Custom Styles
-   Supplements Tailwind utility classes.
-   Design tokens are handled by Tailwind config in each page.
+   Duolingo-inspired design system (v2)
    ============================================================ */
+
+/* ============================================================
+   Color tokens — RGB triplet (không kèm rgb()), dùng cho
+   Tailwind arbitrary "rgb(var(--x) / alpha)" trong tailwind-config.js
+   ============================================================ */
+:root {
+  --color-primary: 88 204 2;
+  --color-primary-container: 70 163 2;
+  --color-primary-fixed: 215 255 184;
+  --color-primary-fixed-dim: 178 242 150;
+  --color-on-primary: 255 255 255;
+  --color-on-primary-container: 255 255 255;
+  --color-on-primary-fixed: 27 77 2;
+  --color-on-primary-fixed-variant: 46 125 2;
+  --color-inverse-primary: 178 242 150;
+  --color-primary-shadow: 70 163 2;
+
+  --color-secondary: 28 176 246;
+  --color-secondary-container: 24 153 214;
+  --color-secondary-fixed: 205 239 255;
+  --color-secondary-fixed-dim: 159 224 255;
+  --color-on-secondary: 255 255 255;
+  --color-on-secondary-container: 255 255 255;
+  --color-on-secondary-fixed: 11 74 107;
+  --color-on-secondary-fixed-variant: 16 101 144;
+  --color-secondary-shadow: 24 153 214;
+
+  --color-tertiary: 255 150 0;
+  --color-tertiary-container: 230 134 0;
+  --color-tertiary-fixed: 255 230 191;
+  --color-tertiary-fixed-dim: 255 208 138;
+  --color-on-tertiary: 255 255 255;
+  --color-on-tertiary-container: 255 255 255;
+  --color-on-tertiary-fixed: 122 74 0;
+  --color-on-tertiary-fixed-variant: 153 92 0;
+  --color-tertiary-shadow: 230 134 0;
+
+  --color-error: 255 75 75;
+  --color-error-container: 255 211 211;
+  --color-on-error: 255 255 255;
+  --color-on-error-container: 139 0 0;
+
+  --color-surface: 255 255 255;
+  --color-surface-dim: 229 229 229;
+  --color-surface-bright: 255 255 255;
+  --color-surface-container-lowest: 255 255 255;
+  --color-surface-container-low: 247 247 247;
+  --color-surface-container: 240 240 240;
+  --color-surface-container-high: 229 229 229;
+  --color-surface-container-highest: 221 221 221;
+  --color-surface-variant: 229 229 229;
+  --color-surface-tint: 88 204 2;
+  --color-on-surface: 60 60 60;
+  --color-on-surface-variant: 119 119 119;
+
+  --color-background: 255 255 255;
+  --color-on-background: 60 60 60;
+
+  --color-outline: 175 175 175;
+  --color-outline-variant: 229 229 229;
+
+  --color-inverse-surface: 60 60 60;
+  --color-inverse-on-surface: 255 255 255;
+}
+
+:root.dark {
+  --color-primary: 122 224 45;
+  --color-primary-container: 88 204 2;
+  --color-primary-fixed: 46 90 10;
+  --color-primary-fixed-dim: 60 110 15;
+  --color-on-primary: 15 30 8;
+  --color-on-primary-container: 15 30 8;
+  --color-on-primary-fixed: 200 255 170;
+  --color-on-primary-fixed-variant: 178 242 150;
+  --color-inverse-primary: 46 125 2;
+  --color-primary-shadow: 100 190 30;
+
+  --color-secondary: 77 196 255;
+  --color-secondary-container: 28 176 246;
+  --color-secondary-fixed: 15 55 80;
+  --color-secondary-fixed-dim: 20 70 100;
+  --color-on-secondary: 10 25 35;
+  --color-on-secondary-container: 10 25 35;
+  --color-on-secondary-fixed: 190 230 255;
+  --color-on-secondary-fixed-variant: 159 224 255;
+  --color-secondary-shadow: 50 150 210;
+
+  --color-tertiary: 255 176 51;
+  --color-tertiary-container: 255 150 0;
+  --color-tertiary-fixed: 80 50 5;
+  --color-tertiary-fixed-dim: 100 65 8;
+  --color-on-tertiary: 40 22 0;
+  --color-on-tertiary-container: 40 22 0;
+  --color-on-tertiary-fixed: 255 220 170;
+  --color-on-tertiary-fixed-variant: 255 208 138;
+  --color-tertiary-shadow: 210 130 10;
+
+  --color-error: 255 107 107;
+  --color-error-container: 90 20 20;
+  --color-on-error: 30 5 5;
+  --color-on-error-container: 255 200 200;
+
+  --color-surface: 30 33 30;
+  --color-surface-dim: 18 20 18;
+  --color-surface-bright: 38 42 38;
+  --color-surface-container-lowest: 22 24 22;
+  --color-surface-container-low: 30 33 30;
+  --color-surface-container: 38 42 38;
+  --color-surface-container-high: 46 51 46;
+  --color-surface-container-highest: 54 59 54;
+  --color-surface-variant: 46 51 46;
+  --color-surface-tint: 178 242 150;
+  --color-on-surface: 230 230 230;
+  --color-on-surface-variant: 170 170 170;
+
+  --color-background: 22 24 22;
+  --color-on-background: 230 230 230;
+
+  --color-outline: 100 105 100;
+  --color-outline-variant: 60 65 60;
+
+  --color-inverse-surface: 230 230 230;
+  --color-inverse-on-surface: 30 33 30;
+}
+
+/* ── App shell: sidebar + topbar ─────────────────────────────── */
+#app-sidebar-container aside {
+  transition: width 0.2s ease;
+}
+#app-content {
+  transition: margin-left 0.2s ease;
+}
+
+/* ── Sidebar thu gọn: ẩn chữ, chỉ còn icon ───────────────────── */
+#appSidebar.sidebar-collapsed .nav-label,
+#appSidebar.sidebar-collapsed .sidebar-logo-text {
+  display: none;
+}
+#appSidebar.sidebar-collapsed .nav-label-wrap {
+  justify-content: center;
+}
+#appSidebar.sidebar-collapsed #sidebarCollapseBtn .material-symbols-outlined {
+  transform: rotate(180deg);
+}
+
+#appSidebar.sidebar-collapsed .sidebar-header {
+  flex-direction: column;
+  height: auto;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  gap: 8px;
+}
+#appSidebar.sidebar-collapsed .sidebar-logo {
+  justify-content: center;
+  width: 100%;
+}
+
+/* ── "Nút nhấn 3D" đặc trưng — dùng kèm border-b-4 + màu *-shadow ─── */
+.btn-3d {
+  border-bottom-width: 4px;
+  transition: all 0.1s ease;
+}
+
+.btn-3d:active {
+  border-bottom-width: 0;
+  transform: translateY(4px);
+}
 
 /* ── Chat ──────────────────────────────────────────────────── */
 .chat-messages {
@@ -13,8 +179,8 @@
 
 .chat-messages::-webkit-scrollbar        { width: 4px; }
 .chat-messages::-webkit-scrollbar-track  { background: transparent; }
-.chat-messages::-webkit-scrollbar-thumb  { background: #b4c5ff; border-radius: 2px; }
-.chat-messages::-webkit-scrollbar-thumb:hover { background: #004ac6; }
+.chat-messages::-webkit-scrollbar-thumb  { background: #B2F296; border-radius: 2px; }
+.chat-messages::-webkit-scrollbar-thumb:hover { background: #58CC02; }
 
 /* ── Flashcard 3D flip ─────────────────────────────────────── */
 .flashcard-wrapper {
@@ -43,7 +209,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
+  border-radius: 1.5rem;
   padding: 2rem;
 }
 
@@ -55,38 +221,38 @@
 .quiz-option {
   transition: all 0.15s ease;
   cursor: pointer;
-  border: 2px solid #c3c6d7;
-  border-radius: 0.5rem;
+  border: 2px solid #E5E5E5;
+  border-radius: 1rem;
   padding: 0.875rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   background: #fff;
-  color: #0b1c30;
+  color: #3C3C3C;
+  font-weight: 600;
 }
 
 .quiz-option:hover {
-  border-color: #004ac6;
-  background-color: rgba(0, 74, 198, 0.05);
+  border-color: #58CC02;
+  background-color: rgba(88, 204, 2, 0.06);
 }
 
 .quiz-option.selected {
-  border-color: #004ac6;
-  background-color: rgba(0, 74, 198, 0.08);
-  color: #004ac6;
-  font-weight: 500;
+  border-color: #58CC02;
+  background-color: rgba(88, 204, 2, 0.1);
+  color: #2E7D02;
 }
 
 .quiz-option.correct {
-  border-color: #006a61;
-  background-color: rgba(0, 106, 97, 0.08);
-  color: #006a61;
+  border-color: #58CC02;
+  background-color: rgba(88, 204, 2, 0.1);
+  color: #2E7D02;
 }
 
 .quiz-option.incorrect {
-  border-color: #ba1a1a;
-  background-color: rgba(186, 26, 26, 0.08);
-  color: #ba1a1a;
+  border-color: #FF4B4B;
+  background-color: rgba(255, 75, 75, 0.08);
+  color: #EA2B2B;
 }
 
 /* ── Toast notifications ───────────────────────────────────── */
@@ -97,10 +263,10 @@
   z-index: 9999;
   min-width: 280px;
   padding: 0.875rem 1.25rem;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
@@ -113,9 +279,9 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-.toast-success { background: #006a61; color: #fff; }
-.toast-error   { background: #ba1a1a; color: #fff; }
-.toast-info    { background: #004ac6; color: #fff; }
+.toast-success { background: #58CC02; color: #fff; }
+.toast-error   { background: #FF4B4B; color: #fff; }
+.toast-info    { background: #1CB0F6; color: #fff; }
 
 /* ── Page fade-in animation ────────────────────────────────── */
 .page-fade-in {
@@ -133,21 +299,22 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.875rem;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   cursor: pointer;
   transition: all 0.15s ease;
-  color: #434655;
+  color: #4B4B4B;
+  font-weight: 600;
 }
 
 .sidebar-item:hover {
-  background-color: rgba(0, 74, 198, 0.06);
-  color: #004ac6;
+  background-color: rgba(88, 204, 2, 0.08);
+  color: #2E7D02;
 }
 
 .sidebar-item.active {
-  background-color: rgba(0, 74, 198, 0.1);
-  color: #004ac6;
-  font-weight: 600;
+  background-color: rgba(88, 204, 2, 0.12);
+  color: #2E7D02;
+  font-weight: 700;
 }
 
 /* ── Progress bar animation ────────────────────────────────── */
@@ -162,15 +329,15 @@
 
 .topic-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(0, 74, 198, 0.12);
+  box-shadow: 0 12px 28px rgba(88, 204, 2, 0.18);
 }
 
 /* ── Level badge colors ────────────────────────────────────── */
-.badge-beginner     { background: #86f2e4; color: #006a61; }
-.badge-intermediate { background: #dbe1ff; color: #003ea8; }
-.badge-advanced     { background: #ffdadb; color: #92002a; }
+.badge-beginner     { background: #CDEFFF; color: #106590; font-weight: 700; }
+.badge-intermediate { background: #D7FFB8; color: #2E7D02; font-weight: 700; }
+.badge-advanced     { background: #FFE6BF; color: #995C00; font-weight: 700; }
 
-/* ── Score circle ──────────────────────────────────────────── */
+/* ── Score circle (giữ lại phòng khi còn nơi khác dùng) ─────── */
 .score-circle {
   width: 120px;
   height: 120px;
@@ -182,6 +349,38 @@
   border: 6px solid;
 }
 
-.score-circle.score-high   { border-color: #006a61; color: #006a61; }
-.score-circle.score-mid    { border-color: #004ac6; color: #004ac6; }
-.score-circle.score-low    { border-color: #ba1a1a; color: #ba1a1a; }
+.score-circle.score-high   { border-color: #58CC02; color: #2E7D02; }
+.score-circle.score-mid    { border-color: #1CB0F6; color: #106590; }
+.score-circle.score-low    { border-color: #FF4B4B; color: #EA2B2B; }
+
+/* ── Skeleton loading ──────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #F0F0F0 25%, #E5E5E5 37%, #F0F0F0 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+  border-radius: 0.75rem;
+}
+
+@keyframes skeletonShimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Scroll reveal (dùng Intersection Observer) ─────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Hiệu ứng trôi nhẹ cho phần trang trí ─────────────────────── */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(2deg); }
+}
+.float-slow { animation: floatSlow 5s ease-in-out infinite; }
+.float-slow-delayed { animation: floatSlow 5s ease-in-out infinite; animation-delay: 1.5s; }

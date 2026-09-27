@@ -1,0 +1,21 @@
+{
+  "hook": {
+    "consent": "accepted"
+  },
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "frontend/quiz.html"
+        ],
+        "createdAt": "2026-09-18T10:24:54.914Z",
+        "reason": "Agent: progress bar width animation is discrete user-triggered, single 2px element, no cascade - sanctioned exception"
+      }
+    ]
+  }
+}

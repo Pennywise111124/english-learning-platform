@@ -4,8 +4,14 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Quiz - LinguistAI</title>
+    <script>
+      if (localStorage.getItem('linguistai_theme') === 'dark' ||
+          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -14,14 +20,34 @@
     <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="font-body-md text-body-md antialiased min-h-screen flex flex-col bg-background text-on-background page-fade-in">
-    <!-- TopNavBar - Will be replaced by navbar.js -->
-    <div id="navbar-container"></div>
+
+    <div id="app-sidebar-container"></div>
+    <div id="app-content" class="min-h-screen flex flex-col">
+    <div id="app-topbar-container"></div>
+
+    <!-- Loading Skeleton -->
+    <div id="quizLoadingSkeleton" class="max-w-3xl mx-auto w-full px-margin-mobile md:px-margin-desktop pt-stack-md">
+        <div class="bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm p-8">
+            <div class="skeleton h-2 w-full rounded-full mb-stack-md"></div>
+            <div class="skeleton h-8 w-3/4 mb-stack-md"></div>
+            <div class="flex flex-col gap-3">
+                <div class="skeleton h-14 w-full"></div>
+                <div class="skeleton h-14 w-full"></div>
+                <div class="skeleton h-14 w-full"></div>
+                <div class="skeleton h-14 w-full"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
-    <main class="flex-grow w-full max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg">
+    <main class="flex-grow w-full max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop pt-stack-md pb-stack-lg">
         <!-- Quiz Selection View -->
         <div id="quizSelectionView" class="hidden">
-            <h1 class="font-display-lg text-display-lg text-primary mb-stack-md text-center">Select a Quiz</h1>
+            <button id="backToTopicListBtn" class="flex items-center gap-2 text-primary hover:text-primary-container font-label-md text-label-md mb-stack-md transition-colors">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to Topic
+            </button>
+            <h1 class="font-display-lg text-display-lg text-primary mb-stack-md text-center">Select a Quiz 📝</h1>
             <div id="quizList" class="grid grid-cols-1 gap-4">
                 <!-- Quiz list loaded dynamically -->
             </div>
@@ -29,15 +55,20 @@
 
         <!-- Quiz View -->
         <div id="quizView" class="hidden">
-            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-8">
+            <button id="cancelQuizBtn" class="flex items-center gap-1 text-on-surface-variant hover:text-error font-label-md text-label-md mb-stack-sm transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+                Cancel Quiz
+            </button>
+
+            <div class="bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm p-8">
                 <!-- Progress Bar -->
                 <div class="mb-stack-md">
                     <div class="flex justify-between items-center mb-2">
                         <span class="font-label-sm text-label-sm text-on-surface-variant">Question <span id="currentQuestion">1</span> of <span id="totalQuestions">5</span></span>
                         <span class="font-label-sm text-label-sm text-primary font-bold"><span id="progressPercent">20</span>%</span>
                     </div>
-                    <div class="w-full bg-surface-container-low rounded-full h-2">
-                        <div id="progressBar" class="progress-bar-fill bg-primary h-2 rounded-full transition-all" style="width: 20%"></div>
+                    <div class="w-full bg-surface-container-low rounded-full h-3">
+                        <div id="progressBar" class="progress-bar-fill bg-primary h-3 rounded-full transition-all" style="width: 20%"></div>
                     </div>
                 </div>
 
@@ -49,57 +80,98 @@
                     <!-- Options loaded dynamically -->
                 </div>
 
-                <!-- Navigation -->
-                <div class="flex justify-between items-center mt-stack-lg pt-stack-md border-t border-outline-variant/30">
-                    <button id="prevQuestionBtn" class="px-6 py-3 bg-surface-container border border-outline-variant rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-all">
+                <!-- Navigation: Previous luôn bên trái (dùng visibility, không dùng display, để giữ chỗ),
+                     Next/Submit luôn bên phải nhờ gói chung 1 wrapper -->
+                <div class="flex justify-between items-center mt-stack-lg pt-stack-md border-t-2 border-outline-variant">
+                    <button id="prevQuestionBtn" class="px-6 py-3 bg-surface-container border-2 border-outline-variant rounded-2xl font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-all">
                         Previous
                     </button>
-                    <button id="nextQuestionBtn" class="px-6 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all">
-                        Next
-                    </button>
-                    <button id="submitQuizBtn" class="hidden px-6 py-3 bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:opacity-90 transition-all">
-                        Submit Quiz
-                    </button>
+                    <div class="flex gap-3">
+                        <button id="nextQuestionBtn" class="btn-3d px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all">
+                            Next
+                        </button>
+                        <button id="submitQuizBtn" class="btn-3d hidden px-6 py-3 bg-secondary border-secondary-shadow text-on-secondary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all">
+                            Submit Quiz
+                        </button>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Empty Quiz View (quiz chưa có câu hỏi nào) -->
+        <div id="quizEmptyView" class="hidden">
+            <button id="backToTopicListBtnEmpty" class="flex items-center gap-2 text-primary hover:text-primary-container font-label-md text-label-md mb-stack-md transition-colors">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to Topic
+            </button>
+            <div class="bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm p-12 text-center">
+                <span class="material-symbols-outlined text-[48px] text-on-surface-variant mb-4" aria-hidden="true">quiz</span>
+                <h2 class="font-headline-md text-headline-md text-on-surface mb-2">This quiz has no questions yet</h2>
+                <p class="font-body-md text-body-md text-on-surface-variant">Please check back later or try a different quiz.</p>
             </div>
         </div>
 
         <!-- Result View -->
         <div id="resultView" class="hidden">
-            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-8 text-center">
+            <div class="bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm p-8 text-center">
+                <!-- Personalized Greeting -->
+                <h2 id="resultGreeting" class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Quiz Complete!</h2>
+
+                <!-- SVG Progress Ring -->
                 <div class="flex justify-center mb-stack-md">
-                    <div id="scoreCircle" class="score-circle score-high">
-                        <div class="flex flex-col">
-                            <span id="scoreValue" class="font-display-lg text-[48px] font-bold">80</span>
-                            <span class="font-label-sm text-label-sm">SCORE</span>
+                    <div class="relative w-48 h-48 flex items-center justify-center">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="10" class="text-surface-container"/>
+                            <circle id="progressRing" cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-dasharray="282.6" stroke-dashoffset="282.6" class="text-primary transition-all duration-1000 ease-out"/>
+                        </svg>
+                        <div class="absolute flex flex-col items-center justify-center">
+                            <span id="scoreValue" class="font-display-lg text-[48px] font-extrabold text-on-surface">80</span>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Score</span>
                         </div>
                     </div>
                 </div>
 
-                <h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Quiz Complete!</h2>
-                <p class="font-body-lg text-body-lg text-on-surface-variant mb-stack-md">
-                    You answered <span id="correctCount" class="text-secondary font-bold">4</span> out of <span id="totalCount" class="font-bold">5</span> questions correctly.
-                </p>
+                <!-- Correct/Incorrect Chips -->
+                <div class="flex flex-wrap justify-center items-center gap-3 mb-stack-md">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary-fixed">
+                        <span class="material-symbols-outlined text-secondary text-[20px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        <span id="correctCount" class="font-label-md text-label-md text-on-secondary-fixed font-bold">4</span>
+                        <span class="font-label-sm text-label-sm text-on-secondary-fixed">Correct</span>
+                    </div>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-error-container">
+                        <span class="material-symbols-outlined text-error text-[20px]" style="font-variation-settings: 'FILL' 1;">cancel</span>
+                        <span id="totalCount" class="font-label-md text-label-md text-on-error-container font-bold">1</span>
+                        <span class="font-label-sm text-label-sm text-on-error-container">Incorrect</span>
+                    </div>
+                </div>
 
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button onclick="location.reload()" class="px-8 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all">
+                    <button onclick="location.reload()" class="px-8 py-3 border-2 border-outline-variant text-on-surface rounded-2xl font-label-md text-label-md hover:bg-surface-container-low transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">refresh</span>
                         Try Again
                     </button>
-                    <button id="backToTopicBtn" class="px-8 py-3 border-2 border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-all">
+                    <button id="backToTopicBtn" class="btn-3d px-8 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all flex items-center justify-center gap-2">
                         Back to Topic
+                        <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
                     </button>
                 </div>
             </div>
         </div>
     </main>
 
+    <div id="app-footer-container"></div>
+        </div>
+
     <script type="module">
-        import { checkAuth } from './js/auth.js';
+        import { checkAuth, getUser } from './js/auth.js';
         import * as api from './js/api.js';
         import { initNavBar } from './js/navbar.js';
+        import { showToast } from './js/toast.js';
+        import { initFooter } from './js/footer.js';
 
         checkAuth();
         initNavBar('topics');
+        initFooter();
 
         const params = new URLSearchParams(window.location.search);
         const topicId = params.get('topicId');
@@ -108,6 +180,19 @@
         let quiz = null;
         let currentQuestionIndex = 0;
         let answers = [];
+
+        function goBackToTopic() {
+            window.location.href = topicId ? `topic-detail.html?id=${topicId}` : 'topics.html';
+        }
+
+        document.getElementById('backToTopicListBtn').addEventListener('click', goBackToTopic);
+        document.getElementById('backToTopicListBtnEmpty').addEventListener('click', goBackToTopic);
+
+        document.getElementById('cancelQuizBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to cancel this quiz? Your progress will not be saved.')) {
+                goBackToTopic();
+            }
+        });
 
         if (topicId && !quizId) {
             showQuizSelection();
@@ -120,17 +205,33 @@
         async function showQuizSelection() {
             try {
                 const quizzes = await api.getQuizzesByTopic(topicId);
+                document.getElementById('quizLoadingSkeleton').classList.add('hidden');
                 const list = document.getElementById('quizList');
 
+                if (quizzes.length === 0) {
+                    list.innerHTML = '<p class="text-center text-on-surface-variant font-body-lg py-12">No quizzes available for this topic yet.</p>';
+                    document.getElementById('quizSelectionView').classList.remove('hidden');
+                    return;
+                }
+
                 quizzes.forEach(q => {
+                    const isEmpty = q.questionCount === 0;
                     const card = document.createElement('div');
-                    card.className = 'bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-lg cursor-pointer transition-all';
+                    card.className = isEmpty
+                        ? 'bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-6 opacity-60 cursor-not-allowed'
+                        : 'bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-6 hover:border-primary hover:-translate-y-1 cursor-pointer transition-all';
                     card.innerHTML = `
                         <h3 class="font-headline-md text-headline-md text-on-surface mb-2">${q.title}</h3>
-                        <p class="font-label-md text-label-md text-on-surface-variant">Click to start</p>
+                        <p class="font-label-md text-label-md text-on-surface-variant">${isEmpty ? 'No questions yet' : 'Click to start'}</p>
                     `;
                     card.onclick = () => {
-                        window.location.href = `quiz.html?quizId=${q.id}`;
+                        if (isEmpty) {
+                            showToast('This quiz has no questions yet', 'info');
+                            return;
+                        }
+                        if (confirm(`Start "${q.title}"? Make sure you're ready to answer all questions.`)) {
+                            window.location.href = `quiz.html?quizId=${q.id}&topicId=${topicId}`;
+                        }
                     };
                     list.appendChild(card);
                 });
@@ -138,18 +239,29 @@
                 document.getElementById('quizSelectionView').classList.remove('hidden');
             } catch (error) {
                 console.error('Failed to load quizzes:', error);
+                document.getElementById('quizLoadingSkeleton').classList.add('hidden');
+                showToast('Failed to load quizzes', 'error');
             }
         }
 
         async function loadQuiz(id) {
             try {
                 quiz = await api.getQuizDetail(id);
+                document.getElementById('quizLoadingSkeleton').classList.add('hidden');
+
+                if (!quiz.questions || quiz.questions.length === 0) {
+                    document.getElementById('quizEmptyView').classList.remove('hidden');
+                    return;
+                }
+
                 answers = new Array(quiz.questions.length).fill(null);
                 document.getElementById('quizView').classList.remove('hidden');
                 document.getElementById('totalQuestions').textContent = quiz.questions.length;
                 showQuestion(0);
             } catch (error) {
                 console.error('Failed to load quiz:', error);
+                document.getElementById('quizLoadingSkeleton').classList.add('hidden');
+                showToast('Failed to load quiz', 'error');
             }
         }
 
@@ -173,7 +285,8 @@
                 container.appendChild(btn);
             });
 
-            document.getElementById('prevQuestionBtn').style.display = index === 0 ? 'none' : 'block';
+            // visibility (không phải display) để Previous luôn giữ chỗ, giúp Next/Submit luôn neo bên phải
+            document.getElementById('prevQuestionBtn').style.visibility = index === 0 ? 'hidden' : 'visible';
             document.getElementById('nextQuestionBtn').style.display = index === quiz.questions.length - 1 ? 'none' : 'block';
             document.getElementById('submitQuizBtn').style.display = index === quiz.questions.length - 1 ? 'block' : 'none';
         }
@@ -192,6 +305,13 @@
         });
 
         document.getElementById('submitQuizBtn').addEventListener('click', async () => {
+            const unanswered = answers.findIndex(a => a === null);
+            if (unanswered !== -1) {
+                showToast(`Vui lòng trả lời câu ${unanswered + 1} trước khi nộp bài`, 'error');
+                showQuestion(unanswered);
+                return;
+            }
+
             try {
                 const result = await api.submitQuiz(quizId, answers.map((answer, i) => ({
                     questionId: quiz.questions[i].id,
@@ -200,21 +320,41 @@
 
                 document.getElementById('scoreValue').textContent = result.score;
                 document.getElementById('correctCount').textContent = result.correctAnswers;
-                document.getElementById('totalCount').textContent = result.totalQuestions;
+                document.getElementById('totalCount').textContent = result.totalQuestions - result.correctAnswers;
 
-                const scoreCircle = document.getElementById('scoreCircle');
-                scoreCircle.className = 'score-circle ' + (result.score >= 80 ? 'score-high' : result.score >= 50 ? 'score-mid' : 'score-low');
+                const user = getUser();
+                const greetingEl = document.getElementById('resultGreeting');
+                if (user && user.username) {
+                    greetingEl.textContent = `Great job, ${user.username}!`;
+                } else {
+                    greetingEl.textContent = 'Quiz Complete!';
+                }
+
+                const progressRing = document.getElementById('progressRing');
+                const circumference = 2 * Math.PI * 45;
+                const offset = circumference * (1 - result.score / 100);
+
+                if (result.score >= 80) {
+                    progressRing.classList.remove('text-secondary', 'text-error');
+                    progressRing.classList.add('text-primary');
+                } else if (result.score >= 50) {
+                    progressRing.classList.remove('text-primary', 'text-error');
+                    progressRing.classList.add('text-secondary');
+                } else {
+                    progressRing.classList.remove('text-primary', 'text-secondary');
+                    progressRing.classList.add('text-error');
+                }
+
+                setTimeout(() => {
+                    progressRing.style.strokeDashoffset = offset;
+                }, 100);
 
                 document.getElementById('quizView').classList.add('hidden');
                 document.getElementById('resultView').classList.remove('hidden');
-
-                if (topicId) {
-                    document.getElementById('backToTopicBtn').onclick = () => {
-                        window.location.href = `topic-detail.html?id=${topicId}`;
-                    };
-                }
+                document.getElementById('backToTopicBtn').onclick = goBackToTopic;
             } catch (error) {
                 console.error('Failed to submit quiz:', error);
+                showToast(error.message || 'Failed to submit quiz', 'error');
             }
         });
     </script>

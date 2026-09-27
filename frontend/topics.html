@@ -4,8 +4,15 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Explore Topics - LinguistAI</title>
+    <!-- Chống nháy sáng/tối lúc tải trang -->
+    <script>
+      if (localStorage.getItem('linguistai_theme') === 'dark' ||
+          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -13,82 +20,94 @@
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/style.css"/>
 </head>
-<body class="font-body-md text-body-md antialiased min-h-screen flex flex-col bg-background text-on-background page-fade-in">
-    <!-- TopNavBar - Will be replaced by navbar.js -->
-    <div id="navbar-container"></div>
+<body class="font-body-md text-body-md antialiased min-h-screen bg-background text-on-background page-fade-in">
+    <div id="app-sidebar-container"></div>
 
-    <!-- Main Content -->
-    <main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg flex flex-col gap-stack-lg">
-        <!-- Header Section -->
-        <section class="flex flex-col gap-stack-sm md:items-center md:text-center">
-            <h1 class="font-display-lg text-display-lg text-primary">Explore Topics</h1>
-            <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-                Discover new subjects, practice essential vocabulary, and immerse yourself in real-world scenarios tailored to your learning goals.
-            </p>
-        </section>
+    <div id="app-content" class="min-h-screen flex flex-col">
+        <div id="app-topbar-container"></div>
 
-        <!-- Controls Section -->
-        <section class="flex flex-col md:flex-row gap-gutter justify-between items-center bg-surface-container-lowest p-stack-sm rounded-xl border border-outline-variant/30 shadow-sm">
-            <div class="relative w-full md:w-96">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
-                <input id="searchInput" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg pl-10 pr-4 py-2 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md font-body-md text-on-surface" placeholder="Search topics..." type="text"/>
-            </div>
-            <div class="flex gap-stack-sm w-full md:w-auto">
-                <select id="levelFilter" class="bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-2 text-body-md font-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all flex-1 md:flex-none cursor-pointer">
-                    <option value="">All Levels</option>
-                    <option value="BEGINNER">Beginner</option>
-                    <option value="INTERMEDIATE">Intermediate</option>
-                    <option value="ADVANCED">Advanced</option>
-                </select>
-                <select id="sortFilter" class="bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-2 text-body-md font-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all flex-1 md:flex-none cursor-pointer">
-                    <option value="title,asc">A-Z</option>
-                    <option value="title,desc">Z-A</option>
-                    <option value="level,asc">Level: Low to High</option>
-                    <option value="level,desc">Level: High to Low</option>
-                </select>
-            </div>
-        </section>
+        <!-- Main Content -->
+        <main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pt-stack-md pb-stack-lg flex flex-col gap-stack-lg">
+            <!-- Header Section -->
+            <section class="flex flex-col gap-stack-sm md:items-center md:text-center">
+                <h1 class="font-display-lg text-display-lg text-primary">Explore Topics 🗺️</h1>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                    Discover new subjects, practice essential vocabulary, and immerse yourself in real-world scenarios tailored to your learning goals.
+                </p>
+            </section>
 
-        <!-- Topics Grid -->
-        <section id="topicsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Topics loaded dynamically -->
-        </section>
+            <!-- Controls Section -->
+            <section class="flex flex-col md:flex-row gap-gutter justify-between items-center bg-surface-container-lowest p-stack-sm rounded-xl border-2 border-outline-variant shadow-sm">
+                <div class="relative w-full md:w-96">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+                    <input id="searchInput" class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl pl-10 pr-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md font-body-md text-on-surface" placeholder="Search topics..." type="text"/>
+                </div>
+                <div class="flex gap-stack-sm w-full md:w-auto">
+                    <select id="levelFilter" class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2.5 text-body-md font-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all flex-1 md:flex-none cursor-pointer">
+                        <option value="">All Levels</option>
+                        <option value="BEGINNER">Beginner</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                    </select>
+                    <select id="sortFilter" class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2.5 text-body-md font-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all flex-1 md:flex-none cursor-pointer">
+                        <option value="title,asc">A-Z</option>
+                        <option value="title,desc">Z-A</option>
+                        <option value="level,asc">Level: Low to High</option>
+                        <option value="level,desc">Level: High to Low</option>
+                    </select>
+                </div>
+            </section>
 
-        <!-- Pagination -->
-        <section id="pagination" class="flex justify-center items-center gap-4 mt-stack-md">
-            <!-- Pagination loaded dynamically -->
-        </section>
-    </main>
+            <!-- Topics Grid -->
+            <section id="topicsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Topics loaded dynamically -->
+            </section>
 
-    <!-- Footer -->
-    <footer class="w-full bg-surface-container-low border-t border-outline-variant/30 py-stack-md mt-auto">
-        <div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop max-w-container-max mx-auto gap-stack-sm">
-            <div class="font-headline-sm text-label-md font-bold text-on-surface">LinguistAI</div>
-            <nav class="flex gap-6 font-label-md text-label-md">
-                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Privacy</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Terms</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Support</a>
-            </nav>
-            <div class="font-label-md text-label-md text-on-surface-variant">© 2024 LinguistAI. All rights reserved.</div>
-        </div>
-    </footer>
+            <!-- Pagination -->
+            <section id="pagination" class="flex justify-center items-center gap-4 mt-stack-md">
+                <!-- Pagination loaded dynamically -->
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <div id="app-footer-container"></div>
+    </div>
 
     <script type="module">
-        import { checkAuth } from './js/auth.js';
         import * as api from './js/api.js';
         import { initNavBar } from './js/navbar.js';
+        import { imageSrc } from './js/config.js';
+        import { initAuthModal } from './js/authModal.js';
+        import { initFooter } from './js/footer.js';
 
-        checkAuth();
-
-        // Initialize navbar after DOM loads
         initNavBar('topics');
+        initAuthModal();
+        initFooter();
 
         let currentPage = 0;
         let currentKeyword = '';
         let currentLevel = '';
         let currentSort = 'title,asc';
 
+        function renderTopicSkeletons(count = 9) {
+            document.getElementById('topicsGrid').innerHTML = Array.from({ length: count }).map(() => `
+                <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl overflow-hidden">
+                    <div class="skeleton w-full h-48"></div>
+                    <div class="p-6 flex flex-col gap-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="skeleton h-6 w-2/3"></div>
+                            <div class="skeleton h-6 w-16 rounded-full"></div>
+                        </div>
+                        <div class="skeleton h-4 w-full"></div>
+                        <div class="skeleton h-4 w-5/6"></div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('pagination').innerHTML = '';
+        }
+        
         async function loadTopics() {
+            renderTopicSkeletons();
             try {
                 const data = await api.getTopics({
                     keyword: currentKeyword,
@@ -115,11 +134,11 @@
 
                 data.content.forEach(topic => {
                     const card = document.createElement('div');
-                    card.className = 'topic-card bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-lg cursor-pointer transition-all';
+                    card.className = 'topic-card bg-surface-container-lowest border-2 border-outline-variant rounded-xl overflow-hidden hover:border-primary hover:-translate-y-1 cursor-pointer transition-all';
                     card.onclick = () => window.location.href = `topic-detail.html?id=${topic.id}`;
 
                     card.innerHTML = `
-                        <img src="${topic.imageUrl}" alt="${topic.title}" class="w-full h-48 object-cover"/>
+                        <img src="${imageSrc(topic.imageUrl)}" alt="${topic.title}" class="w-full h-48 object-cover" loading="lazy"/>
                         <div class="p-6">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-headline-md text-headline-md text-on-surface flex-1">${topic.title}</h3>
@@ -146,7 +165,7 @@
             if (data.totalPages <= 1) return;
 
             const prevBtn = document.createElement('button');
-            prevBtn.className = `px-4 py-2 rounded-lg font-label-md text-label-md transition-all ${currentPage === 0 ? 'bg-surface-container text-on-surface-variant cursor-not-allowed' : 'bg-primary text-on-primary hover:bg-primary-container'}`;
+            prevBtn.className = `px-5 py-2.5 rounded-2xl font-label-md text-label-md transition-all ${currentPage === 0 ? 'bg-surface-container text-on-surface-variant cursor-not-allowed' : 'btn-3d bg-primary border-primary-shadow text-on-primary hover:brightness-105'}`;
             prevBtn.textContent = 'Previous';
             prevBtn.disabled = currentPage === 0;
             prevBtn.onclick = () => {
@@ -163,7 +182,7 @@
             pagination.appendChild(pageInfo);
 
             const nextBtn = document.createElement('button');
-            nextBtn.className = `px-4 py-2 rounded-lg font-label-md text-label-md transition-all ${currentPage >= data.totalPages - 1 ? 'bg-surface-container text-on-surface-variant cursor-not-allowed' : 'bg-primary text-on-primary hover:bg-primary-container'}`;
+            nextBtn.className = `px-5 py-2.5 rounded-2xl font-label-md text-label-md transition-all ${currentPage >= data.totalPages - 1 ? 'bg-surface-container text-on-surface-variant cursor-not-allowed' : 'btn-3d bg-primary border-primary-shadow text-on-primary hover:brightness-105'}`;
             nextBtn.textContent = 'Next';
             nextBtn.disabled = currentPage >= data.totalPages - 1;
             nextBtn.onclick = () => {

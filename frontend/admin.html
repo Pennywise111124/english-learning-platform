@@ -4,8 +4,14 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Admin Panel - LinguistAI</title>
+    <script>
+      if (localStorage.getItem('linguistai_theme') === 'dark' ||
+          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -27,34 +33,31 @@
             direction: ltr;
             -webkit-font-smoothing: antialiased;
         }
-        .tab-active {
-            border-bottom: 2px solid #004ac6;
-            color: #004ac6;
-            font-weight: 600;
-        }
     </style>
 </head>
 <body class="bg-background text-on-background font-body-md min-h-screen flex flex-col page-fade-in">
-    <!-- TopNavBar - Will be replaced by navbar.js -->
-    <div id="navbar-container"></div>
+
+    <div id="app-sidebar-container"></div>
+    <div id="app-content" class="min-h-screen flex flex-col">
+    <div id="app-topbar-container"></div>
 
     <!-- Main Content -->
-    <main class="flex-grow w-full px-gutter md:px-margin-desktop max-w-container-max mx-auto py-stack-lg">
+    <main class="flex-grow w-full px-gutter md:px-margin-desktop max-w-container-max mx-auto pt-stack-md pb-stack-lg">
         <div class="mb-stack-md">
-            <h1 class="font-headline-lg text-headline-lg text-on-surface">Admin Panel</h1>
+            <h1 class="font-headline-lg text-headline-lg text-on-surface">Admin Panel 🛠️</h1>
             <p class="font-body-md text-on-surface-variant mt-2">Manage topics, flashcards, and quizzes.</p>
         </div>
 
         <!-- Tabs -->
-        <div class="border-b border-outline-variant mb-stack-md">
+        <div class="border-b-2 border-outline-variant mb-stack-md">
             <div class="flex gap-8" role="navigation" aria-label="Admin tabs">
-                <button id="topicsTab" class="tab-active py-3 font-body-md transition-colors">
+                <button id="topicsTab" class="border-b-4 border-primary text-primary font-bold py-3 font-body-md transition-colors">
                     Topics
                 </button>
-                <button id="flashcardsTab" class="py-3 font-body-md text-on-surface-variant hover:text-on-surface transition-colors">
+                <button id="flashcardsTab" class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
                     Flashcards
                 </button>
-                <button id="quizzesTab" class="py-3 font-body-md text-on-surface-variant hover:text-on-surface transition-colors">
+                <button id="quizzesTab" class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
                     Quizzes
                 </button>
             </div>
@@ -64,27 +67,28 @@
         <div id="topicsPanel" class="tab-content">
             <div class="flex justify-between items-center mb-stack-sm">
                 <h2 class="font-headline-md text-headline-md text-on-surface">Manage Topics</h2>
-                <button id="addTopicBtn" class="bg-primary text-on-primary font-label-md px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2">
+                <button id="addTopicBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2">
                     <span class="material-symbols-outlined text-lg">add</span>
                     Add Topic
                 </button>
             </div>
 
-            <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-sm overflow-hidden">
-                <table class="w-full">
-                    <thead class="bg-surface-container-low border-b border-outline-variant/30">
-                        <tr>
-                            <th class="text-left p-4 font-label-md text-on-surface">ID</th>
-                            <th class="text-left p-4 font-label-md text-on-surface">Title</th>
-                            <th class="text-left p-4 font-label-md text-on-surface">Level</th>
-                            <th class="text-left p-4 font-label-md text-on-surface">Description</th>
-                            <th class="text-right p-4 font-label-md text-on-surface">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="topicsTableBody" class="divide-y divide-outline-variant/20">
-                        <!-- Table rows will be inserted here -->
-                    </tbody>
-                </table>
+          <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[600px]">
+                        <thead class="bg-surface-container-low border-b-2 border-outline-variant">
+                            <tr>
+                                <th class="hidden sm:table-cell text-left p-4 font-label-md text-on-surface">ID</th>
+                                <th class="text-left p-4 font-label-md text-on-surface">Title</th>
+                                <th class="text-left p-4 font-label-md text-on-surface">Level</th>
+                                <th class="hidden md:table-cell text-left p-4 font-label-md text-on-surface">Description</th>
+                                <th class="text-right p-4 font-label-md text-on-surface">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topicsTableBody" class="divide-y-2 divide-outline-variant">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -93,11 +97,11 @@
             <div class="mb-stack-sm">
                 <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Flashcards</h2>
                 <div class="flex gap-4 items-center">
-                    <label class="font-label-md text-on-surface">Filter by Topic:</label>
-                    <select id="flashcardTopicFilter" class="bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">All Topics</option>
+                    <label class="font-label-md text-on-surface">Topic:</label>
+                    <select id="flashcardTopicFilter" class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="">-- Select a topic --</option>
                     </select>
-                    <button id="addFlashcardBtn" class="bg-primary text-on-primary font-label-md px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 ml-auto">
+                    <button id="addFlashcardBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
                         <span class="material-symbols-outlined text-lg">add</span>
                         Add Flashcard
                     </button>
@@ -105,7 +109,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="flashcardsGrid">
-                <!-- Flashcard cards will be inserted here -->
+                <div class="col-span-full text-center p-stack-lg text-on-surface-variant">Chọn 1 Topic để xem Flashcard</div>
             </div>
         </div>
 
@@ -114,28 +118,28 @@
             <div class="mb-stack-sm">
                 <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Quizzes</h2>
                 <div class="flex gap-4 items-center">
-                    <label class="font-label-md text-on-surface">Filter by Topic:</label>
-                    <select id="quizTopicFilter" class="bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">All Topics</option>
+                    <label class="font-label-md text-on-surface">Topic:</label>
+                    <select id="quizTopicFilter" class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="">-- Select a topic --</option>
                     </select>
-                    <button id="addQuizBtn" class="bg-primary text-on-primary font-label-md px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 ml-auto">
+                    <button id="addQuizBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
                         <span class="material-symbols-outlined text-lg">add</span>
                         Add Quiz
                     </button>
                 </div>
             </div>
 
-            <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-sm overflow-hidden">
-                <div id="quizzesList" class="divide-y divide-outline-variant/20">
-                    <!-- Quiz items will be inserted here -->
+            <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                <div id="quizzesList" class="divide-y-2 divide-outline-variant">
+                    <div class="p-stack-lg text-center text-on-surface-variant">Chọn 1 Topic để xem Quiz</div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal for Add/Edit Topic -->
+    <!-- Modal: Add/Edit Topic -->
     <div id="topicModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md">
+        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md border-2 border-outline-variant">
             <div class="flex justify-between items-center mb-stack-sm">
                 <h3 class="font-headline-md text-headline-md text-on-surface" id="topicModalTitle">Add Topic</h3>
                 <button id="closeTopicModal" class="text-on-surface-variant hover:text-on-surface">
@@ -146,29 +150,33 @@
                 <input type="hidden" id="topicId"/>
                 <div>
                     <label class="block font-label-md text-on-surface mb-unit" for="topicTitle">Title</label>
-                    <input id="topicTitle" type="text" required class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
+                    <input id="topicTitle" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
                 </div>
                 <div>
                     <label class="block font-label-md text-on-surface mb-unit" for="topicDescription">Description</label>
-                    <textarea id="topicDescription" rows="3" required class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                    <textarea id="topicDescription" rows="3" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
                 </div>
                 <div>
                     <label class="block font-label-md text-on-surface mb-unit" for="topicLevel">Level</label>
-                    <select id="topicLevel" required class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <select id="topicLevel" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                         <option value="BEGINNER">Beginner</option>
                         <option value="INTERMEDIATE">Intermediate</option>
                         <option value="ADVANCED">Advanced</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="topicImageUrl">Image URL</label>
-                    <input id="topicImageUrl" type="url" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
+                <div id="topicImageSection" class="hidden">
+                    <label class="block font-label-md text-on-surface mb-unit">Image</label>
+                    <div class="flex items-center gap-4">
+                        <img id="topicImagePreview" src="" alt="" class="hidden w-24 h-16 object-cover rounded-xl border-2 border-outline-variant"/>
+                        <input id="topicImageFile" type="file" accept="image/jpeg,image/png" class="flex-1 font-body-sm"/>
+                        <button type="button" id="uploadTopicImageBtn" class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-4 mt-stack-sm">
-                    <button type="button" id="cancelTopicBtn" class="px-6 py-2 font-label-md text-on-surface-variant hover:text-on-surface border border-outline-variant rounded-lg hover:bg-surface-container-low transition-colors">
+                    <button type="button" id="cancelTopicBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="px-6 py-2 font-label-md bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity">
+                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
                         Save
                     </button>
                 </div>
@@ -176,53 +184,197 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="w-full border-t border-outline-variant bg-surface mt-auto">
-        <div class="flex flex-col md:flex-row justify-between items-center px-gutter py-stack-md max-w-container-max mx-auto">
-            <div class="font-headline-md font-bold text-primary mb-4 md:mb-0">
-                LinguistAI
+    <!-- Modal: Add/Edit Flashcard -->
+    <div id="flashcardModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md border-2 border-outline-variant">
+            <div class="flex justify-between items-center mb-stack-sm">
+                <h3 class="font-headline-md text-headline-md text-on-surface" id="flashcardModalTitle">Add Flashcard</h3>
+                <button id="closeFlashcardModal" class="text-on-surface-variant hover:text-on-surface">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
             </div>
-            <div class="text-on-surface-variant font-label-md">
-                © 2024 LinguistAI. All rights reserved.
-            </div>
+            <form id="flashcardForm" class="flex flex-col gap-stack-sm">
+                <input type="hidden" id="flashcardId"/>
+                <input type="hidden" id="flashcardTopicId"/>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardWord">Word</label>
+                    <input id="flashcardWord" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
+                </div>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardMeaning">Meaning</label>
+                    <input id="flashcardMeaning" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
+                </div>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardExample">Example</label>
+                    <textarea id="flashcardExample" rows="2" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                </div>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardAudioUrl">Audio URL (optional)</label>
+                    <input id="flashcardAudioUrl" type="url" class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
+                </div>
+                <div id="flashcardImageSection" class="hidden">
+                    <label class="block font-label-md text-on-surface mb-unit">Image</label>
+                    <div class="flex items-center gap-4">
+                        <img id="flashcardImagePreview" src="" alt="" class="hidden w-20 h-20 object-cover rounded-xl border-2 border-outline-variant"/>
+                        <input id="flashcardImageFile" type="file" accept="image/jpeg,image/png" class="flex-1 font-body-sm"/>
+                        <button type="button" id="uploadFlashcardImageBtn" class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-4 mt-stack-sm">
+                    <button type="button" id="cancelFlashcardBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                        Save
+                    </button>
+                </div>
+            </form>
         </div>
-    </footer>
+    </div>
+
+    <!-- Modal: Add/Edit Quiz -->
+    <div id="quizModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-lg p-stack-md border-2 border-outline-variant">
+            <div class="flex justify-between items-center mb-stack-sm">
+                <h3 class="font-headline-md text-headline-md text-on-surface" id="quizModalTitle">Add Quiz</h3>
+                <button id="closeQuizModal" class="text-on-surface-variant hover:text-on-surface">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form id="quizForm" class="flex flex-col gap-stack-sm">
+                <input type="hidden" id="quizId"/>
+                <input type="hidden" id="quizTopicId"/>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit" for="quizTitle">Title</label>
+                    <input id="quizTitle" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
+                </div>
+                <div class="flex justify-end gap-4 mt-stack-sm">
+                    <button type="button" id="cancelQuizBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Manage Questions (list + inline Add/Edit form) -->
+    <div id="questionsModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-3xl p-stack-md max-h-[90vh] overflow-y-auto border-2 border-outline-variant">
+            <div class="flex justify-between items-center mb-stack-sm">
+                <h3 class="font-headline-md text-headline-md text-on-surface" id="questionsModalTitle">Manage Questions</h3>
+                <button id="closeQuestionsModal" class="text-on-surface-variant hover:text-on-surface">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div id="questionsList" class="flex flex-col gap-3 mb-stack-md"></div>
+
+            <button id="addQuestionBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 mb-stack-md">
+                <span class="material-symbols-outlined text-lg">add</span>
+                Add Question
+            </button>
+
+            <form id="questionForm" class="hidden flex flex-col gap-stack-sm border-t-2 border-outline-variant pt-stack-md">
+                <input type="hidden" id="questionId"/>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit" for="questionText">Question</label>
+                    <textarea id="questionText" rows="2" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                </div>
+                <div>
+                    <label class="block font-label-md text-on-surface mb-unit">Options (chọn radio ở đáp án đúng)</label>
+                    <div id="optionsContainer" class="flex flex-col gap-2"></div>
+                    <button type="button" id="addOptionBtn" class="mt-2 text-primary font-label-sm font-bold hover:underline">+ Add option</button>
+                </div>
+                <div class="flex justify-end gap-4 mt-stack-sm">
+                    <button type="button" id="cancelQuestionBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                        Save Question
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-footer-container"></div>
+        </div>
 
     <script type="module">
-        import { checkAdmin, clearAuth } from './js/auth.js';
+        import { checkAdmin } from './js/auth.js';
         import * as api from './js/api.js';
         import { initNavBar } from './js/navbar.js';
+        import { imageSrc } from './js/config.js';
+        import { showToast } from './js/toast.js';
+        import { initFooter } from './js/footer.js';
 
-        // Admin guard
         checkAdmin();
-
-        console.log('[Admin] Page loaded, waiting for navbar...');
-
-        // Initialize navbar first and wait for it
         initNavBar('admin');
+        initFooter();
 
-        let currentTab = 'topics';
         let editingTopicId = null;
+        let allTopicsCache = [];
 
-        // Tab switching
+        let currentFlashcardTopicId = null;
+        let editingFlashcardId = null;
+
+        let currentQuizTopicId = null;
+        let editingQuizId = null;
+
+        let currentQuestionsQuizId = null;
+        let editingQuestionId = null;
+        let currentQuestionsCache = [];
+        let optionRowCount = 0;
+        
+        function renderTopicsTableSkeleton(count = 5) {
+            document.getElementById('topicsTableBody').innerHTML = Array.from({ length: count }).map(() => `
+                <tr>
+                    <td class="hidden sm:table-cell p-4"><div class="skeleton h-4 w-8"></div></td>
+                    <td class="p-4"><div class="flex items-center gap-3"><div class="skeleton w-14 h-9 rounded-lg"></div><div class="skeleton h-4 w-32"></div></div></td>
+                    <td class="p-4"><div class="skeleton h-6 w-20 rounded-full"></div></td>
+                    <td class="hidden md:table-cell p-4"><div class="skeleton h-4 w-40"></div></td>
+                    <td class="p-4 text-right"><div class="skeleton h-4 w-16 ml-auto"></div></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderFlashcardsSkeleton(count = 6) {
+            document.getElementById('flashcardsGrid').innerHTML = Array.from({ length: count }).map(() => `
+                <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm p-4 flex flex-col gap-2">
+                    <div class="skeleton w-full h-32 rounded-xl"></div>
+                    <div class="skeleton h-5 w-1/2"></div>
+                    <div class="skeleton h-4 w-2/3"></div>
+                    <div class="skeleton h-4 w-full"></div>
+                </div>
+            `).join('');
+        }
+
+        function renderQuizzesSkeleton(count = 4) {
+            document.getElementById('quizzesList').innerHTML = Array.from({ length: count }).map(() => `
+                <div class="flex justify-between items-center p-4">
+                    <div class="skeleton h-5 w-1/3"></div>
+                    <div class="skeleton h-8 w-32"></div>
+                </div>
+            `).join('');
+        }
+
+        // ═══════════════════════ Tab switching ═══════════════════════
+
         function switchTab(tab) {
-            currentTab = tab;
-
-            // Update tab buttons - use the admin tabs container selector
             document.querySelectorAll('[role="navigation"][aria-label="Admin tabs"] button').forEach(btn => {
-                btn.classList.remove('tab-active');
-                btn.classList.add('text-on-surface-variant');
+                btn.classList.remove('border-primary', 'text-primary', 'font-bold');
+                btn.classList.add('border-transparent', 'text-on-surface-variant');
             });
-            document.getElementById(`${tab}Tab`).classList.add('tab-active');
-            document.getElementById(`${tab}Tab`).classList.remove('text-on-surface-variant');
+            const activeBtn = document.getElementById(`${tab}Tab`);
+            activeBtn.classList.remove('border-transparent', 'text-on-surface-variant');
+            activeBtn.classList.add('border-primary', 'text-primary', 'font-bold');
 
-            // Update panels
-            document.querySelectorAll('.tab-content').forEach(panel => {
-                panel.classList.add('hidden');
-            });
+            document.querySelectorAll('.tab-content').forEach(panel => panel.classList.add('hidden'));
             document.getElementById(`${tab}Panel`).classList.remove('hidden');
 
-            // Load data
             if (tab === 'topics') loadTopics();
             else if (tab === 'flashcards') loadFlashcards();
             else if (tab === 'quizzes') loadQuizzes();
@@ -232,115 +384,128 @@
         document.getElementById('flashcardsTab').addEventListener('click', () => switchTab('flashcards'));
         document.getElementById('quizzesTab').addEventListener('click', () => switchTab('quizzes'));
 
-        // Load Topics
+        function getLevelColor(level) {
+            switch (level) {
+                case 'BEGINNER': return 'bg-secondary-fixed text-on-secondary-fixed';
+                case 'INTERMEDIATE': return 'bg-primary-fixed text-on-primary-fixed';
+                case 'ADVANCED': return 'bg-tertiary-fixed text-on-tertiary-fixed';
+                default: return 'bg-surface-container text-on-surface-variant';
+            }
+        }
+        
+        function truncate(text, maxLen) {
+            return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
+        }
+
+        // ═══════════════════════ Topics ═══════════════════════
+
         async function loadTopics() {
             try {
-                console.log('[Admin] loadTopics() called');
+                renderTopicsTableSkeleton();
                 const result = await api.adminGetTopics();
-                console.log('[Admin] Topics loaded:', result.content.length, 'topics');
+                allTopicsCache = result.content.slice().sort((a, b) => a.id - b.id);
                 const tbody = document.getElementById('topicsTableBody');
-
-                if (!tbody) {
-                    console.error('[Admin] topicsTableBody not found!');
-                    return;
-                }
-
                 tbody.innerHTML = '';
 
-                if (result.content.length === 0) {
+                if (allTopicsCache.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-on-surface-variant">No topics found</td></tr>';
-                    return;
-                }
-
-                result.content.forEach(topic => {
-                    const row = document.createElement('tr');
-                    row.className = 'hover:bg-surface-container-low/50 transition-colors';
-                    row.innerHTML = `
-                        <td class="p-4 font-body-md">${topic.id}</td>
-                        <td class="p-4 font-body-md font-semibold">${topic.title}</td>
+                } else {
+                    allTopicsCache.forEach(topic => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-surface-container-low transition-colors';
+                        row.innerHTML = `
+                        <td class="hidden sm:table-cell p-4 font-body-md">${topic.id}</td>
+                        <td class="p-4 font-body-md font-semibold">
+                            <div class="flex items-center gap-3">
+                                <img src="${imageSrc(topic.imageUrl)}" alt="" class="w-14 h-9 object-cover rounded-lg"/>
+                                ${topic.title}
+                            </div>
+                        </td>
                         <td class="p-4">
-                            <span class="px-2 py-1 rounded-full font-label-sm ${getLevelColor(topic.level)}">
+                            <span class="px-2 py-1 rounded-full font-label-sm font-bold ${getLevelColor(topic.level)}">
                                 ${topic.level}
                             </span>
                         </td>
-                        <td class="p-4 font-body-md text-on-surface-variant">${topic.description.substring(0, 50)}...</td>
+                        <td class="hidden md:table-cell p-4 font-body-md text-on-surface-variant">${truncate(topic.description, 30)}</td>
                         <td class="p-4 text-right">
-                            <button onclick="editTopic(${topic.id})" class="text-primary hover:text-surface-tint p-2 rounded transition-colors">
+                            <button onclick="editTopic(${topic.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
                                 <span class="material-symbols-outlined text-lg">edit</span>
                             </button>
-                            <button onclick="deleteTopic(${topic.id})" class="text-error hover:text-error/80 p-2 rounded transition-colors">
+                            <button onclick="deleteTopic(${topic.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
                         </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                populateTopicFilters();
             } catch (error) {
                 showToast('Failed to load topics', 'error');
             }
         }
 
-        function getLevelColor(level) {
-            switch(level) {
-                case 'BEGINNER': return 'bg-secondary/10 text-secondary';
-                case 'INTERMEDIATE': return 'bg-primary/10 text-primary';
-                case 'ADVANCED': return 'bg-tertiary/10 text-tertiary';
-                default: return 'bg-surface-container text-on-surface-variant';
-            }
+        function populateTopicFilters() {
+            const options = allTopicsCache.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+            document.getElementById('flashcardTopicFilter').innerHTML = '<option value="">-- Select a topic --</option>' + options;
+            document.getElementById('quizTopicFilter').innerHTML = '<option value="">-- Select a topic --</option>' + options;
         }
 
-        // Topic Modal
         document.getElementById('addTopicBtn').addEventListener('click', () => {
             editingTopicId = null;
             document.getElementById('topicModalTitle').textContent = 'Add Topic';
             document.getElementById('topicForm').reset();
+            document.getElementById('topicImageSection').classList.add('hidden');
+            document.getElementById('topicImagePreview').classList.add('hidden');
             document.getElementById('topicModal').classList.remove('hidden');
         });
 
-        document.getElementById('closeTopicModal').addEventListener('click', () => {
-            document.getElementById('topicModal').classList.add('hidden');
-        });
-
-        document.getElementById('cancelTopicBtn').addEventListener('click', () => {
-            document.getElementById('topicModal').classList.add('hidden');
-        });
+        document.getElementById('closeTopicModal').addEventListener('click', () => document.getElementById('topicModal').classList.add('hidden'));
+        document.getElementById('cancelTopicBtn').addEventListener('click', () => document.getElementById('topicModal').classList.add('hidden'));
 
         document.getElementById('topicForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const data = {
                 title: document.getElementById('topicTitle').value,
                 description: document.getElementById('topicDescription').value,
-                level: document.getElementById('topicLevel').value,
-                imageUrl: document.getElementById('topicImageUrl').value || `https://picsum.photos/seed/${Date.now()}/400/240`
+                level: document.getElementById('topicLevel').value
             };
 
             try {
                 if (editingTopicId) {
                     await api.adminUpdateTopic(editingTopicId, data);
                     showToast('Topic updated successfully!', 'success');
+                    document.getElementById('topicModal').classList.add('hidden');
                 } else {
-                    await api.adminCreateTopic(data);
-                    showToast('Topic created successfully!', 'success');
+                    const created = await api.adminCreateTopic(data);
+                    showToast('Topic created! Bạn có thể upload ảnh ngay bên dưới.', 'success');
+                    editingTopicId = created.id;
+                    document.getElementById('topicModalTitle').textContent = 'Edit Topic';
+                    document.getElementById('topicImageSection').classList.remove('hidden');
                 }
-                document.getElementById('topicModal').classList.add('hidden');
                 loadTopics();
             } catch (error) {
                 showToast(error.message || 'Failed to save topic', 'error');
             }
         });
 
-        // Edit/Delete Topic (exposed to window for inline onclick)
         window.editTopic = async (id) => {
             editingTopicId = id;
             document.getElementById('topicModalTitle').textContent = 'Edit Topic';
-
             try {
                 const topic = await api.getTopicDetail(id);
                 document.getElementById('topicTitle').value = topic.title;
                 document.getElementById('topicDescription').value = topic.description;
                 document.getElementById('topicLevel').value = topic.level;
-                document.getElementById('topicImageUrl').value = topic.imageUrl || '';
+                document.getElementById('topicImageSection').classList.remove('hidden');
+                const preview = document.getElementById('topicImagePreview');
+                if (topic.imageUrl) {
+                    preview.src = imageSrc(topic.imageUrl);
+                    preview.classList.remove('hidden');
+                } else {
+                    preview.classList.add('hidden');
+                }
                 document.getElementById('topicModal').classList.remove('hidden');
             } catch (error) {
                 showToast('Failed to load topic', 'error');
@@ -349,7 +514,6 @@
 
         window.deleteTopic = async (id) => {
             if (!confirm('Are you sure you want to delete this topic?')) return;
-
             try {
                 await api.adminDeleteTopic(id);
                 showToast('Topic deleted successfully!', 'success');
@@ -359,51 +523,393 @@
             }
         };
 
-        // Load Flashcards (simplified)
-        async function loadFlashcards() {
-            const grid = document.getElementById('flashcardsGrid');
-            grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Flashcard management coming soon...</div>';
-        }
-
-        // Load Quizzes (simplified)
-        async function loadQuizzes() {
-            const list = document.getElementById('quizzesList');
-            list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Quiz management coming soon...</div>';
-        }
-
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to logout?')) {
-                clearAuth();
-                window.location.href = 'login.html';
+        document.getElementById('uploadTopicImageBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('topicImageFile');
+            if (!fileInput.files[0]) { showToast('Chọn 1 file ảnh trước', 'error'); return; }
+            try {
+                const updated = await api.adminUploadTopicImage(editingTopicId, fileInput.files[0]);
+                const preview = document.getElementById('topicImagePreview');
+                preview.src = imageSrc(updated.imageUrl);
+                preview.classList.remove('hidden');
+                fileInput.value = '';
+                showToast('Image uploaded!', 'success');
+                loadTopics();
+            } catch (error) {
+                showToast(error.message || 'Failed to upload image', 'error');
             }
         });
 
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        // ═══════════════════════ Flashcards ═══════════════════════
+
+        document.getElementById('flashcardTopicFilter').addEventListener('change', (e) => {
+            currentFlashcardTopicId = e.target.value || null;
+            loadFlashcards();
+        });
+
+        async function loadFlashcards() {
+            const grid = document.getElementById('flashcardsGrid');
+            if (!currentFlashcardTopicId) {
+                grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Chọn 1 Topic để xem Flashcard</div>';
+                return;
+            }
+            renderFlashcardsSkeleton();
+            try {
+                const flashcards = await api.getFlashcards(currentFlashcardTopicId);
+                if (flashcards.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Chưa có Flashcard nào trong Topic này</div>';
+                    return;
+                }
+                grid.innerHTML = flashcards.map(fc => `
+                    <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm p-4 flex flex-col gap-2">
+                        <img src="${imageSrc(fc.imageUrl)}" alt="" class="w-full h-32 object-cover rounded-xl"/>
+                        <div class="font-body-lg font-semibold text-on-surface">${fc.word}</div>
+                        <div class="font-body-md text-on-surface-variant">${fc.meaning}</div>
+                        <div class="font-body-sm text-on-surface-variant italic">${fc.example}</div>
+                        <div class="flex justify-end gap-2 mt-2">
+                            <button onclick="editFlashcard(${fc.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
+                                <span class="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button onclick="deleteFlashcard(${fc.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
+                                <span class="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showToast('Failed to load flashcards', 'error');
+            }
         }
 
-        // Initialize - load topics on page load
-        // Wait for DOM to be fully ready
+        document.getElementById('addFlashcardBtn').addEventListener('click', () => {
+            if (!currentFlashcardTopicId) { showToast('Chọn 1 Topic trước', 'error'); return; }
+            editingFlashcardId = null;
+            document.getElementById('flashcardModalTitle').textContent = 'Add Flashcard';
+            document.getElementById('flashcardForm').reset();
+            document.getElementById('flashcardTopicId').value = currentFlashcardTopicId;
+            document.getElementById('flashcardImageSection').classList.add('hidden');
+            document.getElementById('flashcardImagePreview').classList.add('hidden');
+            document.getElementById('flashcardModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeFlashcardModal').addEventListener('click', () => document.getElementById('flashcardModal').classList.add('hidden'));
+        document.getElementById('cancelFlashcardBtn').addEventListener('click', () => document.getElementById('flashcardModal').classList.add('hidden'));
+
+        document.getElementById('flashcardForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                word: document.getElementById('flashcardWord').value,
+                meaning: document.getElementById('flashcardMeaning').value,
+                example: document.getElementById('flashcardExample').value,
+                audioUrl: document.getElementById('flashcardAudioUrl').value || null
+            };
+
+            try {
+                if (editingFlashcardId) {
+                    await api.adminUpdateFlashcard(editingFlashcardId, data);
+                    showToast('Flashcard updated!', 'success');
+                    document.getElementById('flashcardModal').classList.add('hidden');
+                } else {
+                    const created = await api.adminCreateFlashcard(document.getElementById('flashcardTopicId').value, data);
+                    showToast('Flashcard created! Bạn có thể upload ảnh ngay bên dưới.', 'success');
+                    editingFlashcardId = created.id;
+                    document.getElementById('flashcardModalTitle').textContent = 'Edit Flashcard';
+                    document.getElementById('flashcardImageSection').classList.remove('hidden');
+                }
+                loadFlashcards();
+            } catch (error) {
+                showToast(error.message || 'Failed to save flashcard', 'error');
+            }
+        });
+
+        window.editFlashcard = async (id) => {
+            // Không có GET /api/flashcards/{id} riêng — lấy lại từ danh sách của Topic hiện tại
+            const flashcards = await api.getFlashcards(currentFlashcardTopicId);
+            const fc = flashcards.find(f => f.id === id);
+            if (!fc) { showToast('Flashcard not found', 'error'); return; }
+
+            editingFlashcardId = id;
+            document.getElementById('flashcardModalTitle').textContent = 'Edit Flashcard';
+            document.getElementById('flashcardWord').value = fc.word;
+            document.getElementById('flashcardMeaning').value = fc.meaning;
+            document.getElementById('flashcardExample').value = fc.example;
+            document.getElementById('flashcardAudioUrl').value = fc.audioUrl || '';
+            document.getElementById('flashcardImageSection').classList.remove('hidden');
+            const preview = document.getElementById('flashcardImagePreview');
+            if (fc.imageUrl) {
+                preview.src = imageSrc(fc.imageUrl);
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+            document.getElementById('flashcardModal').classList.remove('hidden');
+        };
+
+        window.deleteFlashcard = async (id) => {
+            if (!confirm('Are you sure you want to delete this flashcard?')) return;
+            try {
+                await api.adminDeleteFlashcard(id);
+                showToast('Flashcard deleted!', 'success');
+                loadFlashcards();
+            } catch (error) {
+                showToast(error.message || 'Failed to delete flashcard', 'error');
+            }
+        };
+
+        document.getElementById('uploadFlashcardImageBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('flashcardImageFile');
+            if (!fileInput.files[0]) { showToast('Chọn 1 file ảnh trước', 'error'); return; }
+            try {
+                const updated = await api.adminUploadFlashcardImage(editingFlashcardId, fileInput.files[0]);
+                const preview = document.getElementById('flashcardImagePreview');
+                preview.src = imageSrc(updated.imageUrl);
+                preview.classList.remove('hidden');
+                fileInput.value = '';
+                showToast('Image uploaded!', 'success');
+                loadFlashcards();
+            } catch (error) {
+                showToast(error.message || 'Failed to upload image', 'error');
+            }
+        });
+
+        // ═══════════════════════ Quizzes ═══════════════════════
+
+        document.getElementById('quizTopicFilter').addEventListener('change', (e) => {
+            currentQuizTopicId = e.target.value || null;
+            loadQuizzes();
+        });
+
+        async function loadQuizzes() {
+            const list = document.getElementById('quizzesList');
+            if (!currentQuizTopicId) {
+                list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Chọn 1 Topic để xem Quiz</div>';
+                return;
+            }
+            renderQuizzesSkeleton();
+            try {
+                const quizzes = await api.getQuizzesByTopic(currentQuizTopicId);
+                if (quizzes.length === 0) {
+                    list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Chưa có Quiz nào trong Topic này</div>';
+                    return;
+                }
+                list.innerHTML = quizzes.map(q => `
+                    <div class="flex justify-between items-center p-4">
+                        <div class="font-body-md font-semibold text-on-surface">${q.title}</div>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="manageQuestions(${q.id})" class="px-3 py-1.5 font-label-sm border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                                Manage Questions
+                            </button>
+                            <button onclick="editQuiz(${q.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
+                                <span class="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button onclick="deleteQuiz(${q.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
+                                <span class="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showToast('Failed to load quizzes', 'error');
+            }
+        }
+
+        document.getElementById('addQuizBtn').addEventListener('click', () => {
+            if (!currentQuizTopicId) { showToast('Chọn 1 Topic trước', 'error'); return; }
+            editingQuizId = null;
+            document.getElementById('quizModalTitle').textContent = 'Add Quiz';
+            document.getElementById('quizForm').reset();
+            document.getElementById('quizTopicId').value = currentQuizTopicId;
+            document.getElementById('quizModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeQuizModal').addEventListener('click', () => document.getElementById('quizModal').classList.add('hidden'));
+        document.getElementById('cancelQuizBtn').addEventListener('click', () => document.getElementById('quizModal').classList.add('hidden'));
+
+        document.getElementById('quizForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = { title: document.getElementById('quizTitle').value };
+            try {
+                if (editingQuizId) {
+                    await api.adminUpdateQuiz(editingQuizId, data);
+                    showToast('Quiz updated!', 'success');
+                } else {
+                    await api.adminCreateQuiz(document.getElementById('quizTopicId').value, data);
+                    showToast('Quiz created!', 'success');
+                }
+                document.getElementById('quizModal').classList.add('hidden');
+                loadQuizzes();
+            } catch (error) {
+                showToast(error.message || 'Failed to save quiz', 'error');
+            }
+        });
+
+        window.editQuiz = async (id) => {
+            const quizzes = await api.getQuizzesByTopic(currentQuizTopicId);
+            const quiz = quizzes.find(q => q.id === id);
+            if (!quiz) { showToast('Quiz not found', 'error'); return; }
+            editingQuizId = id;
+            document.getElementById('quizModalTitle').textContent = 'Edit Quiz';
+            document.getElementById('quizTitle').value = quiz.title;
+            document.getElementById('quizModal').classList.remove('hidden');
+        };
+
+        window.deleteQuiz = async (id) => {
+            if (!confirm('Are you sure? Nếu Quiz đã có người làm bài, thao tác sẽ bị từ chối (409).')) return;
+            try {
+                await api.adminDeleteQuiz(id);
+                showToast('Quiz deleted!', 'success');
+                loadQuizzes();
+            } catch (error) {
+                showToast(error.message || 'Failed to delete quiz', 'error');
+            }
+        };
+
+        // ═══════════════════════ Quiz Questions ═══════════════════════
+
+        window.manageQuestions = async (quizId) => {
+            currentQuestionsQuizId = quizId;
+            document.getElementById('questionsModalTitle').textContent = 'Manage Questions';
+            document.getElementById('questionForm').classList.add('hidden');
+            await loadQuestions();
+            document.getElementById('questionsModal').classList.remove('hidden');
+        };
+
+        async function loadQuestions() {
+            const list = document.getElementById('questionsList');
+            try {
+                currentQuestionsCache = await api.adminGetQuestionsForQuiz(currentQuestionsQuizId);
+                if (currentQuestionsCache.length === 0) {
+                    list.innerHTML = '<div class="text-center p-stack-md text-on-surface-variant">Chưa có câu hỏi nào</div>';
+                    return;
+                }
+                list.innerHTML = currentQuestionsCache.map(q => `
+                    <div class="border-2 border-outline-variant rounded-xl p-4">
+                        <div class="font-body-md font-semibold text-on-surface mb-2">${q.question}</div>
+                        <ul class="mb-2 flex flex-col gap-1">
+                            ${q.options.map(opt => `
+                                <li class="font-body-sm ${opt === q.correctAnswer ? 'text-secondary font-bold' : 'text-on-surface-variant'}">
+                                    ${opt === q.correctAnswer ? '✓' : '•'} ${opt}
+                                </li>
+                            `).join('')}
+                        </ul>
+                        <div class="flex justify-end gap-2">
+                            <button onclick="editQuestion(${q.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
+                                <span class="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button onclick="deleteQuestion(${q.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
+                                <span class="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('[loadQuestions]', error);
+                showToast('Failed to load questions', 'error');
+            }
+        }
+
+        document.getElementById('closeQuestionsModal').addEventListener('click', () => document.getElementById('questionsModal').classList.add('hidden'));
+
+        function addOptionRow(value = '', isCorrect = false) {
+            optionRowCount++;
+            const rowId = `opt_${optionRowCount}`;
+            const container = document.getElementById('optionsContainer');
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            row.dataset.rowId = rowId;
+            row.innerHTML = `
+                <input type="radio" name="correctOption" value="${rowId}" ${isCorrect ? 'checked' : ''} class="w-4 h-4 accent-primary"/>
+                <input type="text" class="option-text flex-1 bg-surface-container-low border-2 border-outline-variant rounded-2xl px-3 py-2 font-body-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" value="${value}" required/>
+                <button type="button" class="remove-option text-error hover:opacity-70 p-1">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            `;
+            row.querySelector('.remove-option').addEventListener('click', () => {
+                if (container.children.length <= 2) { showToast('Cần ít nhất 2 lựa chọn', 'error'); return; }
+                row.remove();
+            });
+            container.appendChild(row);
+        }
+
+        document.getElementById('addOptionBtn').addEventListener('click', () => addOptionRow());
+
+        function resetQuestionForm() {
+            document.getElementById('questionId').value = '';
+            document.getElementById('questionText').value = '';
+            document.getElementById('optionsContainer').innerHTML = '';
+            optionRowCount = 0;
+            addOptionRow();
+            addOptionRow();
+        }
+
+        document.getElementById('addQuestionBtn').addEventListener('click', () => {
+            editingQuestionId = null;
+            resetQuestionForm();
+            document.getElementById('questionForm').classList.remove('hidden');
+        });
+
+        window.editQuestion = (id) => {
+            const q = currentQuestionsCache.find(item => item.id === id);
+            if (!q) return;
+            editingQuestionId = id;
+            document.getElementById('questionId').value = id;
+            document.getElementById('questionText').value = q.question;
+            document.getElementById('optionsContainer').innerHTML = '';
+            optionRowCount = 0;
+            q.options.forEach(opt => addOptionRow(opt, opt === q.correctAnswer));
+            document.getElementById('questionForm').classList.remove('hidden');
+        };
+
+        document.getElementById('cancelQuestionBtn').addEventListener('click', () => {
+            document.getElementById('questionForm').classList.add('hidden');
+        });
+
+        document.getElementById('questionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const rows = [...document.getElementById('optionsContainer').children];
+            const options = rows.map(row => row.querySelector('.option-text').value.trim());
+            const checkedRadio = document.querySelector('input[name="correctOption"]:checked');
+            if (!checkedRadio) { showToast('Chọn 1 đáp án đúng', 'error'); return; }
+            const checkedRow = rows.find(row => row.dataset.rowId === checkedRadio.value);
+            const correctAnswer = checkedRow.querySelector('.option-text').value.trim();
+
+            const data = {
+                question: document.getElementById('questionText').value,
+                options,
+                correctAnswer
+            };
+
+            try {
+                if (editingQuestionId) {
+                    await api.adminUpdateQuestion(editingQuestionId, data);
+                    showToast('Question updated!', 'success');
+                } else {
+                    await api.adminCreateQuestion(currentQuestionsQuizId, data);
+                    showToast('Question created!', 'success');
+                }
+                document.getElementById('questionForm').classList.add('hidden');
+                loadQuestions();
+            } catch (error) {
+                console.error('[saveQuestion]', error);
+                showToast(error.message || 'Failed to save question', 'error');
+            }
+        });
+
+        window.deleteQuestion = async (id) => {
+            if (!confirm('Are you sure you want to delete this question?')) return;
+            try {
+                await api.adminDeleteQuestion(id);
+                showToast('Question deleted!', 'success');
+                loadQuestions();
+            } catch (error) {
+                showToast(error.message || 'Failed to delete question', 'error');
+            }
+        };
+
+        // ═══════════════════════ Init ═══════════════════════
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializePage);
+            document.addEventListener('DOMContentLoaded', loadTopics);
         } else {
-            initializePage();
-        }
-
-        function initializePage() {
-            console.log('[Admin] Initializing admin page...');
-            console.log('[Admin] Document ready state:', document.readyState);
-            console.log('[Admin] Topics panel exists?', !!document.getElementById('topicsPanel'));
-            console.log('[Admin] Topics panel visible?', !document.getElementById('topicsPanel')?.classList.contains('hidden'));
-            console.log('[Admin] tbody element exists?', !!document.getElementById('topicsTableBody'));
-
-            // Load topics immediately
-            console.log('[Admin] Calling loadTopics()...');
             loadTopics();
         }
     </script>
