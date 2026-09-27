@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX uk_quizzes_topic_title_lower ON quizzes (topic_id, LOWER(title));

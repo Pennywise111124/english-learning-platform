@@ -48,7 +48,7 @@ app:
   ai:
     base-url: https://api.xkiro.com/v1
     api-key: ${XKIRO_API_KEY}
-    model: minimax/minimax-m3:free
+    model: qwen/qwen3.8-omni-flash:free
     connect-timeout-ms: 5000
     read-timeout-ms: 30000
     max-retries: 2

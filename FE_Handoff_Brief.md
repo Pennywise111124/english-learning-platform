@@ -1,273 +1,230 @@
-# FRONTEND HANDOFF BRIEF
-# Đưa file này cho AI Agent (Claude qua 9Router/Kiro) để code phần Frontend
+# FRONTEND — TÀI LIỆU TRA CỨU NHANH KHI CODE THÊM TRANG
+*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9. File này giờ dùng khi build tiếp trang mới ở M10+, tra nhanh contract API + quy ước design system, không cần đọc lại toàn bộ Requirements.md mỗi lần.)*
 
-**Repo:** [điền GitHub repo URL của bạn ở đây]
-**Vai trò của bạn (Agent):** Code toàn bộ Frontend trong thư mục `frontend/`. **KHÔNG động vào bất kỳ thư mục nào khác của repo** (đặc biệt là code Backend Java/Spring Boot) — người dùng đang tự code Backend riêng trên máy khác, đụng vào sẽ gây conflict khi merge git.
+**Repo:** `github.com/Pennywise111124/english-learning-platform`, nhánh `main`
+**Vai trò:** code trong thư mục `frontend/`. Không động vào Backend Java (thư mục gốc, ngoài `frontend/`).
 
 ---
 
 ## 1. Ràng buộc bắt buộc
 
-- **Chỉ dùng HTML/CSS/JavaScript thuần + Tailwind CSS** (qua CDN `https://cdn.tailwindcss.com`, cấu hình tuỳ biến qua `js/tailwind-config.js`). **Không** dùng React/Vue/framework nào khác, không cần build tool/npm. **[Sửa 05/09/2026]** Đổi từ Bootstrap (bản brief gốc) sang Tailwind — quyết định thực tế đã áp dụng khi code Frontend, brief gốc ghi nhầm.
-- Gọi REST API bằng `fetch` thuần.
-- Kết nối WebSocket bằng `SockJS + STOMP` (qua CDN).
-- **Được phép dùng `localStorage`** để lưu JWT token (đây là ứng dụng web thật chạy trên trình duyệt người dùng, khác với môi trường sandbox — `localStorage` hoạt động bình thường ở đây).
-- Toàn bộ file đặt trong thư mục `frontend/` theo đúng cấu trúc bên dưới.
+- HTML/CSS/JavaScript thuần + Tailwind CSS qua CDN (`cdn.tailwindcss.com`, config ở `js/tailwind-config.js`). Không React/Vue/build tool.
+- Gọi REST qua `js/api.js` (đã có sẵn `request()` engine — tự gắn JWT, tự refresh token khi 401, tự gắn header `ngrok-skip-browser-warning` cho môi trường dev qua tunnel). **Không tự viết `fetch()` riêng trong từng trang** — luôn thêm hàm mới vào `api.js` rồi import.
+- WebSocket qua `js/chat.js` (SockJS + STOMP) — chỉ dùng cho trang Chat, không dùng lại pattern này cho trang khác trừ khi thật sự cần realtime.
+- `localStorage` dùng cho: JWT (`linguistai_token`/`linguistai_refresh_token`), user cache (`linguistai_user`), theme (`linguistai_theme`), trạng thái sidebar thu gọn (`linguistai_sidebar_collapsed`).
 
-## 2. Cấu trúc thư mục bắt buộc
+## 2. Cấu trúc thư mục hiện tại
 
 ```
 frontend/
- ├── index.html          (Landing page — trang chủ công khai, chưa đăng nhập)
- ├── login.html
- ├── register.html
- ├── chat.html            (trang chat AI — yêu cầu đã đăng nhập)
- ├── topics.html          (duyệt/tìm kiếm danh sách chủ đề — grid + search/filter/pagination)
- ├── topic-detail.html    (chi tiết 1 Topic — overview + 2 lối vào: Flashcards / Quiz)
- ├── quiz.html            (làm quiz)
- ├── progress.html        (tiến độ học + lịch sử quiz)
- ├── profile.html         (thông tin cá nhân, avatar, đổi mật khẩu)
- ├── admin.html           (trang quản trị nội dung — chỉ ADMIN)
- ├── js/
- │    ├── api.js               (helper fetch, tự động gắn header Authorization: Bearer <JWT>)
- │    ├── auth.js               (login/register, lưu/đọc JWT từ localStorage, redirect nếu chưa đăng nhập)
- │    ├── chat.js               (kết nối WebSocket/STOMP cho trang chat)
- │    ├── mockApi.js            (mock data — xem mục 7, sẽ thay bằng api.js thật khi nối Backend)
- │    ├── navbar.js             (navbar dùng chung giữa các trang)
- │    └── tailwind-config.js    (cấu hình tuỳ biến Tailwind — theme, màu sắc riêng của project)
- └── css/
-      └── style.css       (style tùy chỉnh ngoài Tailwind, nếu cần)
+├── index.html (landing page công khai — có footer riêng, không dùng footer.js)
+├── chat.html (yêu cầu đăng nhập)
+├── topics.html (PUBLIC — khách xem được)
+├── topic-detail.html (PUBLIC — khách xem được)
+├── quiz.html (yêu cầu đăng nhập — checkAuth() ngay đầu)
+├── progress.html (yêu cầu đăng nhập)
+├── profile.html (yêu cầu đăng nhập)
+├── admin.html (yêu cầu đăng nhập + role ADMIN — checkAdmin())
+├── test-websocket.html (công cụ test riêng, không tính vào bộ chính)
+├── js/
+│ ├── api.js (fetch engine + toàn bộ hàm gọi API — xem mục 4)
+│ ├── auth.js (JWT storage, checkAuth()/checkAdmin(), getUser()/setUser())
+│ ├── config.js (API_BASE_URL — SỬA DUY NHẤT Ở ĐÂY khi đổi domain Backend; imageSrc(path))
+│ ├── navbar.js (sidebar trái thu gọn được + topbar — trang đã đăng nhập; topbar rút gọn — khách)
+│ ├── footer.js (initFooter() — dùng chung mọi trang app, TRỪ index.html)
+│ ├── authModal.js (modal Login/Sign Up dùng chung — thay login.html/register.html cũ, đã bỏ hẳn)
+│ ├── toast.js (showToast(message, type))
+│ ├── theme.js (dark/light mode)
+│ ├── chat.js (STOMP/SockJS, chỉ chat.html dùng)
+│ └── tailwind-config.js (design token — xem mục 5)
+└── css/
+└── style.css (CSS custom property màu + component class + skeleton/animation)
 ```
 
-**Quy tắc điều hướng:** `index.html`, `login.html`, `register.html` là trang công khai (không cần JWT). Tất cả trang còn lại (`chat.html`, `topics.html`, `quiz.html`, `progress.html`, `profile.html`) phải kiểm tra JWT trong `localStorage` khi load — nếu không có, redirect về `login.html`. `admin.html` kiểm tra thêm role `ADMIN` từ JWT payload.
+**Không còn `login.html`/`register.html`, không còn `mockApi.js`** — đã xoá hẳn ở M9.
 
-## 3. Base URL & Auth convention
+## 3. Base URL & Auth
 
-- Backend chạy tại: `http://localhost:8080` (đổi lại nếu người dùng báo port khác)
-- Mọi API (trừ `/api/auth/**`) yêu cầu header: `Authorization: Bearer <JWT access token>`
-- Sau khi login (`POST /api/auth/login`) thành công, lưu token vào `localStorage`, mọi request sau đó tự động đính kèm header này qua `api.js`
-- Nếu API trả `401 Unauthorized` (thiếu/sai JWT) → xóa token, redirect về trang login
-- Nếu API trả `404` cho resource không thuộc quyền sở hữu → hiển thị thông báo lỗi phù hợp (Backend luôn trả 404 cho case này, không dùng 403 — kể cả khi Conversation/Topic/Quiz tồn tại nhưng không thuộc user)
+- `API_BASE_URL` khai báo **duy nhất** ở `js/config.js` — đổi 1 chỗ này khi backend đổi domain (VD: URL ngrok mới mỗi phiên dev).
+- Login nhận **username hoặc email** cùng 1 field (Backend tự thử cả 2).
+- `api.js` tự động: gắn `Authorization: Bearer <token>`, tự gọi `/api/auth/refresh` khi gặp `401` rồi thử lại request gốc 1 lần, nếu vẫn thất bại mới `clearAuth()` + redirect `index.html?auth=login`.
+- Route bị chặn bởi `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal Login qua query param). Logout chủ động → redirect `index.html` **trơn**, không kèm query param.
 
-## 4. Danh sách API Endpoint (đúng theo Requirements đã chốt)
+## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M9)
 
 ### Auth
+
 ```
-POST /api/auth/register   {email, username, password}
-POST /api/auth/login      {username, password} → {accessToken, ...}
-```
-
-### Chat (trang chat.html) — REST (M4) + WebSocket Streaming (M6), cả 2 đã xong
-
-POST /api/conversations
-GET /api/conversations?page=&size=
-GET /api/conversations/{id} → có thêm field updatedAt (xem mục 8)
-GET /api/conversations/{id}/messages
-POST /api/conversations/{id}/messages {content: string} → trả về Message của AI (sender, content, correction, explanation, createdAt) — vẫn dùng được, nhưng khuyến nghị dùng WebSocket bên dưới để có hiệu ứng "đang gõ" thay vì chờ 1 cục
-
-
-**WS `/ws/chat` (STOMP qua SockJS) — chi tiết bắt buộc để implement `chat.js`:**
-
-- **Kết nối:** `new SockJS('http://localhost:8080/ws/chat')`, JWT gửi qua STOMP CONNECT header (KHÔNG phải HTTP header thường):
-
-```js
-  client.connectHeaders = { Authorization: 'Bearer ' + token };
+POST /api/auth/register {username, email, password} → 200, không có body
+POST /api/auth/login {username, password} → {accessToken, refreshToken, user}
+POST /api/auth/refresh {refreshToken} → {accessToken}
 ```
 
-  Nếu JWT thiếu/sai, server từ chối kết nối kèm 1 STOMP ERROR frame có `message` rõ ràng trước khi đóng — bắt qua `onStompError` để hiển thị lỗi cho User.
+### Users/me — cần JWT
 
-- **Subscribe (2 kênh riêng biệt cho 1 conversation):**
-  - `/topic/conversations/{id}` — nhận **message hoàn chỉnh** của AI (đúng lúc AI trả lời xong), payload là `MessageResponse` đầy đủ (xem mục 8).
-  - `/topic/conversations/{id}/typing` — nhận **từng chunk text thô** (không phải JSON, là plain string) trong lúc AI đang trả lời, dùng để hiển thị hiệu ứng gõ chữ. Nối các chunk lại theo thứ tự nhận được để hiện dần lên UI, KHÔNG đợi hết mới hiện.
-  - Nếu subscribe vào conversation không thuộc quyền sở hữu → nhận STOMP ERROR frame kèm message, sau đó bị ngắt kết nối (hành vi có chủ đích, không phải bug).
-
-- **Gửi tin nhắn:** publish tới `/app/chat.sendMessage/{id}`, body `{content: string}` (giống hệt body REST). Không có response trực tiếp qua publish — kết quả luôn tới qua 2 kênh subscribe ở trên.
-
-- **Kênh lỗi riêng:** subscribe thêm `/user/queue/errors` để nhận lỗi phát sinh **sau khi** đã gửi thành công (VD: AI provider lỗi giữa lúc đang stream) — payload dạng `{message, status, timestamp}` (giống format lỗi REST ở mục 5).
-
-- **Gợi ý luồng UI:** gửi tin nhắn → xoá/reset ô "đang gõ" → nối dần text từ kênh `/typing` → khi kênh chính (không phải `/typing`) nhận được message → thay hẳn ô "đang gõ" bằng bubble chat hoàn chỉnh (đã có `correction`/`explanation` nếu có).
-
-### Topic — Duyệt/Tìm kiếm (trang topics.html)
 ```
-GET  /api/topics?keyword=&level=&page=&size=&sort=
+GET /api/users/me → User object (mục 6)
+POST /api/users/me/avatar multipart, field "file" → User object
+POST /api/users/me/password {currentPassword, newPassword} → 200, không có body
+GET /api/users/me/progress → mảng UserProgress (mục 6)
+GET /api/users/me/quiz-attempts?page=&size= → PageResponse<QuizAttempt> — TỔNG HỢP mọi Quiz
 ```
 
-### Topic — Chi tiết (trang topic-detail.html)
+### Topics — **PUBLIC**, không cần JWT
+
 ```
-GET  /api/topics/{id}
-GET  /api/topics/{id}/flashcards
-GET  /api/topics/{id}/quizzes
+GET /api/topics?page=&size= → PageResponse<Topic> (CHƯA có keyword/level/sort — để dành M10)
+GET /api/topics/{id} → Topic
+GET /api/topics/{id}/flashcards → mảng Flashcard (không phân trang)
+GET /api/topics/{id}/quizzes → mảng { id, title, questionCount } — PUBLIC, chỉ tên+số câu hỏi, KHÔNG phải nội dung
 ```
 
-### Quiz (trang quiz.html)
+### Quizzes — cần JWT (khác GET /api/topics/{id}/quizzes ở trên)
+
 ```
-GET  /api/topics/{id}/quizzes
-GET  /api/quizzes/{id}                    (KHÔNG chứa đáp án đúng — chỉ hiển thị câu hỏi + lựa chọn)
-POST /api/quizzes/{id}/submit             {answers: [{questionId, answer}]}
-GET  /api/quizzes/{id}/attempts?page=&size=
+GET /api/quizzes/{id} → { id, title, questions: [{id, question, options}] } — KHÔNG có correctAnswer
+POST /api/quizzes/{id}/submit {answers: [{questionId, answer}]} → QuizResult (mục 6)
+GET /api/quizzes/{id}/attempts?page=&size= → PageResponse<QuizAttempt> — CHỈ riêng Quiz này
 ```
 
-### Progress (trang progress.html)
+### Conversations — cần JWT
+
 ```
-GET /api/users/me/progress
+POST /api/conversations (không cần body) → Conversation
+GET /api/conversations?page=&size= → PageResponse<Conversation>
+GET /api/conversations/{id} → Conversation
+GET /api/conversations/{id}/messages → mảng Message (không phân trang)
+POST /api/conversations/{id}/messages {content} → Message (đây là USER message vừa lưu — KHÔNG phải câu trả lời AI, câu trả lời AI luôn qua WebSocket, xem mục 5)
 ```
 
-### Profile (trang profile.html)
-```
-POST /api/users/me/avatar (multipart/form-data, field name: "file") → trả về full User object (xem shape "Auth — user object" ở mục 8), gồm avatarUrl mới sau khi upload thành công
-```
-*(Lưu ý: hiện tại chưa có endpoint `GET /api/users/me` riêng để lấy lại thông tin profile — nếu `profile.html` cần hiển thị avatar/thông tin user mà không qua hành động upload, tạm thời lấy từ `user` object đã lưu trong `localStorage` lúc login, cập nhật lại `localStorage` sau mỗi lần avatar upload thành công bằng chính response trả về từ API này)*
+### WS `/ws/chat` (STOMP qua SockJS)
+Không đổi từ M6 — chi tiết đầy đủ trong `js/chat.js` (đã code sẵn, dùng lại `connectChat()`/`subscribeConversation()`/`sendChatMessage()`/`unsubscribeConversation()`, không viết lại từ đầu).
 
-### Admin (trang admin.html — chỉ hiện nếu role = ADMIN)
+### Admin — cần JWT + role ADMIN
+
 ```
-POST/PUT/DELETE /api/admin/topics, /api/admin/topics/{id}
-POST /api/admin/topics/{id}/image        (multipart/form-data, field name: "file") → trả về full Topic object (đã có imageUrl mới)
+POST/PUT/DELETE /api/admin/topics, /api/admin/topics/{id} (KHÔNG có field imageUrl trong body — ảnh set riêng)
+POST /api/admin/topics/{id}/image multipart "file" → Topic
 POST /api/admin/topics/{id}/flashcards
-PUT/DELETE /api/admin/flashcards/{id}
-POST /api/admin/flashcards/{id}/image    (multipart/form-data, field name: "file") → trả về full Flashcard object (đã có imageUrl mới)
-POST/PUT/DELETE /api/admin/topics/{id}/quizzes, /api/admin/quizzes/{id}
+PUT/DELETE /api/admin/flashcards/{id} (KHÔNG có field imageUrl trong body)
+POST /api/admin/flashcards/{id}/image multipart "file" → Flashcard
+POST/PUT/DELETE /api/admin/topics/{id}/quizzes, /api/admin/quizzes/{id} (title phải duy nhất trong cùng Topic, không phân biệt hoa/thường — 409 nếu trùng)
+GET /api/admin/quizzes/{quizId}/questions → mảng { id, question, options, correctAnswer } — CÓ đáp án đúng, chỉ dùng điền sẵn form sửa
 POST/PUT/DELETE /api/admin/quizzes/{id}/questions, /api/admin/questions/{id}
 ```
 
-*(Các endpoint v1.1 — Dictation, Vocabulary/SRS, Search nâng cao — sẽ bổ sung sau khi Backend làm tới M10-M12, chưa cần code ở bản đầu)*
+*(Dictation/Vocabulary-SRS/Search nâng cao — chưa có, chờ M10-M12)*
 
 ## 5. Quy ước chung
 
-- **Pagination:** query param `page` (mặc định 0), `size` (mặc định 20, tối đa 100). Response dạng `{content: [...], totalPages, totalElements, page, size}` — đây là DTO `PageResponse` tự định nghĩa ở Backend (không phải object `Page` thô của Spring Data trả thẳng ra), nhưng có cấu trúc tương thích với format quen thuộc của Spring Data Page nên FE xử lý y hệt như dự kiến ban đầu, không cần thay đổi gì
-- **Lỗi:** Backend trả JSON dạng `{message: "...", status: ...}` khi lỗi — hiển thị `message` cho người dùng
-- **Dùng mock data có chủ đích** theo đúng chỉ dẫn ở mục 7 bên dưới — đây không phải "tạm bợ" mà là cách làm việc chính thức đã chốt cho giai đoạn này (xây UI trước, nối API thật sau)
+- **Pagination:** `page` (mặc định 0), `size` (mặc định 20, tối đa 100 — vượt quá trả `400`, không tự cắt). Response `{content, totalPages, totalElements, page, size}`.
+- **Lỗi:** `{message, status, timestamp}` — hiện `message` qua `showToast()` (hành động tức thời) hoặc inline text tại khối nội dung (khi cả 1 khu vực load thất bại — không dùng toast vì tự biến mất sau 3s, người dùng dễ bỏ lỡ).
+- **Ownership sai** → luôn `404`, không `403` (không tiết lộ resource có tồn tại hay không).
+- **Chat:** câu trả lời AI KHÔNG đến qua response của `POST /api/conversations/{id}/messages` — luôn qua kênh WebSocket. Đừng nhầm request REST đó với luồng nhận trả lời.
 
-## 6. Thứ tự ưu tiên build các trang
+## 6. Shape dữ liệu thật (xác nhận qua Swagger, không phải bản nháp)
 
-Dù build UI trước với mock data, vẫn nên theo thứ tự các trang theo mức độ quan trọng: Login/Register → Landing → Chat → Topics → Topic Detail → Quiz → Progress → Profile → Admin. Điều này giúp có sản phẩm demo được sớm nhất (đăng nhập + chat) trước khi hoàn thiện các trang còn lại.
-
-## 7. CHẾ ĐỘ MOCK DATA — build toàn bộ UI trước, nối API thật sau
-
-**Yêu cầu hiện tại:** Backend chưa code xong, nhưng cần build **toàn bộ UI với dữ liệu giả (mock)** trước, để sau này chỉ cần đổi 1 lớp duy nhất sang gọi API thật — không phải sửa lại UI.
-
-**Cách bắt buộc thực hiện:**
-- Tạo 1 file riêng `js/mockApi.js` chứa các hàm mock, đặt tên **giống hệt** hàm thật sẽ có trong `api.js` sau này (VD: `getTopics(page, size)`, `getTopicDetail(id)`, `login(username, password)`...), mỗi hàm trả về `Promise` chứa dữ liệu giả **đúng cấu trúc JSON ở mục 8 bên dưới** (giả lập độ trễ mạng bằng `setTimeout` ~300-500ms cho giống thật)
-- Toàn bộ code UI (HTML/JS các trang) **chỉ được gọi qua các hàm này**, không tự bịa cấu trúc dữ liệu riêng trong từng trang
-- Sau này khi Backend xong, chỉ cần thay nội dung `api.js` (dùng `fetch` thật) theo đúng chữ ký hàm y hệt `mockApi.js` — UI không cần sửa gì
-
-## 8. DTO SHAPE (bản nháp) — mock data phải khớp đúng cấu trúc này
-
-*(Cấu trúc có thể tinh chỉnh nhẹ khi Backend implement thật, nhưng đây là cơ sở đáng tin cậy nhất hiện tại — dựa đúng theo Entity đã thiết kế trong Requirements)*
-
-**Auth — login response:**
 ```json
-{
-  "accessToken": "...",
-  "refreshToken": "...",
-  "user": { "id": 1, "username": "john", "email": "john@mail.com", "role": "USER", "avatarUrl": null }
-}
-```
-*(`avatarUrl` = `null` nếu user chưa từng upload avatar, hoặc URL thật nếu đã upload. Object `user` này — gọi là "User object" — được dùng lại y hệt ở nhiều nơi: response login, register, và response của `POST /api/users/me/avatar`, xem mục 4)*
+// User object — trả về lồng trong AuthResponse.user (login), hoặc trực tiếp (GET /api/users/me, upload avatar).
+// Riêng register KHÔNG trả object này (response rỗng, 200 không có body)
+{ "id": 1, "username": "john", "email": "john@mail.com", "role": "USER", "avatarUrl": "/uploads/avatars/<uuid>.jpg" }
+// avatarUrl là đường dẫn TƯƠNG ĐỐI — luôn qua imageSrc() (config.js) trước khi gán vào <img src>, không dùng thẳng
 
-**Topic — danh sách (paged, chuẩn Spring Data Page):**
-```json
-{
-  "content": [
-    { "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "..." }
-  ],
-  "totalPages": 5, "totalElements": 42, "page": 0, "size": 20
-}
-```
+// Topic
+{ "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "/uploads/topics/<uuid>.jpg" }
 
-**Topic — chi tiết:**
-```json
-{ "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "..." }
-```
+// Flashcard
+{ "id": 1, "word": "airport", "meaning": "sân bay", "example": "...", "imageUrl": "...", "audioUrl": null }
 
-**Flashcards theo Topic (không phân trang):**
-```json
-[
-  { "id": 1, "word": "airport", "meaning": "sân bay", "example": "...", "imageUrl": "...", "audioUrl": "..." }
-]
-```
+// Quiz — danh sách theo Topic (PUBLIC)
+{ "id": 1, "title": "Travel Vocabulary Quiz", "questionCount": 5 }
 
-**Quiz — danh sách theo Topic:**
-```json
-[ { "id": 1, "title": "Travel Vocabulary Quiz" } ]
-```
+// Quiz — chi tiết (cần JWT, KHÔNG correctAnswer)
+{ "id": 1, "title": "Travel Vocabulary Quiz", "questions": [
+  { "id": 1, "question": "What is 'airport'?", "options": ["sân bay", "khách sạn", "nhà ga", "bến xe"] }
+]}
 
-**Quiz — chi tiết (KHÔNG có correctAnswer):**
-```json
-{
-  "id": 1, "title": "Travel Vocabulary Quiz",
-  "questions": [
-    { "id": 1, "question": "What is 'airport' in Vietnamese?", "options": ["sân bay", "khách sạn", "nhà ga", "bến xe"] }
-  ]
-}
-```
+// Quiz — câu hỏi dành riêng Admin (CÓ correctAnswer)
+{ "id": 1, "question": "...", "options": [...], "correctAnswer": "sân bay" }
 
-**Quiz — kết quả sau submit:**
-```json
-{ "score": 80, "correctAnswers": 4, "totalQuestions": 5, "completedAt": "2026-08-29T10:00:00Z" }
-```
+// Quiz — kết quả submit (QuizResultResponse, KHÔNG có id)
+{ "score": 80, "correctAnswers": 4, "totalQuestions": 5, "completedAt": "2026-09-23T10:00:00Z" }
 
-**Quiz — lịch sử attempts (paged):**
-```json
-{
-  "content": [
-    { "id": 1, "score": 80, "correctAnswers": 4, "totalQuestions": 5, "completedAt": "..." }
-  ],
-  "totalPages": 1, "totalElements": 3, "page": 0, "size": 20
-}
-```
+// Quiz — 1 lần làm bài trong lịch sử (QuizAttemptResponse, CÓ id — dùng ở PageResponse<QuizAttempt> của 2 endpoint attempts)
+{ "id": 1, "score": 80, "correctAnswers": 4, "totalQuestions": 5, "completedAt": "2026-09-23T10:00:00Z" }
 
-**Progress — theo user (mảng, mỗi phần tử 1 Topic):**
-```json
-[
-  { "topicId": 1, "topicTitle": "Travel", "status": "IN_PROGRESS", "progressPercent": 60, "updatedAt": "..." }
-]
-```
+// UserProgress (mảng, không phân trang)
+{ "topicId": 1, "topicTitle": "Travel", "status": "IN_PROGRESS", "progressPercent": 60, "updatedAt": "..." }
 
-**Conversation — danh sách (paged):**
-```json
-{
-  "content": [ { "id": 1, "title": "Small talk practice", "updatedAt": "..." } ],
-  "totalPages": 1, "totalElements": 2, "page": 0, "size": 20
-}
-```
-
-**Conversation — chi tiết:**
-```json
+// Conversation
 { "id": 1, "title": "Small talk practice", "createdAt": "...", "updatedAt": "..." }
+// title có thể null cho conversation vừa tạo, chưa có tin nhắn nào — hiển thị fallback "New conversation"
+
+// Message
+{ "id": 1, "sender": "USER", "content": "...", "correction": null, "explanation": null, "createdAt": "..." }
 ```
 
-**Conversation — messages (không phân trang):**
-```json
-[
-  { "id": 1, "sender": "USER", "content": "How are you?", "correction": null, "explanation": null, "createdAt": "..." },
-  { "id": 2, "sender": "AI", "content": "I'm doing great, thanks for asking!", "correction": null, "explanation": null, "createdAt": "..." }
-]
+## 7. Design System — tóm tắt thực dụng (chi tiết đầy đủ + lý do quyết định: `Requirements.md` mục 10)
+
+**Màu:** token giữ nguyên tên MD3 (`primary`/`secondary`/`tertiary`/`error` + `-container`/`-fixed`/`-fixed-dim`/`on-*`), định nghĩa qua CSS custom property ở đầu `style.css`, đừng bao giờ hardcode mã hex trong HTML/JS — luôn dùng class Tailwind theo token.
+
+**Nút hành động chính — "nút 3D":**
+```html
+<button class="btn-3d px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all active:scale-95">
+  Label
+</button>
 ```
+Nút phụ/Cancel dùng viền thường (`border-2 border-outline-variant`), không dùng `btn-3d`.
 
-**Gửi tin nhắn — request:**
-```json
-{ "content": "How are you?" }
+**Dark mode:** mọi trang mới **bắt buộc** có script chống nháy ngay đầu `<head>`, trước `tailwind-config.js`:
+```html
+<script>
+  if (localStorage.getItem('linguistai_theme') === 'dark' ||
+      (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+  }
+</script>
 ```
+Component dùng thư viện có palette riêng (VD: Tailwind Typography `prose`) phải thêm `dark:` biến thể tường minh.
 
-**Gửi tin nhắn — response (Message của AI, dùng chung cho cả REST và kênh WebSocket chính):**
-```json
-{ "id": 3, "sender": "AI", "content": "I'm doing great, thanks!", "correction": "Not applicable.", "explanation": "No correction needed as the sentence is grammatically correct and natural.", "createdAt": "..." }
+**Khung sườn trang (app shell) — bắt buộc đúng 3 id cho mọi trang cần sidebar+topbar** (mọi trang trừ `index.html`):
+```html
+<body class="...">
+    <div id="app-sidebar-container"></div>
+    <div id="app-content" class="min-h-screen flex flex-col">
+        <div id="app-topbar-container"></div>
+        <main class="flex-grow pt-stack-md ...">
+            <!-- nội dung -->
+        </main>
+        <div id="app-footer-container"></div>
+    </div>
+
+    <script type="module">
+        import { checkAuth } from './js/auth.js';       // hoặc checkAdmin cho trang admin
+        import { initNavBar } from './js/navbar.js';
+        import { initFooter } from './js/footer.js';
+
+        checkAuth();
+        initNavBar('<activePage>');  // 'chat'|'topics'|'progress'|'admin'|'' 
+        initFooter();
+        // ... logic riêng của trang
+    </script>
+</body>
 ```
+Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) **bỏ** dòng `checkAuth();` — `navbar.js` tự nhận diện không có `user` và render topbar rút gọn cho khách, không cần code riêng.
 
-**WebSocket — kênh `/typing` (chunk đang gõ):** payload là **plain text string thô**, KHÔNG phải JSON — VD server gửi lần lượt `"Hi there"`, `"! How can"`, `" I help..."`. Nối trực tiếp các chuỗi này lại theo đúng thứ tự nhận được.
+Cần modal Login/Register trên trang PUBLIC → thêm `import { initAuthModal } from './js/authModal.js';` + gọi `initAuthModal();`. Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào bất kỳ `<button>` nào, không cần gắn `onclick` tay.
 
-**WebSocket — kênh `/user/queue/errors` (lỗi giữa lúc stream):**
-```json
-{ "message": "Không thể stream phản hồi từ AI provider", "status": 500, "timestamp": "..." }
-```
+**Skeleton loading:** mọi khu vực chờ API phải render `div.skeleton` (shimmer có sẵn trong `style.css`) ngay khi bắt đầu gọi API, không dùng chữ "Loading..." hay để trắng.
 
-**Lỗi AI provider tạm thời không khả dụng (REST):** status 503, body {message, status, timestamp}
+## 8. Checklist khi thêm 1 trang mới
 
-**Profile / User object (dùng chung cho login, register, và response của `POST /api/users/me/avatar`):**
-```json
-{ "id": 1, "username": "john", "email": "john@mail.com", "avatarUrl": "...", "role": "USER" }
-```
-*(Đây chính xác là response thật của `POST /api/users/me/avatar` sau khi upload thành công — `avatarUrl` là URL ảnh vừa upload, VD `/uploads/avatars/<uuid>.jpg`. Ghép với `http://localhost:8080` làm base URL đầy đủ khi hiển thị `<img src>`)*
+1. Copy đúng khung `<head>` (script chống nháy + font + Tailwind CDN + `tailwind-config.js` + `style.css`) từ 1 trang gần nhất đã có (VD `progress.html`).
+2. Copy đúng cấu trúc `<body>` ở mục 7 (3 `<div>` container, không đổi tên id).
+3. Import + gọi `checkAuth()`/`checkAdmin()` (trang cần đăng nhập) hoặc bỏ qua (trang public) + `initNavBar('<tên trang>')` + `initFooter()`.
+4. Mọi lệnh gọi API mới → thêm hàm vào `api.js` trước, không tự `fetch()` trong trang.
+5. Trạng thái loading → skeleton; trạng thái lỗi/rỗng của khối nội dung chính → inline text, không toast.
+6. Nút hành động chính → `btn-3d`; test cả light lẫn dark mode trước khi coi là xong.
 
 ---
-*File này được tạo từ bản Requirements chính thức của project "Nền tảng học tiếng Anh tích hợp AI". Nếu có thay đổi API/entity ở file Requirements, cần đồng bộ lại brief này trước khi giao tiếp tục cho Agent.*
+*Nguồn xác nhận cao nhất khi có sai lệch với file này: Swagger UI (`/swagger-ui.html`) cho API, `Requirements.md` mục 10 cho design system đầy đủ.*

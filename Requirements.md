@@ -2,9 +2,9 @@
 # Project 1 — Nền tảng học tiếng Anh tích hợp AI
 *(AI English Learning Platform — trước đây gọi là "Chatbot Học Tiếng Anh"; đổi tên vì phạm vi đã lớn hơn 1 chatbot đơn thuần: gồm AI Chat, Topic/Flashcard, Quiz, Progress, Vocabulary/SRS, Dictation, Search)*
 
-**Phiên bản:** 1.5
-**Ngày tạo:** 28/08/2026 — cập nhật lần 5 (13/09/2026, hoàn thành M8 Unit Test)
-**Trạng thái:** Đã chốt thiết kế, sẵn sàng bắt đầu code
+**Phiên bản:** 1.6
+**Ngày tạo:** 28/08/2026 — cập nhật lần 6 (23/09/2026, hoàn thành M9)
+**Trạng thái:** M1–M9 hoàn thành (MVP đầy đủ, Backend + Frontend, đã polish UI + QA tổng thể) — sẵn sàng bắt đầu M10
 
 ---
 
@@ -35,8 +35,9 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 | Realtime | WebSocket (STOMP) | Chat AI trả lời dạng stream |
 | AI Provider | xKiro (`api.xkiro.com/v1`, chuẩn OpenAI-compatible) | Dùng `WebClient`/`RestClient` |
 | Upload file | Lưu local filesystem (giai đoạn đầu), có thể nâng cấp cloud storage sau | Ảnh flashcard, avatar |
-| Frontend | HTML/CSS/JavaScript thuần + Tailwind CSS (qua CDN) | Gọi REST API bằng `fetch`, WebSocket bằng `SockJS + STOMP` client. **Sửa 05/09/2026:** đổi từ Bootstrap (dự kiến ban đầu) sang Tailwind — cần đồng bộ lại `FE_Handoff_Brief.md` mục 1 cho khớp |
+| Frontend | HTML/CSS/JavaScript thuần + Tailwind CSS (qua CDN) | Gọi REST API bằng `fetch`, WebSocket bằng `SockJS + STOMP` client. **Sửa 05/09/2026:** đổi từ Bootstrap (dự kiến ban đầu) sang Tailwind. **Cập nhật M9:** redesign toàn bộ theo design system riêng (Duolingo-inspired) — xem chi tiết đầy đủ ở mục 10 (mới). |
 | Testing | JUnit 5 + Mockito | Theo đúng Phase 5 đã học |
+| API Documentation | springdoc-openapi 3.1.1 | Swagger UI tự sinh từ code tại `/swagger-ui.html` — nguồn tham chiếu chính xác nhất cho request/response shape thật, ưu tiên hơn tài liệu này khi có sai lệch. Thêm ở M9. |
 
 ### 1.4. Ràng buộc & nguyên tắc làm việc
 - Ưu tiên có **scaffold (khung sườn code)** trước khi người học tự code phần logic chi tiết
@@ -48,6 +49,10 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - Lưu ý: `SecurityConfig` mặc định trả 403 thay vì 401 khi thiếu/sai JWT (do chưa custom `AuthenticationEntryPoint`) — đã fix ở M4 bằng `HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)`, áp dụng cho toàn bộ API từ M4 trở đi.
 - Lưu ý: phát hiện ở M7 — thiếu `.requestMatchers("/error").permitAll()` trong `SecurityConfig` khiến MỌI lỗi 403 (`AccessDeniedException`, VD: USER hợp lệ gọi route `hasRole("ADMIN")`) bị biến thành 401 rỗng. Nguyên nhân: Spring Boot tự forward nội bộ sang `/error` để render error body, request forward này đi lại qua Security Filter Chain; `JwtAuthenticationFilter` (kế thừa `OncePerRequestFilter`) mặc định bỏ qua dispatch `ERROR` (không set lại `SecurityContext`) nên `/error` rơi vào trạng thái anonymous, bị chặn tiếp bởi `anyRequest().authenticated()`, rồi `AuthenticationEntryPoint` ghi đè 403 thành 401. Bug tồn tại từ M4 (khi thêm `hasRole("ADMIN")`) nhưng chưa từng lộ ra vì chưa có test nào dùng token USER hợp lệ gọi route ADMIN cho tới M7. Đã fix bằng cách thêm `/error` vào danh sách `permitAll()`.
 - Lưu ý: phát hiện ở M8 khi viết Unit Test — 3 lỗi kỹ thuật lặp lại nhiều lần, đáng nhớ cho các milestone sau: (1) mock 1 method trả về object thường (không phải `Optional`) mà quên stub sẽ mặc định trả `null` (khác `Optional` được Mockito tự trả `Optional.empty()`), dễ gây `NullPointerException` ở bất kỳ chỗ nào service đọc lại giá trị từ `save()`; (2) `ArgumentCaptor.capture()` khớp với **mọi** lời gọi bất kể kiểu tham số thật (khác `any(SomeClass.class)` có kiểm tra kiểu runtime) — nếu 1 method bị gọi nhiều lần với các loại Event/tham số khác nhau trong cùng 1 lần thực thi, dùng `capture()` với `verify(times(1))` mặc định sẽ gây lỗi `TooManyActualInvocations`; cách đúng là `verify(times(n))` rồi tự lọc lại theo `instanceof`; (3) khi input được validate theo kiểu exact-match (VD: `options.contains(rawAnswer)`) TRƯỚC, rồi mới tới bước so sánh case-insensitive/trim, thì input có khoảng trắng thừa hoặc sai case sẽ bị chặn ngay ở bước validate — không bao giờ chạm tới được bước so khớp linh hoạt hơn phía sau.
+- Lưu ý: phát hiện ở M9 — CORS **không có cấu hình mặc định** trong Spring Security, phải khai báo tường minh (`CorsConfigurationSource` bean + `.cors(...)` trong `SecurityFilterChain`) ngay khi FE/BE chạy khác origin (kể cả localhost khác port, hoặc qua tunnel như ngrok). Riêng SockJS (WebSocket) tự gửi request kèm `withCredentials: true` cho bước `/info` — nếu bật `allowCredentials(true)` phía Backend, **bắt buộc** dùng `setAllowedOriginPatterns(...)` thay vì `setAllowedOrigins("*")` (Spring Security cấm kết hợp wildcard `*` với credentials, ném exception lúc khởi động). Preflight `OPTIONS` cũng phải nằm trong danh sách `permitAll()` riêng, đặt trước `anyRequest().authenticated()`, nếu không JWT filter sẽ chặn preflight trước khi CORS kịp xử lý.
+- Lưu ý: phát hiện ở M9 (lặp lại nhiều lần trong lúc code FE) — gắn `addEventListener` cho 1 `id` không tồn tại trên DOM tại thời điểm script chạy sẽ ném `TypeError` đồng bộ ngay tại dòng đó; vì đây là top-level statement trong `<script type="module">`, **toàn bộ code phía sau trong cùng module dừng chạy hoàn toàn** (kể cả lệnh gọi hàm khởi tạo dữ liệu ở cuối file) — không có exception nào hiện ra ngoài Console, dễ nhầm là "trang không load được gì cả" thay vì đúng nguyên nhân là 1 dòng bị lỗi giữa file. Luôn kiểm tra Console trước khi đoán nguyên nhân khi 1 trang JS đột nhiên "im lặng không làm gì".
+- Lưu ý: phát hiện ở M9 — khi mở public 1 API vốn trước đó yêu cầu JWT (VD: `GET /api/topics`), cần sửa **cả 2 lớp** cùng lúc: (1) `SecurityConfig` thêm `permitAll()` cho đúng method + path, và (2) tầng FE dùng chung (`navbar.js`) phải có nhánh render riêng cho "khách chưa đăng nhập" — nếu chỉ sửa Backend, trang vẫn tải được dữ liệu nhưng phần điều hướng/thanh nav sẽ trống trơn với khách vãng lai (vì logic cũ giả định luôn có `user` mới render).
+- Lưu ý: phát hiện ở M9 — dịch vụ tunnel dev (VD: ngrok free tier) chèn trang cảnh báo (interstitial) chặn request đầu tiên từ 1 trình duyệt/phiên chưa từng xác nhận; cần thêm header `ngrok-skip-browser-warning` vào **mọi request `fetch()` tự viết**. Riêng các thư viện bên thứ 3 tự thực hiện request nội bộ không qua code của mình (VD: bước dò `/info` của SockJS trước khi nâng WebSocket) sẽ **không** có header này và có thể vẫn bị chặn ở phiên trình duyệt hoàn toàn mới (ẩn danh) — đây là giới hạn của môi trường dev qua tunnel, không phải bug code, và biến mất khi deploy domain thật.
 
 ---
 
@@ -55,10 +60,12 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 
 ### FR-1: Authentication & Authorization `[MVP]`
 - FR-1.1: Đăng ký tài khoản (email, username, password) — mặc định role `USER`
-- FR-1.2: Đăng nhập, trả về JWT access token
+- FR-1.2: Đăng nhập bằng **username hoặc email** (thử khớp `username` trước, nếu không có mới thử `email` — cùng 1 field input, không cần 2 ô riêng), trả JWT access token + refresh token. **ĐÃ CHỐT 23/09/2026 (M9)**
 - FR-1.3: Middleware/filter xác thực JWT cho mọi API cần bảo vệ
 - FR-1.4: Phân quyền endpoint theo role (`/api/admin/**` chỉ ADMIN)
 - FR-1.5: Mã hóa mật khẩu bằng BCrypt
+- FR-1.6 *(mới, M9)*: User xem lại thông tin profile của chính mình (`GET /api/users/me`)
+- FR-1.7 *(mới, M9)*: User đổi mật khẩu, yêu cầu xác nhận đúng mật khẩu hiện tại trước khi đổi (`POST /api/users/me/password`)
 
 ### FR-2: Chat tự do với AI `[MVP]`
 - FR-2.1: Tạo mới một `Conversation`
@@ -89,6 +96,8 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
   - Không bắt buộc cache mọi biến thể search/filter/pagination — chỉ cache các query có lợi ích rõ ràng (VD: trang đầu, không filter), tránh biến Redis thành hàng nghìn cache key khó kiểm soát khi có FR-9 (search/filter)
   - **Dependency Topic ↔ Flashcard — ĐÃ CHỐT tại M5:** `TopicResponse` hiện **không** có field tổng hợp từ Flashcard (không có `flashcardCount` hay tương tự), nên cập nhật Flashcard **không** cần invalidate chéo cache Topic — 2 cache (`topics`/`topicDetails` và `flashcardsByTopic`) hoàn toàn độc lập. Nếu sau này `TopicResponse` được bổ sung field tổng hợp từ Flashcard, phải quay lại bổ sung evict chéo ở `FlashcardService` (evict thêm cache `topics`/`topicDetails` khi Flashcard CUD).
 
+- **ĐÃ CHỐT 23/09/2026 (M9):** `GET /api/topics`, `GET /api/topics/{id}`, `GET /api/topics/{id}/flashcards`, `GET /api/topics/{id}/quizzes` chuyển thành **public** (không cần JWT) — cho phép khách xem trước khi đăng ký, đúng tinh thần trang chủ mời chào người dùng mới. Các hành động sâu hơn (làm Quiz, Chat AI, xem Progress cá nhân) vẫn bắt buộc đăng nhập như cũ.
+
 ### FR-4: Quiz & Đánh giá `[MVP]`
 - FR-4.1 (Admin): Tạo `Quiz` + `QuizQuestion` (trắc nghiệm) thuộc 1 Topic
 - FR-4.2 (User): Lấy đề quiz theo Topic
@@ -101,11 +110,15 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - FR-4.4: Mỗi lần nộp bài lưu 1 bản ghi `QuizAttempt` mới (không ghi đè lên lần trước — giữ đầy đủ *các lần làm*, nhưng mỗi bản ghi chỉ chứa kết quả tổng quan, xem chi tiết phạm vi ở mục Entity) — sau đó cập nhật `UserProgress` tương ứng (trạng thái tổng quan hiện tại của Topic đó)
 - FR-4.5: `QuizQuestion.correctAnswer` **không bao giờ được trả về cho User** trong bất kỳ API GET nào (lấy đề quiz, xem lại câu hỏi...) — chỉ được Service dùng nội bộ khi chấm điểm ở backend. Bắt buộc dùng DTO riêng (VD: `QuizQuestionPublicDTO`) ẩn hẳn trường này, không chỉ ẩn ở tầng serialize
 
+- **ĐÃ CHỐT 23/09/2026 (M9):** tên Quiz phải **duy nhất trong phạm vi 1 Topic**, không phân biệt hoa/thường (`"Quiz A"` và `"quiz a"` coi là trùng). Ràng buộc ở 2 lớp: `UNIQUE INDEX` trên `(topic_id, LOWER(title))` ở DB (migration V7) + check tường minh ở Service, trả `409 Conflict` khi trùng.
+- **ĐÃ CHỐT 23/09/2026 (M9):** thêm `GET /api/admin/quizzes/{quizId}/questions` — response riêng (`AdminQuizQuestionResponse`) **có kèm** `correctAnswer`, chỉ dùng nội bộ cho Admin (điền sẵn form sửa câu hỏi). Khác hẳn `QuizQuestionPublicResponse` (User) luôn ẩn trường này theo đúng FR-4.5 — không nới lỏng FR-4.5, chỉ thêm 1 lối riêng dành cho ADMIN.
+
 ### FR-5: Theo dõi tiến độ `[MVP]`
 - FR-5.1: User xem được tiến độ học của mình: `UserProgress` theo từng Topic (trạng thái hiện tại), và có thể xem lại lịch sử các lần làm quiz qua `QuizAttempt`
 - FR-5.2: User chỉ được xem tiến độ/lịch sử của chính mình — không cho truyền `userId` để xem của người khác (áp dụng cùng nguyên tắc FR-2.7)
 - FR-5.3: (Mở rộng, không bắt buộc) Thống kê tổng quan: số từ đã học, số quiz đã làm
 - FR-5.4: Công thức tính `UserProgress.progressPercent`. **ĐÃ CHỐT 03/09/2026 (M3):** xem công thức đầy đủ ở mục 8.
+- FR-5.5 *(mới, M9)*: `GET /api/users/me/quiz-attempts?page=&size=` — lịch sử làm bài **tổng hợp mọi Quiz** của chính User, sort mới nhất trước. Khác với `GET /api/quizzes/{id}/attempts` (chỉ giới hạn theo 1 Quiz cụ thể, đã có từ M3) — dùng cho trang Progress hiển thị hoạt động gần đây không phân biệt Quiz nào.
 
 ### FR-6: Quản lý file upload `[MVP]`
 - FR-6.1: Upload ảnh (Flashcard, avatar), quy tắc bắt buộc:
@@ -297,6 +310,7 @@ Quiz
  ├─ id: Long
  ├─ topic: Topic (ManyToOne)     — CHỐT: 1 Topic có thể có nhiều Quiz (VD: Travel → Vocabulary Quiz, Grammar Quiz, Conversation Quiz)
  └─ title: String
+  [DB constraint: UNIQUE INDEX (topic_id, LOWER(title)) — chốt 23/09/2026 (M9), chặn trùng tên Quiz (không phân biệt hoa/thường) trong cùng 1 Topic]
 
 QuizQuestion
  ├─ id: Long
@@ -385,6 +399,7 @@ UserVocabulary
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | Đăng ký |
 | POST | `/api/auth/login` | Public | Đăng nhập, trả JWT |
+| POST | `/api/auth/refresh` | Public | Làm mới access token bằng refresh token (không cấp lại refresh token mới — dùng lại token cũ tới khi hết hạn 7 ngày) |
 
 ### Chat `[MVP]`
 | Method | Endpoint | Role | Mô tả |
@@ -393,6 +408,7 @@ UserVocabulary
 | GET | `/api/conversations?page=&size=` | USER | Danh sách conversation của user, sort theo `updatedAt` giảm dần, phân trang đơn giản (không search — theo phạm vi FR-9) |
 | GET | `/api/conversations/{id}` | USER | Chi tiết 1 conversation (title, thời gian) — chỉ nếu thuộc về user hiện tại (FR-2.7), ngược lại trả 404 (theo convention mục 2.3) |
 | GET | `/api/conversations/{id}/messages` | USER | Lịch sử tin nhắn — chỉ nếu conversation thuộc về user hiện tại (FR-2.7), ngược lại trả 404 (theo convention mục 2.3) |
+| POST | `/api/conversations/{id}/messages` | USER | Gửi tin nhắn qua REST — chỉ lưu Message của USER, KHÔNG trả về câu trả lời AI (câu trả lời AI luôn qua WebSocket, xem dòng WS bên dưới). Tồn tại làm phương án dự phòng — FE hiện tại (M9) không dùng route này để gửi tin, dùng STOMP publish thay thế hoàn toàn |
 | WS | `/ws/chat` (STOMP) | USER | Gửi/nhận tin nhắn realtime — connection phải authenticate bằng JWT, backend kiểm tra ownership conversation trước khi xử lý send/subscribe (FR-2.7); backend tự đính kèm context lịch sử hội thoại (FR-2.8) |
 
 ### Topic & Flashcard (Admin quản lý nội dung) `[MVP]`
@@ -410,9 +426,9 @@ UserVocabulary
 ### Topic & Flashcard (User học) `[MVP]`
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
-| GET | `/api/topics?keyword=&level=&page=&size=&sort=` | USER | Danh sách topic — search/filter/sort/pagination đầy đủ (có cache, FR-9) |
-| GET | `/api/topics/{id}` | USER | Chi tiết 1 topic |
-| GET | `/api/topics/{id}/flashcards` | USER | Danh sách flashcard theo topic (không cần phân trang — danh sách nhỏ theo 1 topic) |
+| GET | `/api/topics?page=&size=` | **Public** | Danh sách topic — hiện chỉ có `page`/`size`; `keyword`/`level`/`sort` để dành M10 (FR-9) |
+| GET | `/api/topics/{id}` | **Public** | Chi tiết 1 topic |
+| GET | `/api/topics/{id}/flashcards` | **Public** | Danh sách flashcard theo topic |
 
 ### Quiz (Admin quản lý nội dung) `[MVP]`
 | Method | Endpoint | Role | Mô tả |
@@ -420,14 +436,15 @@ UserVocabulary
 | POST | `/api/admin/topics/{id}/quizzes` | ADMIN | Tạo quiz mới thuộc topic |
 | PUT | `/api/admin/quizzes/{id}` | ADMIN | Sửa thông tin quiz |
 | DELETE | `/api/admin/quizzes/{id}` | ADMIN | Xóa quiz |
-| POST | `/api/admin/quizzes/{id}/questions` | ADMIN | Thêm câu hỏi (bao gồm `correctAnswer`) vào quiz |
+| POST | `/api/admin/quizzes/{quizId}/questions` | ADMIN | Thêm câu hỏi mới (bao gồm `correctAnswer`) vào quiz |
+| GET | `/api/admin/quizzes/{quizId}/questions` | ADMIN | Xem lại danh sách câu hỏi **kèm** `correctAnswer` (chỉ dùng điền sẵn form sửa) |
 | PUT | `/api/admin/questions/{id}` | ADMIN | Sửa câu hỏi |
 | DELETE | `/api/admin/questions/{id}` | ADMIN | Xóa câu hỏi |
 
 ### Quiz (User làm bài) `[MVP]`
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
-| GET | `/api/topics/{id}/quizzes` | USER | Danh sách quiz thuộc 1 topic |
+| GET | `/api/topics/{id}/quizzes` | **Public** | Danh sách quiz thuộc 1 topic (kèm `questionCount` — thêm M9, để FE báo trước quiz rỗng) |
 | GET | `/api/quizzes/{id}` | USER | Chi tiết đề quiz — **không** trả `correctAnswer` (FR-4.5) |
 | POST | `/api/quizzes/{id}/submit` | USER | Nộp bài, chấm điểm, tạo `QuizAttempt` mới + cập nhật `UserProgress` (trong 1 transaction — NFR-10) |
 | GET | `/api/quizzes/{id}/attempts?page=&size=` | USER | Lịch sử các lần làm quiz này của chính mình, phân trang đơn giản |
@@ -440,7 +457,10 @@ UserVocabulary
 ### Profile `[MVP]`
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
+| GET | `/api/users/me` | USER | Xem thông tin profile của chính mình |
 | POST | `/api/users/me/avatar` | USER | Upload/cập nhật avatar cá nhân, dùng chung rule validate với FR-6 |
+| POST | `/api/users/me/password` | USER | Đổi mật khẩu — yêu cầu đúng mật khẩu hiện tại (FR-1.7) |
+| GET | `/api/users/me/quiz-attempts?page=&size=` | USER | Lịch sử làm bài tổng hợp mọi Quiz, mới nhất trước (FR-5.5) |
 
 ### Dictation `[v1.1]`
 | Method | Endpoint | Role | Mô tả |
@@ -490,7 +510,7 @@ frontend/
 
 **Nguyên tắc:** đây là Layered Architecture chuẩn (Phase 5), nhưng **không tạo sẵn toàn bộ class/package ngay từ đầu** chỉ vì Requirements liệt kê nhiều chức năng. Cấu trúc nên "tiến hóa" theo từng milestone — ví dụ M1 chỉ cần `entity/User`, `repository/UserRepository`, `service/AuthService`, `controller/AuthController`, `dto/auth/*`, `security/*`; đến M2 mới xuất hiện `Topic`/`Flashcard`, v.v. Tránh việc tạo package rỗng gây rối mà chưa dùng tới.
 
-*(Đây là cấu trúc **dự kiến** lúc thiết kế ban đầu, không phải snapshot thực tế — cấu trúc project thật tại từng thời điểm được track ở `Session_Summary.md` mục 6, cập nhật sau mỗi milestone.)*
+*(Đây là cấu trúc **dự kiến** lúc thiết kế ban đầu, không phải snapshot thực tế — cấu trúc project thật tại từng thời điểm được track ở `Session_Summary.md` mục 5, cập nhật sau mỗi milestone.)*
 
 ---
 
@@ -506,7 +526,7 @@ frontend/
 | M6 | Nâng cấp chat sang WebSocket streaming (FR-2.5) → cập nhật `chat.html` dùng SockJS/STOMP | **Hoàn thành 08/09/2026** |
 | M7 | File upload ảnh flashcard/avatar (FR-6) | **Hoàn thành 10/09/2026** |
 | M8 | Viết Unit Test cho các Service chính (NFR-5) | **Hoàn thành 13/09/2026** — 110 test: `QuizAttemptService`(19), `UserProgressService`(3), `AuthService`(10), `TopicService`(18), `FlashcardService`(12) [chính]; `FileStorageServiceImpl`(14), `ChatServiceImpl`(21) [optional]; `JwtUtil`(7), `TopicCacheEvictionListener`(4), `FlashcardCacheEvictionListener`(2) [phát sinh] |
-| M9 | Hoàn thiện `admin.html`, polish UI toàn bộ, test tổng thể end-to-end | Chưa bắt đầu |
+| M9 | Hoàn thiện `admin.html`, polish UI toàn bộ, test tổng thể end-to-end | **Hoàn thành 23/09/2026** — chi tiết đầy đủ ở mục 10 (mới, Frontend Design System) |
 | **M10** | **(v1.1)** Search/Filter/Pagination cho Topic (FR-9) | Chưa bắt đầu |
 | **M11** | **(v1.1)** Vocabulary & SRS — lưu từ, thuật toán ôn tập (FR-8) | Chưa bắt đầu |
 | **M12** | **(v1.1)** Dictation — nghe, so sánh transcript, tính accuracy (FR-7) | Chưa bắt đầu |
@@ -554,6 +574,110 @@ Tham khảo từ [parroto.app](https://parroto.app/vi) (28/08/2026). Đây là *
 | Community Speaking / Voice Chat (WebRTC) | Khó nhất — cần signaling server, WebRTC, matching queue; nên làm cuối cùng |
 
 *Khi bắt đầu bất kỳ nhóm nào ở trên, quay lại bổ sung FR/entity/API chi tiết vào tài liệu này trước khi code — giữ đúng nguyên tắc "thiết kế trước, code sau" đã áp dụng xuyên suốt.*
+
+## 10. FRONTEND DESIGN SYSTEM (chốt tại M9)
+
+Tài liệu tham chiếu bắt buộc khi code thêm trang mới — giữ đúng convention dưới đây để trang mới không lệch hẳn với 10 trang hiện có.
+
+### 10.1. Bảng màu (Duolingo-inspired)
+
+Token giữ nguyên tên (Material Design 3 style: `primary`/`secondary`/`tertiary`/`error` + biến thể `-container`/`-fixed`/`-fixed-dim`/`on-*`), chỉ đổi giá trị màu. Định nghĩa qua **CSS custom property dạng RGB triplet** (không kèm hàm `rgb()`) trong `css/style.css`, ánh xạ vào Tailwind qua `tailwind-config.js` bằng cú pháp `rgb(var(--color-x) / <alpha-value>)` — cách này giúp 1 lần đổi `:root.dark` là đổi màu toàn site, không phải sửa lại từng trang.
+
+- `primary` = xanh lá (#58CC02 sáng / #7AE02D tối) — CTA chính, hoàn thành, tiến độ
+- `secondary` = xanh dương (#1CB0F6 sáng) — thông tin phụ, AI Tutor avatar
+- `tertiary` = cam (#FF9600 sáng) — thành tích/gợi ý tích cực (VD: Grammar Tip)
+- `error` = đỏ (#FF4B4B sáng)
+- Nền: trắng thuần ở light mode, xám đen ở dark mode (không dùng xanh nhạt như bản gốc M1-M8)
+
+Giá trị đầy đủ nằm trong khối `:root { --color-*: ... }` và `:root.dark { --color-*: ... }` ở đầu `css/style.css`.
+
+### 10.2. Component signature — "nút nhấn 3D"
+
+Đặc trưng riêng của phong cách này, áp dụng cho mọi nút hành động chính (không áp cho nút phụ/Cancel):
+- Class `btn-3d` (định nghĩa trong `style.css`: `border-bottom-width: 4px`, `active:` giảm về 0 + dịch `translate-y`)
+- Kèm border màu đậm hơn nền 1 bậc, dùng token riêng `*-shadow` (VD: `border-primary-shadow` cho nút `bg-primary`)
+- Bo góc lớn hơn mặc định cũ: `rounded-2xl`/`rounded-xl` thay vì `rounded-lg`
+
+Ví dụ chuẩn: `class="btn-3d px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all"`
+
+### 10.3. Dark mode
+
+- Cơ chế: class `.dark` trên `<html>`, toggle qua `js/theme.js` (`getTheme()`/`applyTheme()`/`toggleTheme()`/`initTheme()`), lưu lựa chọn ở `localStorage` key `linguistai_theme`.
+- **Script chống nháy bắt buộc** ở đầu `<head>` của **mọi trang**, đặt trước `tailwind-config.js`:
+```html
+<script>
+  if (localStorage.getItem('linguistai_theme') === 'dark' ||
+      (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+  }
+</script>
+```
+- Component nào dùng thư viện ngoài có palette riêng (VD: Tailwind Typography `prose` cho Markdown AI chat) phải thêm `dark:prose-invert` tường minh — không tự động ăn theo token màu của project.
+
+### 10.4. Cấu trúc khung sườn trang đã đăng nhập (app shell)
+
+Mọi trang cần sidebar+topbar (tức là mọi trang trừ `index.html`) **bắt buộc** đúng cấu trúc `<body>` sau:
+```html
+<body class="...">
+    <div id="app-sidebar-container"></div>
+    <div id="app-content" class="min-h-screen flex flex-col">
+        <div id="app-topbar-container"></div>
+
+        <main class="flex-grow ...">
+            <!-- nội dung trang -->
+        </main>
+
+        <div id="app-footer-container"></div>
+    </div>
+
+    <script type="module">
+        import { checkAuth } from './js/auth.js'; // hoặc checkAdmin cho trang admin
+        import { initNavBar } from './js/navbar.js';
+        import { initFooter } from './js/footer.js';
+
+        checkAuth();
+        initNavBar('<activePage>'); // 'chat' | 'topics' | 'progress' | 'admin' | '' (profile không có tab active)
+        initFooter();
+        // ...
+    </script>
+</body>
+```
+3 `<div>` container (`app-sidebar-container`, `app-topbar-container`, `app-footer-container`) là **id bắt buộc** — `navbar.js`/`footer.js` tìm đúng các id này để render vào, đổi tên sẽ khiến trang mất trắng điều hướng mà không có lỗi rõ ràng.
+
+`index.html` là **ngoại lệ** — không dùng `footer.js` (footer riêng, nhiều cột, vì đây là trang marketing công khai cần nhiều thông tin hơn các trang app nội bộ) và có `<header>` cố định riêng thay vì sidebar (vì đây là trang landing, không phải app có nhiều mục điều hướng).
+
+Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) bỏ hẳn dòng `checkAuth()` — không gọi hàm này, để `navbar.js` tự nhận diện không có `user` và render đúng nhánh khách.
+
+### 10.5. `navbar.js` — sidebar thu gọn được + phân nhánh khách/đã đăng nhập
+
+- Nếu `getUser()` trả `null` (khách chưa đăng nhập) → `renderGuestNavBar()`: chỉ topbar đơn giản, nút "Log In" dispatch `CustomEvent('open-auth-modal')`.
+- Nếu đã đăng nhập → sidebar trái (`#appSidebar`, có thể thu gọn còn icon qua nút mũi tên, trạng thái lưu `localStorage` key `linguistai_sidebar_collapsed`) + topbar riêng (theme toggle, avatar, logout). Trên mobile, sidebar biến thành drawer trượt ra (mở qua hamburger trên topbar).
+- **Lưu ý xung đột:** `chat.html` có sidebar riêng thứ 2 (danh sách Conversation, `#conversationsSidebar`) — đây KHÔNG phải sidebar điều hướng chung, chỉ nội dung riêng của trang Chat, có hamburger mở/đóng độc lập nằm trong Chat Header (khác hamburger mở sidebar điều hướng chung nằm trên topbar).
+
+### 10.6. Modal Login/Register dùng chung (`authModal.js`)
+
+- Không còn `login.html`/`register.html` riêng — mọi trang khách truy cập được (`index.html`, `topics.html`, `topic-detail.html`) gọi `initAuthModal()` 1 lần lúc load, chèn modal vào cuối `<body>`.
+- Mở modal: gắn `data-open-login`/`data-open-register` vào bất kỳ `<button>` nào (authModal.js tự quét toàn trang), hoặc dispatch `window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'login' }))` từ nơi khác (navbar khách dùng cách này).
+- `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal qua query param) — **không** dùng `?auth=login` cho hành động logout chủ động (chỉ về `index.html` trơn).
+
+### 10.7. Module JS dùng chung khác
+
+| File | Vai trò |
+|---|---|
+| `config.js` | `API_BASE_URL` (điểm duy nhất cần sửa khi đổi domain Backend/ngrok URL) + `imageSrc(path)` (nối domain vào đường dẫn ảnh tương đối Backend trả về) |
+| `toast.js` | `showToast(message, type)` — dùng cho hành động tức thời (submit, upload, xoá). KHÔNG dùng cho lỗi/rỗng của 1 khối nội dung chính — trường hợp đó viết inline text ngay tại khối đó (người dùng luôn thấy, không trôi mất sau 3 giây) |
+| `chat.js` | `connectChat()`/`subscribeConversation()`/`sendChatMessage()`/`unsubscribeConversation()` — STOMP over SockJS, tách riêng khỏi `chat.html` |
+| `footer.js` | `initFooter()` — footer dùng chung cho mọi trang app (trừ `index.html`) |
+| `theme.js` | Dark/light mode, xem mục 10.3 |
+
+### 10.8. Skeleton loading
+
+Mọi khu vực nội dung chính chờ API phải có skeleton (khung `div.skeleton` — shimmer animation định nghĩa trong `style.css`) thay vì "Loading..." chữ hoặc để trắng, hiển thị ngay khi bắt đầu gọi API, tự bị ghi đè khi có data thật.
+
+### 10.9. Backlog/giới hạn đã biết, chưa xử lý
+
+- `topics.html`: 3 ô Search/Level/Sort hiện **chưa có tác dụng lọc thật** — Backend `GET /api/topics` chỉ nhận `page`/`size`, `keyword`/`level`/`sort` bị bỏ qua. Cố ý để dành M10 (FR-9) làm trọn vẹn cùng lúc.
+- Accessibility nâng cao (skip link, `focus-visible` toàn diện, `aria-hidden` cho icon trang trí) mới chỉ áp dụng đầy đủ cho `index.html` (qua audit Impeccable) — 9 trang còn lại chưa rà theo cùng chuẩn, để dành đợt polish sau nếu cần.
 
 ---
 

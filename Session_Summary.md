@@ -1,7 +1,7 @@
 # TÓM TẮT TOÀN BỘ QUÁ TRÌNH — Project "Nền tảng học tiếng Anh tích hợp AI"
 *(Dùng để tiếp tục ở cuộc trò chuyện mới)*
 
-**Ngày tóm tắt:** 13/09/2026 (cập nhật sau M8)
+**Ngày tóm tắt:** 23/09/2026 (cập nhật sau M9 — MVP hoàn chỉnh, sẵn sàng M10)
 
 ---
 
@@ -22,9 +22,9 @@
 
 ---
 
-## 2. Tài liệu Requirements — hiện tại: **v1.5**
+## 2. Tài liệu Requirements — hiện tại: **v1.6**
 
-File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.5.md` (bump từ v1.4 lên v1.5 ở đợt review 13/09/2026 sau M8). So với v1.2 gốc, các thay đổi đã áp dụng:
+File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (bump từ v1.5 lên v1.6 ở đợt review 23/09/2026 sau M9, xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
 - Mục 2.3 và mục 4: toàn bộ `LocalDateTime` → `Instant` cho timestamp (quyết định phát sinh khi code M1).
 - Mục 7 (Roadmap): M1, M2 đã đánh dấu hoàn thành.
 - Mục 8: 2 điểm mở đã chốt — Database (PostgreSQL), Refresh Token (có).
@@ -54,6 +54,8 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.5.md` (bump từ v1.4 
 - Mục 7 (Roadmap): M8 đánh dấu hoàn thành.
 - Mục 1.4: thêm ghi chú 3 lỗi kỹ thuật lặp lại nhiều lần khi viết Unit Test (mock method trả object thường không stub → `null`; `ArgumentCaptor.capture()` khớp mọi type bất kể kiểu tham số; validate exact-match luôn chạy trước so sánh case-insensitive/trim) — không phải bug ở Service, mà là kiến thức nền tảng Mockito cần nhớ cho M9 trở đi.
 
+**Đã đồng bộ đầy đủ ở đợt review 23/09/2026 (sau M9):** bump lên **v1.6**. Thêm mục 10 hoàn toàn mới — "Frontend Design System" (bảng màu, component signature "nút 3D", dark mode, cấu trúc app shell, module JS dùng chung) — bắt buộc tham chiếu khi code thêm trang mới. Cập nhật đầy đủ 6 endpoint mới phát sinh trong lúc làm M9 (không có trong Requirements gốc, xem mục 6 bên dưới), cập nhật FR-1.2 (login hỗ trợ username/email), thêm ràng buộc unique tên Quiz trong Topic, ghi nhận quyết định mở public 4 route Topic/Quiz-list.
+
 **Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= 70`, MIME ảnh upload = JPEG/PNG only (5MB max).
 
 ---
@@ -63,8 +65,10 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.5.md` (bump từ v1.4 
 | Công cụ | Vai trò |
 |---|---|
 | **Antigravity** (Windows) | IDE code Backend |
-| **9Router** (Linux VM) → Kiro AI free tier, Claude Sonnet 4.5 | Agent code Frontend |
+| **9Router** (Linux VM) → Kiro AI free tier, Claude Sonnet 4.5 | Môi trường dev chạy Frontend (M1-M8: agent tự code UI; M9: chủ yếu dùng để chạy static server test FE + chạy Impeccable, phần lớn code redesign làm trực tiếp qua chat) |
 | **Google Stitch** | Design UI, xuất HTML/Tailwind |
+| **ngrok** (free tier) | Expose Backend (Windows) ra ngoài cho Linux VM gọi vào qua HTTPS — dùng từ M9 |
+| **Impeccable** (`pbakaus/impeccable`) | Skill audit/polish UI trong Claude Code — dùng từ M9, xem chi tiết mục 6 phần M9 |
 | **xKiro** (api.xkiro.com) | AI provider — đã tích hợp xong ở M4 |
 | **GitHub** — `github.com/Pennywise111124/english-learning-platform`, nhánh `main` | Repo chính |
 | **PostgreSQL + pgAdmin** | DB tên `english_learning_db` |
@@ -78,16 +82,29 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.5.md` (bump từ v1.4 
 - **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V6**
 - **Security:** Spring Security + JWT (Access + Refresh), BCrypt, `@Enumerated(EnumType.STRING)`, role-based (`hasRole("ADMIN")` cho `/api/admin/**`)
 - **Timestamp:** `Instant` (Entity) ↔ `TIMESTAMPTZ` (PostgreSQL) — xuyên suốt mọi entity
-- **Frontend:** HTML/JS thuần + Tailwind CSS qua CDN, `js/mockApi.js` sẵn sàng thay `api.js` thật
+- **Frontend:** HTML/JS thuần + Tailwind CSS qua CDN, `js/api.js` gọi API thật (không còn mock từ M9) — chi tiết đầy đủ xem mục 5
 - **AI Provider:** xKiro, model `qwen/qwen3.6-plus:free`, context N=10 message, response format JSON {reply, correction, explanation}
 - **Cache:** Redis qua Spring Cache abstraction (`@Cacheable`/`RedisCacheManager`), evict bằng `@TransactionalEventListener(phase = AFTER_COMMIT)` + `CacheManager` thủ công (không dùng `@CacheEvict` trực tiếp trên method `@Transactional`, tránh race condition evict-trước-commit) — chốt tại M5
 - **File upload:** Local filesystem qua `app.upload.dir` (ngoài classpath), validate MIME header + nội dung ảnh thật qua `javax.imageio.ImageIO`, filename `UUID` theo format ảnh thật đọc được (không theo Content-Type/tên file client), serve qua `/uploads/**` (`WebMvcConfig` + `permitAll()`), dọn file cũ khi update/xoá qua `FileDeletionEvent`/`FileDeletionListener` — tái dùng đúng pattern `AFTER_COMMIT` đã chốt ở M5 cho cache — chốt tại M7
+- **CORS:** cấu hình tường minh qua `CorsConfigurationSource` bean (không có mặc định) — `setAllowedOriginPatterns` (không phải `setAllowedOrigins`, bắt buộc khi kết hợp `allowCredentials(true)`), preflight `OPTIONS` permitAll riêng — chốt tại M9
+- **API Documentation:** springdoc-openapi 3.1.1, Swagger UI tại `/swagger-ui.html` — thêm tại M9, dùng làm nguồn đối chiếu contract thật khi có sai lệch với Requirements
 
 ---
 
-## 5. Tiến độ Frontend — ĐÃ XONG (mock data, merged `main`)
+## 5. Tiến độ Frontend — HOÀN THÀNH, đã nối Backend thật + redesign UI (M9, 23/09/2026)
 
-10 trang hoàn chỉnh, chưa nối Backend thật. Tài liệu: `FE_Handoff_Brief.md` — đã đồng bộ CSS framework (Tailwind) và cấu trúc `js/` khớp thực tế (05/09/2026). **Vẫn còn cần đồng bộ khi bắt đầu nối Backend thật cho `topics.html`/`quiz.html`/`progress.html`/`chat.html`**: response shape thật từ M2-M4 (VD: `ConversationDetailResponse` có thêm `updatedAt`), pagination qua `PageResponse`, endpoint `POST /api/conversations/{id}/messages` chưa có trong brief, và cache ở M5 không ảnh hưởng contract API nên không cần đổi gì thêm ở phần này.
+10 trang, đã bỏ hẳn `js/mockApi.js` — toàn bộ gọi API thật qua `js/api.js`. **Đổi kiến trúc trang so với giai đoạn mock:**
+- **Bỏ hẳn** `login.html`/`register.html` — gộp vào modal chung (`authModal.js`), mở qua `index.html?auth=login` hoặc `data-open-login`/`data-open-register` attribute.
+- **Đổi hẳn** navbar ngang → **sidebar trái thu gọn được + topbar riêng** (`navbar.js` viết lại hoàn toàn, xem chi tiết Requirements mục 10.5).
+- Thêm mới: `topic-detail.html` vẫn giữ tên cũ, không đổi.
+
+**10 trang hiện tại:** `index.html`, `chat.html`, `topics.html`, `topic-detail.html`, `quiz.html`, `progress.html`, `profile.html`, `admin.html` (8 trang chính) + `test-websocket.html` (công cụ test riêng, không tính vào bộ chính thức).
+
+**Module JS dùng chung (mới, không có ở giai đoạn mock):** `config.js`, `toast.js`, `chat.js`, `footer.js`, `theme.js`, `authModal.js` — vai trò từng file xem Requirements mục 10.7.
+
+**Redesign UI hoàn chỉnh (Duolingo-inspired):** đổi bảng màu, thêm component "nút 3D" (`btn-3d` + `border-*-shadow`), dark mode thật (CSS custom property, không phải chỉ khai báo `darkMode: "class"` suông như dự kiến ban đầu), skeleton loading toàn site, empty/error state chuẩn hoá. Chi tiết đầy đủ đã chuyển hẳn vào Requirements mục 10 (không lặp lại ở đây, tránh 2 nguồn dễ lệch nhau) — **khi cần chi tiết design system, luôn tham chiếu Requirements, không phải file này**.
+
+`FE_Handoff_Brief.md` — không còn cần thiết cho việc phát triển tiếp (toàn bộ contract đã được thực thi và test qua M9, sai lệch nào phát hiện được đã sửa trực tiếp ở code, không update ngược lại file brief nữa). Giữ lại chỉ mang tính lịch sử, không dùng làm nguồn tham chiếu — nguồn đúng nhất từ giờ là Swagger UI (`/swagger-ui.html`) hoặc đọc thẳng code Controller/DTO.
 
 ---
 
@@ -139,7 +156,7 @@ src/main/resources/
 ├── application.yml — thêm mục `app.upload.*` + `spring.servlet.multipart.*` ở M7
 └── db/migration/ (V1 → V6, không đổi ở M5/M6/M7 — M7 không thêm entity/bảng mới, imageUrl/avatarUrl đã có sẵn từ M2/M1)
 
-frontend/ (đã xong ở giai đoạn mock data — 10 trang: index/login/register/chat/topics/topic-detail/quiz/progress/profile/admin.html + js/{api,auth,mockApi,navbar,tailwind-config}.js + css/style.css + README.md. Có thêm `test-websocket.html` — công cụ test riêng, không nằm trong 10 trang chính thức. `FE_Handoff_Brief.md` đã được người dùng tự cập nhật đầy đủ phần Chat REST+WebSocket. Trạng thái `chat.html` có thực sự dùng SockJS/STOMP thật hay vẫn bản mock — CHƯA XÁC NHẬN, xem mục 7)
+frontend/ — trạng thái thật đã đổi hoàn toàn ở M9, xem mục 5 (không mô tả lại ở đây để tránh 2 nguồn lệch nhau)
 ```
 
 src/test/java/com/example/englishlearningplatform/ — MỚI HOÀN TOÀN Ở M8, trước đó chưa có
@@ -155,6 +172,30 @@ src/test/java/com/example/englishlearningplatform/ — MỚI HOÀN TOÀN Ở M8,
 └── event/
   ├── TopicCacheEvictionListenerTest.java (4 test)
   └── FlashcardCacheEvictionListenerTest.java (2 test)
+
+### M9 — Hoàn thiện Admin, Polish UI, Nối Backend thật, Test tổng thể: **HOÀN THÀNH 23/09/2026**
+
+Khối lượng lớn nhất từ trước tới giờ, gồm cả Backend lẫn Frontend, chia làm 4 phần:
+
+**A. Backend — 6 endpoint mới + 2 thay đổi hành vi (không có trong Requirements gốc, phát sinh từ nhu cầu thực tế lúc nối FE):**
+- `GET /api/users/me` — lấy lại profile hiện tại (thiếu ngay từ đầu, chỉ có avatar upload)
+- `POST /api/users/me/password` — đổi mật khẩu (form Change Password ở `profile.html` từng chỉ giả lập thành công, không có API thật)
+- `GET /api/users/me/quiz-attempts?page=&size=` — lịch sử làm bài **tổng hợp mọi Quiz** (khác `GET /api/quizzes/{id}/attempts` chỉ giới hạn 1 Quiz — `progress.html` cần cái tổng hợp, phát hiện lúc test thấy hardcode nhầm `quizId=1`)
+- `GET /api/admin/quizzes/{quizId}/questions` — Admin xem lại câu hỏi **kèm** `correctAnswer` (trước đó Admin sửa câu hỏi cũ không thấy được đáp án đúng hiện tại)
+- Login hỗ trợ **username hoặc email** (`findByUsername().or(() -> findByEmail())`) — UI ghi "Username or Email" nhưng Backend ban đầu chỉ nhận username, phát hiện qua review kỹ giao diện
+- `GET /api/topics`, `GET /api/topics/{id}`, `GET /api/topics/{id}/flashcards`, `GET /api/topics/{id}/quizzes` đổi thành **public** — cho khách chưa đăng nhập xem trước (đúng tinh thần landing page mời chào), quyết định có chủ đích chứ không phải sơ hở: `GET /api/topics/{id}/quizzes` chỉ trả tên Quiz, còn `GET /api/quizzes/{id}` (câu hỏi thật)/`submit`/`attempts` vẫn đòi JWT như cũ
+
+**B. Backend — sửa lỗi/bổ sung ràng buộc:**
+- CORS: thêm hoàn toàn mới (`CorsConfigurationSource`, `allowCredentials(true)`, `setAllowedOriginPatterns`) — không có sẵn ở M1-M8 vì trước đó FE/BE luôn chạy cùng origin lúc test Postman, chỉ lộ ra khi FE chạy trên máy ảo Linux khác origin
+- Unique constraint tên Quiz trong cùng Topic (không phân biệt hoa/thường) — migration V7, `existsByTopicIdAndTitleIgnoreCase`
+
+**C. Frontend — nối API thật + redesign UI hoàn chỉnh.** Chi tiết kiến trúc/design system đầy đủ đã ghi ở Requirements mục 10 — không lặp lại ở đây.
+
+**D. QA tổng thể end-to-end** — đi hết luồng khách vãng lai → đăng ký → học tập đầy đủ (Chat/Topic/Flashcard/Quiz/Progress) → Admin CRUD, cả 2 chế độ màu và cả di động. Phát hiện thêm vài bug nhỏ trong lúc QA (tiêu đề dài tràn khung ở 2 chỗ khác nhau trong `chat.html`, "Take Quiz" im lặng khi Topic chưa có Quiz, Quiz rỗng bị treo loading, nút Next/Submit lệch trái ở câu đầu) — đã sửa hết.
+
+**Công cụ mới dùng ở M9, không có trong danh sách công cụ ở mục 3:**
+- **ngrok** (free tier) — expose Backend chạy trên máy Windows thật ra ngoài cho Linux VM gọi vào qua HTTPS, vì 2 máy khác mạng/khác origin. Giới hạn đã biết: trang cảnh báo interstitial của ngrok free chặn request đầu tiên từ phiên trình duyệt mới — đã vá cho REST (header `ngrok-skip-browser-warning` gắn trong `api.js`), **chưa vá được cho SockJS** (thư viện tự gọi request nội bộ riêng, không có header đó) — chỉ ảnh hưởng lúc test qua tunnel dev, biến mất khi deploy domain thật.
+- **Impeccable** (`pbakaus/impeccable`, cài qua `npx impeccable install`) — skill audit/polish UI chạy trong Claude Code, dùng cho 1 đợt audit accessibility/performance trên `index.html` (phát hiện: thiếu skip link, logo không phải link, ảnh hero thiếu `loading="lazy"`, thiếu `focus-visible`...) và 1 lần polish khu vực `#resultView` của `quiz.html` (SVG progress ring animated thay khung viền tĩnh). Chỉ dùng 2 lần trong toàn bộ M9 — phần lớn redesign còn lại làm trực tiếp trong chat để giữ đúng `id`/logic.
 
 ### M1 — Auth + JWT: **HOÀN THÀNH 01/09/2026**
 
@@ -257,13 +298,15 @@ JUnit 5 + Mockito, Unit test thuần (mock toàn bộ Repository/dependency), kh
 
 ---
 
-## 7. Việc cần làm trước khi bắt đầu M9
+## 7. Trạng thái hiện tại — M1-M9 hoàn thành, sẵn sàng M10
 
-1. ~~Đồng bộ `FE_Handoff_Brief.md` phần Chat~~ — **ĐÃ XÁC NHẬN HOÀN THÀNH 10/09/2026.** Không còn nợ.
-2. **Xác nhận trạng thái `chat.html`** — vẫn CHƯA XÁC NHẬN đã cập nhật dùng SockJS/STOMP thật hay còn bản mock/REST (nợ lại từ trước M8 — M8 chỉ động tới Backend nên chưa xử lý). Cần xác nhận khi bắt đầu M9, đúng lúc Requirements mục 7 dự kiến M9 sẽ "polish UI toàn bộ".
-3. ~~M7 (File upload ảnh Flashcard/avatar, FR-6)~~ — **ĐÃ HOÀN THÀNH 10/09/2026.** Chi tiết xem mục 6.
-4. ~~M8 (Unit Test cho Service chính, NFR-5)~~ — **ĐÃ HOÀN THÀNH 13/09/2026.** 110 test case / 10 class. Chi tiết xem mục 6.
-5. **M9 (Hoàn thiện `admin.html`, polish UI toàn bộ, test tổng thể end-to-end):** chưa có quyết định nào được chốt — cần xác định phạm vi cụ thể khi bắt đầu.
+Không còn việc nào nợ lại từ các milestone trước. Backend + Frontend đã nối thật, redesign UI hoàn chỉnh, QA tổng thể xong.
+
+**Việc còn treo, cố ý để dành M10 (không phải nợ/sai sót):**
+- `topics.html`: 3 ô Search/Level/Sort đã có UI nhưng chưa có tác dụng lọc thật — `GET /api/topics` hiện chỉ nhận `page`/`size` (đúng FR-9 chưa làm, đúng kế hoạch)
+- Accessibility nâng cao (skip link, `focus-visible`, `aria-hidden`...) mới áp dụng đầy đủ cho `index.html` qua Impeccable — 9 trang còn lại chưa rà theo cùng chuẩn
+
+**M10 (Search/Filter/Pagination cho Topic, FR-9):** chưa bắt đầu, đây sẽ là việc tiếp theo.
 
 ---
 
@@ -271,12 +314,11 @@ JUnit 5 + Mockito, Unit test thuần (mock toàn bộ Repository/dependency), kh
 
 **Bắt buộc:**
 1. File tóm tắt này (`Session_Summary.md`)
-2. `Project1_Requirements_ChatbotHocTiengAnh_v1.5.md` (Requirements đầy đủ — cần cho chi tiết FR/entity/API khi code)
-3. `FE_Handoff_Brief.md` (nếu việc tiếp theo liên quan API contract, đặc biệt là M4 — Chat)
+2. `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
 
-**Nếu đang code dở:** file `.java` đang dở + file nó phụ thuộc trực tiếp.
+**Không còn cần gửi:** `FE_Handoff_Brief.md` (đã lỗi thời từ M9, xem mục 5) — nếu cần chi tiết API contract, dùng Swagger UI (`/swagger-ui.html`) hoặc đọc thẳng code.
 
-**Không cần gửi:** toàn bộ source code project, lịch sử chat cũ đầy đủ.
+**Nếu đang code dở:** file `.java`/`.html`/`.js` đang dở + file nó phụ thuộc trực tiếp.
 
 **Câu mở đầu gợi ý cho cuộc trò chuyện mới:**
-> "Đây là tóm tắt project mình đang làm (đính kèm), M1-M2-M3-M4-M5-M6-M7-M8 đã xong (Auth, Topic/Flashcard CRUD, Quiz/Submit/Progress, AI Chat REST qua xKiro, Redis Cache cho Topic/Flashcard, WebSocket Streaming cho Chat, File upload ảnh Flashcard/avatar, Unit Test 110 case cho Service chính), giờ bắt đầu M9 (hoàn thiện admin.html, polish UI, test tổng thể end-to-end), tiếp tục giúp mình nhé."
+> "Đây là tóm tắt project mình đang làm (đính kèm), M1-M9 đã xong toàn bộ MVP (Backend đầy đủ + Frontend đã nối thật + redesign UI Duolingo-style + QA tổng thể), giờ bắt đầu M10 (Search/Filter/Pagination cho Topic), tiếp tục giúp mình nhé."
