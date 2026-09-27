@@ -149,4 +149,14 @@ public class QuizAttemptService {
         return quizAttemptRepository.findByUser_IdAndQuiz_Id(user.getId(), quizId, pageable)
                 .map(QuizAttemptResponse::from);
     }
+
+    @Transactional(readOnly = true)
+    public Page<QuizAttemptResponse> getMyRecentAttempts(Pageable pageable) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Username " + username + " không tồn tại!"));
+
+        return quizAttemptRepository.findByUser_IdOrderByCompletedAtDesc(user.getId(), pageable)
+                .map(QuizAttemptResponse::from);
+    }
 }

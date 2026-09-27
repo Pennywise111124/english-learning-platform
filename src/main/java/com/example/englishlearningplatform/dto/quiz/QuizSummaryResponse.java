@@ -8,11 +8,13 @@ public class QuizSummaryResponse {
 
     private Long id;
     private String title;
+    private long questionCount;
 
-    public static QuizSummaryResponse from(Quiz quiz) {
+    public static QuizSummaryResponse from(Quiz quiz, long questionCount) {
         QuizSummaryResponse dto = new QuizSummaryResponse();
         dto.id = quiz.getId();
         dto.title = quiz.getTitle();
+        dto.questionCount = questionCount;
         return dto;
     }
 
@@ -22,5 +24,9 @@ public class QuizSummaryResponse {
 
     public String getTitle() {
         return title;
+    }
+
+    public long getQuestionCount() {
+        return questionCount;
     }
 }

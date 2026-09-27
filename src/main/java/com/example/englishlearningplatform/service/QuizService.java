@@ -43,7 +43,7 @@ public class QuizService {
             throw new ResourceNotFoundException("Topic không tồn tại với Id: " + topicId);
         }
         return quizRepository.findByTopicId(topicId).stream()
-                .map(QuizSummaryResponse::from)
+                .map(quiz -> QuizSummaryResponse.from(quiz, quizQuestionRepository.countByQuizId(quiz.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -76,11 +76,15 @@ public class QuizService {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic không tồn tại với Id: " + topicId));
 
+        if (quizRepository.existsByTopicIdAndTitleIgnoreCase(topicId, request.getTitle())) {
+            throw new ResourceConflictException("Topic này đã có Quiz trùng tên: " + request.getTitle());
+        }
+
         Quiz quiz = new Quiz();
         quiz.setTopic(topic);
         quiz.setTitle(request.getTitle());
 
-        return QuizSummaryResponse.from(quizRepository.save(quiz));
+        return QuizSummaryResponse.from(quizRepository.save(quiz), 0);
     }
 
     @Transactional
@@ -88,8 +92,14 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId));
 
+        if (quizRepository.existsByTopicIdAndTitleIgnoreCaseAndIdNot(quiz.getTopic().getId(), request.getTitle(),
+                quizId)) {
+            throw new ResourceConflictException("Topic này đã có Quiz trùng tên: " + request.getTitle());
+        }
+
         quiz.setTitle(request.getTitle());
-        return QuizSummaryResponse.from(quizRepository.save(quiz));
+        Quiz updated = quizRepository.save(quiz);
+        return QuizSummaryResponse.from(updated, quizQuestionRepository.countByQuizId(updated.getId()));
     }
 
     /**

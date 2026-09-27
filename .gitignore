@@ -39,3 +39,6 @@ build/
 
 ### Uploaded files ###
 uploads/
+
+### Local run scripts (chứa secret thật) ###
+run-backend.bat

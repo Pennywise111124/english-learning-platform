@@ -10,6 +10,9 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
     List<Quiz> findByTopicId(Long topicId);
 
-    // Dùng làm mẫu số trong công thức progressPercent (tổng số Quiz thuộc Topic)
     long countByTopicId(Long topicId);
+
+    boolean existsByTopicIdAndTitleIgnoreCase(Long topicId, String title);
+
+    boolean existsByTopicIdAndTitleIgnoreCaseAndIdNot(Long topicId, String title, Long id);
 }
