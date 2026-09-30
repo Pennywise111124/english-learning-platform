@@ -39,7 +39,7 @@ function buildQuery(params) {
 
 async function request(path, { method = 'GET', body, isMultipart = false, params } = {}, _isRetry = false) {
   const token = getToken();
-  const headers = { 'ngrok-skip-browser-warning': 'true' }; 
+  const headers = { 'ngrok-skip-browser-warning': 'true' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (!isMultipart) headers['Content-Type'] = 'application/json';
 
@@ -89,11 +89,11 @@ export async function register(email, username, password) {
 }
 
 // ─── Topics (User) ───────────────────────────────────────────────────────────
-// LƯU Ý: Backend GET /api/topics hiện CHỈ nhận page/size — chưa hỗ trợ keyword/level
-// (search/filter thuộc M10, chưa làm). keyword/level nếu truyền vào sẽ bị bỏ qua.
 
-export async function getTopics({ page = 0, size = 20 } = {}) {
-  return request('/api/topics', { params: { page, size } });
+// GET /api/topics hỗ trợ keyword / level / sort (M10). Giá trị rỗng bị buildQuery() tự loại.
+// sort: 'newest' (mặc định) | 'popular' | 'title'
+export async function getTopics({ keyword, level, sort, page = 0, size = 20 } = {}) {
+  return request('/api/topics', { params: { keyword, level, sort, page, size } });
 }
 
 export async function getTopicDetail(id) {
@@ -127,6 +127,32 @@ export async function getQuizAttempts(quizId, page = 0, size = 20) {
 
 export async function getProgress() {
   return request('/api/users/me/progress');
+}
+
+// ─── Vocabulary / SRS (M11) ──────────────────────────────────────────────────
+
+export async function saveVocabulary(flashcardId) {
+  return request(`/api/vocabulary/${flashcardId}/save`, { method: 'POST' });
+}
+
+export async function getAllVocabulary(page = 0, size = 20) {
+  return request('/api/vocabulary', { params: { page, size } });
+}
+
+export async function reviewVocabulary(id, remembered) {
+  return request(`/api/vocabulary/${id}/review`, { method: 'PATCH', body: { remembered } });
+}
+
+export async function getVocabularyToday(page = 0, size = 20) {
+  return request('/api/vocabulary/today', { params: { page, size } });
+}
+
+export async function getSavedFlashcardIds(topicId) {
+  return request(`/api/vocabulary/topics/${topicId}/saved-ids`);
+}
+
+export async function deleteVocabulary(id) {
+  return request(`/api/vocabulary/${id}`, { method: 'DELETE' });
 }
 
 // ─── Chat / Conversations (REST — WebSocket streaming nằm ở chat.js riêng) ────
@@ -253,3 +279,4 @@ export async function adminUpdateQuestion(id, { question, options, correctAnswer
 export async function adminDeleteQuestion(id) {
   return request(`/api/admin/questions/${id}`, { method: 'DELETE' });
 }
+

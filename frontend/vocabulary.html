@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>My Words - LinguistAI</title>
+    <script>
+      if (localStorage.getItem('linguistai_theme') === 'dark' ||
+          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="font-body-md text-body-md antialiased min-h-screen bg-background text-on-background page-fade-in">
+    <div id="app-sidebar-container"></div>
+    <div id="app-content" class="min-h-screen flex flex-col">
+        <div id="app-topbar-container"></div>
+
+        <main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pt-stack-md pb-stack-lg flex flex-col gap-stack-lg items-center">
+            <section class="flex flex-col gap-stack-sm text-center">
+                <h1 class="font-display-lg text-display-lg text-primary">My Words 🔖</h1>
+                <p id="dueCounter" class="font-body-lg text-body-lg text-on-surface-variant"></p>
+            </section>
+            
+            <div class="flex gap-2 bg-surface-container-lowest border-2 border-outline-variant rounded-2xl p-1">
+                <button id="tabDue" class="px-5 py-2 rounded-xl font-label-md text-label-md bg-primary text-on-primary transition-all">Due Today</button>
+                <button id="tabAll" class="px-5 py-2 rounded-xl font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-all">All Words</button>
+            </div>
+
+            <!-- Skeleton -->
+            <div id="reviewSkeleton" class="flex flex-col items-center gap-6">
+                <div class="skeleton w-full max-w-lg h-[300px] rounded-xl"></div>
+                <div class="flex items-center justify-between w-full max-w-lg">
+                    <div class="skeleton h-12 w-32 rounded-2xl"></div>
+                    <div class="skeleton h-12 w-32 rounded-2xl"></div>
+                </div>
+            </div>
+
+            <!-- Review area -->
+            <div id="reviewContainer" class="hidden flex-col items-center gap-6 w-full">
+                <div class="flashcard-wrapper w-full max-w-lg">
+                    <div id="reviewCard" class="flashcard bg-surface border-2 border-outline-variant rounded-xl min-h-[300px] shadow-md">
+                        <div class="flashcard-front bg-primary text-on-primary p-8">
+                            <div class="text-center">
+                                <p class="font-label-sm text-label-sm opacity-80 mb-2">WORD</p>
+                                <h3 id="reviewWord" class="font-display-lg text-[42px] font-extrabold"></h3>
+                                <p class="font-label-sm text-label-sm opacity-80 mt-4">Click to flip</p>
+                            </div>
+                        </div>
+                        <div class="flashcard-back bg-surface-container p-8">
+                            <div class="text-center space-y-4">
+                                <p class="font-label-sm text-label-sm text-on-surface-variant">MEANING</p>
+                                <h3 id="reviewMeaning" class="font-headline-lg text-headline-lg text-on-surface"></h3>
+                                <div class="pt-4 border-t-2 border-outline-variant">
+                                    <p class="font-label-sm text-label-sm text-on-surface-variant mb-2">EXAMPLE</p>
+                                    <p id="reviewExample" class="font-body-md text-body-md text-on-surface italic"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between w-full max-w-lg">
+                    <button id="prevBtn" class="px-4 py-2 bg-surface-container border-2 border-outline-variant rounded-2xl text-on-surface hover:bg-surface-container-high transition-all active:scale-95 disabled:opacity-40">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <p id="cardCounter" class="font-label-md text-label-md text-on-surface-variant"></p>
+                    <button id="nextBtn" class="px-4 py-2 bg-surface-container border-2 border-outline-variant rounded-2xl text-on-surface hover:bg-surface-container-high transition-all active:scale-95 disabled:opacity-40">
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-center gap-4 w-full max-w-lg">
+                    <button id="forgotBtn" class="flex-1 px-6 py-3 bg-surface-container border-2 border-error text-error rounded-2xl font-label-md text-label-md hover:bg-error-container transition-all active:scale-95">
+                        Not yet
+                    </button>
+                    <button id="rememberedBtn" class="btn-3d flex-1 px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all active:scale-95">
+                        Remembered
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div id="emptyState" class="hidden text-center py-12">
+                <p class="font-headline-md text-headline-md text-on-surface mb-2">All caught up! 🎉</p>
+                <p class="font-body-md text-body-md text-on-surface-variant">No words due for review right now. Save more words from Topics to grow your list.</p>
+                <a href="topics.html" class="btn-3d inline-block mt-stack-md px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all active:scale-95">
+                    Browse Topics
+                </a>
+            </div>
+            
+            <!-- All Words tab -->
+            <div id="allWordsSkeleton" class="hidden w-full max-w-2xl flex flex-col gap-3">
+                <div class="skeleton h-20 w-full rounded-xl"></div>
+                <div class="skeleton h-20 w-full rounded-xl"></div>
+                <div class="skeleton h-20 w-full rounded-xl"></div>
+            </div>
+
+            <div id="allWordsContainer" class="hidden w-full max-w-2xl flex-col gap-3"></div>
+
+            <div id="allWordsPagination" class="flex justify-center items-center gap-4"></div>
+
+            <div id="allWordsEmpty" class="hidden text-center py-12">
+                <p class="font-headline-md text-headline-md text-on-surface mb-2">No saved words yet</p>
+                <p class="font-body-md text-body-md text-on-surface-variant">Save words from Topics to build your vocabulary list.</p>
+                <a href="topics.html" class="btn-3d inline-block mt-stack-md px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all active:scale-95">
+                    Browse Topics
+                </a>
+            </div>
+        </main>
+
+        <div id="app-footer-container"></div>
+    </div>
+
+    <script type="module">
+        import * as api from './js/api.js';
+        import { checkAuth } from './js/auth.js';
+        import { initNavBar } from './js/navbar.js';
+        import { initFooter } from './js/footer.js';
+        import { showToast } from './js/toast.js';
+
+        checkAuth();
+        initNavBar('vocabulary');
+        initFooter();
+        
+        const statusStyle = {
+            NEW: 'bg-secondary-fixed text-on-secondary-fixed',
+            LEARNING: 'bg-tertiary-fixed text-on-tertiary-fixed',
+            KNOWN: 'bg-primary-fixed text-on-primary-fixed'
+        };
+
+        let queue = [];
+        let currentIndex = 0;
+        let totalDue = 0;
+        let allWordsPage = 0;
+
+        async function loadDueWords() {
+            try {
+                const data = await api.getVocabularyToday(0, 50);
+                queue = data.content;
+                totalDue = data.totalElements;
+
+                document.getElementById('reviewSkeleton').classList.add('hidden');
+
+                if (queue.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    return;
+                }
+
+                document.getElementById('reviewContainer').classList.remove('hidden');
+                document.getElementById('reviewContainer').classList.add('flex');
+                showCard(0);
+            } catch (error) {
+                console.error('Failed to load due words:', error);
+                document.getElementById('reviewSkeleton').classList.add('hidden');
+                showToast(error.message || 'Failed to load words', 'error');
+            }
+        }
+        
+        async function handleDeleteWord(id) {
+            if (!confirm('Remove this word from your vocabulary?')) return;
+            try {
+                await api.deleteVocabulary(id);
+
+                // Đồng bộ hàng đợi Due Today nếu từ vừa xoá đang nằm trong đó,
+                // tránh việc quay lại tab Due còn thấy 1 card đã bị xoá dưới DB.
+                const idNum = Number(id);
+                const queueIndex = queue.findIndex(item => item.id === idNum);
+                if (queueIndex !== -1) {
+                    queue.splice(queueIndex, 1);
+                    if (queue.length === 0) {
+                        totalDue = 0;
+                    } else if (currentIndex >= queue.length) {
+                        currentIndex = queue.length - 1;
+                    }
+                }
+
+                showToast('Word removed', 'success');
+                if (allWordsPage > 0 && (await api.getAllVocabulary(allWordsPage, 10)).content.length === 0) {
+                    allWordsPage--;
+                }
+                loadAllWords();
+            } catch (error) {
+                showToast(error.message || 'Failed to remove word', 'error');
+            }
+        }
+
+        async function loadAllWords() {
+            document.getElementById('allWordsSkeleton').classList.remove('hidden');
+            document.getElementById('allWordsContainer').classList.add('hidden');
+            document.getElementById('allWordsEmpty').classList.add('hidden');
+            document.getElementById('allWordsPagination').innerHTML = '';
+
+            try {
+                const data = await api.getAllVocabulary(allWordsPage, 10);
+                document.getElementById('allWordsSkeleton').classList.add('hidden');
+
+                if (data.content.length === 0 && allWordsPage === 0) {
+                    document.getElementById('allWordsEmpty').classList.remove('hidden');
+                    return;
+                }
+
+                const container = document.getElementById('allWordsContainer');
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                container.innerHTML = data.content.map(item => `
+                    <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4 flex items-center justify-between gap-4">
+                        <div>
+                            <p class="font-headline-md text-headline-md text-on-surface">${item.word}</p>
+                            <p class="font-body-md text-body-md text-on-surface-variant">${item.meaning}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 rounded-full font-label-sm text-label-sm whitespace-nowrap ${statusStyle[item.status]}">${item.status}</span>
+                            <button class="deleteWordBtn text-error hover:bg-error-container rounded-full p-2 transition-colors" data-id="${item.id}" title="Remove word">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('.deleteWordBtn').forEach(btn => {
+                    btn.addEventListener('click', () => handleDeleteWord(btn.dataset.id));
+                });
+
+                document.getElementById('allWordsPagination').classList.remove('hidden');
+                renderAllWordsPagination(data);
+            } catch (error) {
+                document.getElementById('allWordsSkeleton').classList.add('hidden');
+                showToast(error.message || 'Failed to load your words', 'error');
+            }
+        }
+
+        function renderAllWordsPagination(data) {
+            const pagination = document.getElementById('allWordsPagination');
+            pagination.innerHTML = '';
+            if (data.totalPages <= 1) return;
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `px-5 py-2.5 rounded-2xl font-label-md text-label-md transition-all ${allWordsPage === 0 ? 'bg-surface-container text-on-surface-variant cursor-not-allowed' : 'btn-3d bg-primary border-primary-shadow text-on-primary hover:brightness-105'}`;
+            prevBtn.textContent = 'Previous';
+            prevBtn.disabled = allWordsPage === 0;
+            prevBtn.onclick = () => { allWordsPage--; loadAllWords(); };
+            pagination.appendChild(prevBtn);
+
+            const pageInfo = document.createElement('span');
+            pageInfo.className = 'font-label-md text-label-md text-on-surface';
+            pageInfo.textContent = `Page ${allWordsPage + 1} of ${data.totalPages}`;
+            pagination.appendChild(pageInfo);
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `px-5 py-2.5 rounded-2xl font-label-md text-label-md transition-all ${allWordsPage >= data.totalPages - 1 ? 'bg-surface-container text-on-surface-variant cursor-not-allowed' : 'btn-3d bg-primary border-primary-shadow text-on-primary hover:brightness-105'}`;
+            nextBtn.textContent = 'Next';
+            nextBtn.disabled = allWordsPage >= data.totalPages - 1;
+            nextBtn.onclick = () => { allWordsPage++; loadAllWords(); };
+            pagination.appendChild(nextBtn);
+        }
+
+        function switchTab(tab) {
+            const isDue = tab === 'due';
+            document.getElementById('tabDue').className = `px-5 py-2 rounded-xl font-label-md text-label-md transition-all ${isDue ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`;
+            document.getElementById('tabAll').className = `px-5 py-2 rounded-xl font-label-md text-label-md transition-all ${!isDue ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`;
+
+            for (const id of ['reviewSkeleton', 'reviewContainer', 'emptyState']) {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(id).classList.remove('flex');
+            }
+            for (const id of ['allWordsSkeleton', 'allWordsContainer', 'allWordsEmpty', 'allWordsPagination']) {
+                document.getElementById(id).classList.add('hidden');
+            }
+
+            if (isDue) {
+                document.getElementById('dueCounter').classList.remove('hidden');
+                if (queue.length === 0 && totalDue === 0) {
+                    loadDueWords();
+                } else if (queue.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                } else {
+                    document.getElementById('reviewContainer').classList.remove('hidden');
+                    document.getElementById('reviewContainer').classList.add('flex');
+                    showCard(currentIndex);   // thêm dòng này — vẽ lại đúng card sau khi queue có thể đã đổi
+                }
+            } else {
+                document.getElementById('dueCounter').classList.add('hidden');
+                loadAllWords();
+            }
+        }
+
+        document.getElementById('tabDue').addEventListener('click', () => switchTab('due'));
+        document.getElementById('tabAll').addEventListener('click', () => switchTab('all'));
+
+        function showCard(index) {
+            currentIndex = index;
+            const item = queue[index];
+
+            document.getElementById('reviewWord').textContent = item.word;
+            document.getElementById('reviewMeaning').textContent = item.meaning;
+            document.getElementById('reviewExample').textContent = item.example ?? '';
+            document.getElementById('reviewCard').classList.remove('flipped');
+            document.getElementById('dueCounter').textContent = `${queue.length} word(s) due today (${totalDue} total)`;
+            document.getElementById('cardCounter').textContent = `${index + 1} / ${queue.length}`;
+
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === queue.length - 1;
+        }
+        
+        document.getElementById('reviewCard').addEventListener('click', function() {
+            this.classList.toggle('flipped');
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentIndex > 0) showCard(currentIndex - 1);
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentIndex < queue.length - 1) showCard(currentIndex + 1);
+        });
+
+        async function submitReview(remembered) {
+            const item = queue[currentIndex];
+            document.getElementById('rememberedBtn').disabled = true;
+            document.getElementById('forgotBtn').disabled = true;
+            try {
+                await api.reviewVocabulary(item.id, remembered);
+
+                queue.splice(currentIndex, 1);
+
+                if (queue.length === 0) {
+                    document.getElementById('reviewContainer').classList.add('hidden');
+                    document.getElementById('reviewContainer').classList.remove('flex');
+                    document.getElementById('emptyState').classList.remove('hidden');
+                } else {
+                    showCard(Math.min(currentIndex, queue.length - 1));
+                }
+            } catch (error) {
+                showToast(error.message || 'Failed to submit review', 'error');
+            } finally {
+                document.getElementById('rememberedBtn').disabled = false;
+                document.getElementById('forgotBtn').disabled = false;
+            }
+        }
+
+        document.getElementById('rememberedBtn').addEventListener('click', () => submitReview(true));
+        document.getElementById('forgotBtn').addEventListener('click', () => submitReview(false));
+
+        loadDueWords();
+    </script>
+</body>
+</html>

@@ -84,6 +84,9 @@
                 <div class="flashcard-wrapper w-full max-w-lg">
                     <div id="flashcard" class="flashcard bg-surface border-2 border-outline-variant rounded-xl min-h-[300px] shadow-md">
                         <div class="flashcard-front bg-primary text-on-primary p-8">
+                            <button id="saveWordBtn" class="absolute top-4 right-4 text-on-primary hover:bg-on-primary/20 rounded-full p-2 transition-colors" title="Save word" onclick="event.stopPropagation()">
+                                <span class="material-symbols-outlined">bookmark_add</span>
+                            </button>
                             <div class="text-center">
                                 <p class="font-label-sm text-label-sm opacity-80 mb-2">WORD</p>
                                 <h3 id="flashcardWord" class="font-display-lg text-[42px] font-extrabold"></h3>
@@ -127,6 +130,7 @@
         import { initAuthModal } from './js/authModal.js';
         import { showToast } from './js/toast.js';
         import { initFooter } from './js/footer.js';
+        import { getUser } from './js/auth.js';
 
         initNavBar('topics');
         initAuthModal();
@@ -141,6 +145,7 @@
 
         let flashcards = [];
         let currentIndex = 0;
+        let savedIds = new Set();
 
         async function loadTopic() {
             try {
@@ -165,6 +170,15 @@
 
                 flashcards = await api.getFlashcards(topicId);
                 document.getElementById('flashcardSkeleton').classList.add('hidden');
+                
+                if (getUser()) {
+                    try {
+                        const ids = await api.getSavedFlashcardIds(topicId);
+                        savedIds = new Set(ids);
+                    } catch (error) {
+                        console.error('Failed to load saved word ids:', error);
+                    }
+                }
 
                 if (flashcards.length > 0) {
                     document.getElementById('flashcardContainer').classList.remove('hidden');
@@ -206,10 +220,42 @@
             // Update button states
             document.getElementById('prevBtn').disabled = index === 0;
             document.getElementById('nextBtn').disabled = index === flashcards.length - 1;
+            
+            const btn = document.getElementById('saveWordBtn');
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const isSaved = savedIds.has(card.id);
+            icon.textContent = isSaved ? 'bookmark_added' : 'bookmark_add';
+            icon.classList.toggle('icon-filled', isSaved);
         }
 
         document.getElementById('flashcard').addEventListener('click', function() {
             this.classList.toggle('flipped');
+        });
+        
+        document.getElementById('saveWordBtn').addEventListener('click', async () => {
+            if (!getUser()) {
+                window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'login' }));
+                return;
+            }
+            const btn = document.getElementById('saveWordBtn');
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const card = flashcards[currentIndex];
+            try {
+                await api.saveVocabulary(card.id);
+                savedIds.add(card.id);
+                icon.textContent = 'bookmark_added';
+                icon.classList.add('icon-filled');
+                showToast('Word saved to your vocabulary', 'success');
+            } catch (error) {
+                if (error.message === 'Word is already saved') {
+                    savedIds.add(card.id);
+                    icon.textContent = 'bookmark_added';
+                    icon.classList.add('icon-filled');
+                    showToast('Already saved', 'info');
+                } else {
+                    showToast(error.message || 'Failed to save word', 'error');
+                }
+            }
         });
 
         document.getElementById('prevBtn').addEventListener('click', () => {

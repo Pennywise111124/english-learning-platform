@@ -20,6 +20,7 @@ export function initNavBar(activePage = '') {
   const navItems = [
     { id: 'chat', label: 'Chat', href: 'chat.html', icon: 'forum' },
     { id: 'topics', label: 'Topics', href: 'topics.html', icon: 'style' },
+    { id: 'vocabulary', label: 'My Words', href: 'vocabulary.html', icon: 'bookmark' },
     { id: 'progress', label: 'Progress', href: 'progress.html', icon: 'monitoring' }
   ];
 
