@@ -56,7 +56,7 @@ public class UserService {
         User user = getCurrentUser();
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác!");
+            throw new IllegalArgumentException("Current password is incorrect!");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -66,6 +66,6 @@ public class UserService {
     private User getCurrentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại với username: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
 }

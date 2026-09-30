@@ -40,11 +40,11 @@ public class FileStorageServiceImpl implements FileStorageService {
     @Override
     public String storeImage(MultipartFile file, String subDirectory) {
         if (file == null || file.isEmpty()) {
-            throw new InvalidFileException("File không tồn tại hoặc rỗng");
+            throw new InvalidFileException("File is missing or empty");
         }
 
         if (file.getSize() > maxFileSizeBytes) {
-            throw new InvalidFileException("Dung lượng file vượt quá giới hạn");
+            throw new InvalidFileException("File size exceeds the limit");
         }
 
         String contentType = file.getContentType();
@@ -53,7 +53,7 @@ public class FileStorageServiceImpl implements FileStorageService {
                 (allowedContentTypes.contains(contentType) || contentType.equals("application/octet-stream"));
 
         if (!isValidContentType) {
-            throw new InvalidFileException("Định dạng File không được hỗ trợ (Chỉ chấp nhận JPG/PNG)");
+            throw new InvalidFileException("Unsupported file format (only JPG/PNG are accepted)");
         }
 
         String extension;
@@ -61,12 +61,12 @@ public class FileStorageServiceImpl implements FileStorageService {
                 ImageInputStream iis = ImageIO.createImageInputStream(inputStream)) {
 
             if (iis == null) {
-                throw new InvalidFileException("Không thể đọc luồng dữ liệu của tệp tin");
+                throw new InvalidFileException("Unable to read the file stream");
             }
 
             var readers = ImageIO.getImageReaders(iis);
             if (!readers.hasNext()) {
-                throw new InvalidFileException("Nội dung tệp không phải là hình ảnh hợp lệ!");
+                throw new InvalidFileException("File content is not a valid image!");
             }
 
             ImageReader reader = readers.next();
@@ -74,19 +74,19 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             BufferedImage bufferedImage = reader.read(0);
             if (bufferedImage == null) {
-                throw new InvalidFileException("Nội dung tệp hình ảnh bị lỗi hoặc hỏng!");
+                throw new InvalidFileException("Image file is corrupted or unreadable!");
             }
             String formatName = reader.getFormatName().toLowerCase();
 
             if (!formatName.equals("jpeg") && !formatName.equals("jpg") && !formatName.equals("png")) {
-                throw new InvalidFileException("Định dạng File không được hỗ trợ (Chỉ chấp nhận JPG/PNG)");
+                throw new InvalidFileException("Unsupported file format (only JPG/PNG are accepted)");
             }
             extension = formatName.equals("jpeg") ? "jpg" : formatName;
 
             reader.dispose();
 
         } catch (IOException e) {
-            throw new InvalidFileException("Lỗi trong quá trình đọc và kiểm tra tệp hình ảnh");
+            throw new InvalidFileException("Error while reading and validating the image file");
         }
 
         String filename = UUID.randomUUID().toString() + "." + extension;
@@ -95,14 +95,14 @@ public class FileStorageServiceImpl implements FileStorageService {
         try {
             Files.createDirectories(targetFolder);
         } catch (IOException e) {
-            throw new RuntimeException("Không thể tạo thư mục lưu trữ file: " + targetFolder.toString(), e);
+            throw new RuntimeException("Unable to create storage directory: " + targetFolder.toString(), e);
         }
 
         Path targetPath = targetFolder.resolve(filename);
         try (InputStream inputStream = file.getInputStream()) {
             Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new RuntimeException("Lỗi khi lưu tệp tin vào đĩa cứng", e);
+            throw new RuntimeException("Failed to save the file to disk", e);
         }
 
         return "/uploads/" + subDirectory + "/" + filename;

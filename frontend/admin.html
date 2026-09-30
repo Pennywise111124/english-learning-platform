@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html class="light" lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Admin Panel - LinguistAI</title>
     <script>
-      if (localStorage.getItem('linguistai_theme') === 'dark' ||
-          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
+        if (localStorage.getItem('linguistai_theme') === 'dark' ||
+            (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
     </script>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="js/tailwind-config.js"></script>
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/style.css"/>
+    <link rel="stylesheet" href="css/style.css" />
     <style>
         .material-symbols-outlined {
             font-family: 'Material Symbols Outlined';
@@ -35,273 +39,327 @@
         }
     </style>
 </head>
+
 <body class="bg-background text-on-background font-body-md min-h-screen flex flex-col page-fade-in">
 
     <div id="app-sidebar-container"></div>
     <div id="app-content" class="min-h-screen flex flex-col">
-    <div id="app-topbar-container"></div>
+        <div id="app-topbar-container"></div>
 
-    <!-- Main Content -->
-    <main class="flex-grow w-full px-gutter md:px-margin-desktop max-w-container-max mx-auto pt-stack-md pb-stack-lg">
-        <div class="mb-stack-md">
-            <h1 class="font-headline-lg text-headline-lg text-on-surface">Admin Panel 🛠️</h1>
-            <p class="font-body-md text-on-surface-variant mt-2">Manage topics, flashcards, and quizzes.</p>
-        </div>
+        <!-- Main Content -->
+        <main
+            class="flex-grow w-full px-gutter md:px-margin-desktop max-w-container-max mx-auto pt-stack-md pb-stack-lg">
+            <div class="mb-stack-md">
+                <h1 class="font-headline-lg text-headline-lg text-on-surface">Admin Panel 🛠️</h1>
+                <p class="font-body-md text-on-surface-variant mt-2">Manage topics, flashcards, and quizzes.</p>
+            </div>
 
-        <!-- Tabs -->
-        <div class="border-b-2 border-outline-variant mb-stack-md">
-            <div class="flex gap-8" role="navigation" aria-label="Admin tabs">
-                <button id="topicsTab" class="border-b-4 border-primary text-primary font-bold py-3 font-body-md transition-colors">
-                    Topics
-                </button>
-                <button id="flashcardsTab" class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
-                    Flashcards
-                </button>
-                <button id="quizzesTab" class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
-                    Quizzes
-                </button>
+            <!-- Tabs -->
+            <div class="border-b-2 border-outline-variant mb-stack-md">
+                <div class="flex gap-8" role="navigation" aria-label="Admin tabs">
+                    <button id="topicsTab"
+                        class="border-b-4 border-primary text-primary font-bold py-3 font-body-md transition-colors">
+                        Topics
+                    </button>
+                    <button id="flashcardsTab"
+                        class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
+                        Flashcards
+                    </button>
+                    <button id="quizzesTab"
+                        class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
+                        Quizzes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Topics Panel -->
+            <div id="topicsPanel" class="tab-content">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h2 class="font-headline-md text-headline-md text-on-surface">Manage Topics</h2>
+                    <button id="addTopicBtn"
+                        class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">add</span>
+                        Add Topic
+                    </button>
+                </div>
+
+                <div
+                    class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[600px]">
+                            <thead class="bg-surface-container-low border-b-2 border-outline-variant">
+                                <tr>
+                                    <th class="hidden sm:table-cell text-left p-4 font-label-md text-on-surface">ID</th>
+                                    <th class="text-left p-4 font-label-md text-on-surface">Title</th>
+                                    <th class="text-left p-4 font-label-md text-on-surface">Level</th>
+                                    <th class="hidden md:table-cell text-left p-4 font-label-md text-on-surface">
+                                        Description</th>
+                                    <th class="text-right p-4 font-label-md text-on-surface">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topicsTableBody" class="divide-y-2 divide-outline-variant">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flashcards Panel -->
+            <div id="flashcardsPanel" class="tab-content hidden">
+                <div class="mb-stack-sm">
+                    <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Flashcards</h2>
+                    <div class="flex gap-4 items-center">
+                        <label class="font-label-md text-on-surface">Topic:</label>
+                        <select id="flashcardTopicFilter"
+                            class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            <option value="">-- Select a topic --</option>
+                        </select>
+                        <button id="addFlashcardBtn"
+                            class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
+                            <span class="material-symbols-outlined text-lg">add</span>
+                            Add Flashcard
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="flashcardsGrid">
+                    <div class="col-span-full text-center p-stack-lg text-on-surface-variant">Select a topic to view its
+                        flashcards</div>
+                </div>
+            </div>
+
+            <!-- Quizzes Panel -->
+            <div id="quizzesPanel" class="tab-content hidden">
+                <div class="mb-stack-sm">
+                    <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Quizzes</h2>
+                    <div class="flex gap-4 items-center">
+                        <label class="font-label-md text-on-surface">Topic:</label>
+                        <select id="quizTopicFilter"
+                            class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            <option value="">-- Select a topic --</option>
+                        </select>
+                        <button id="addQuizBtn"
+                            class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
+                            <span class="material-symbols-outlined text-lg">add</span>
+                            Add Quiz
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                    <div id="quizzesList" class="divide-y-2 divide-outline-variant">
+                        <div class="p-stack-lg text-center text-on-surface-variant">Select a topic to view its quizzes
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal: Add/Edit Topic -->
+        <div id="topicModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+            <div
+                class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md border-2 border-outline-variant">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h3 class="font-headline-md text-headline-md text-on-surface" id="topicModalTitle">Add Topic</h3>
+                    <button id="closeTopicModal" class="text-on-surface-variant hover:text-on-surface">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="topicForm" class="flex flex-col gap-stack-sm">
+                    <input type="hidden" id="topicId" />
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="topicTitle">Title</label>
+                        <input id="topicTitle" type="text" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit"
+                            for="topicDescription">Description</label>
+                        <textarea id="topicDescription" rows="3" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="topicLevel">Level</label>
+                        <select id="topicLevel" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            <option value="BEGINNER">Beginner</option>
+                            <option value="INTERMEDIATE">Intermediate</option>
+                            <option value="ADVANCED">Advanced</option>
+                        </select>
+                    </div>
+                    <div id="topicImageSection" class="hidden">
+                        <label class="block font-label-md text-on-surface mb-unit">Image</label>
+                        <div class="flex items-center gap-4">
+                            <img id="topicImagePreview" src="" alt=""
+                                class="hidden w-24 h-16 object-cover rounded-xl border-2 border-outline-variant" />
+                            <input id="topicImageFile" type="file" accept="image/jpeg,image/png"
+                                class="flex-1 font-body-sm" />
+                            <button type="button" id="uploadTopicImageBtn"
+                                class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-4 mt-stack-sm">
+                        <button type="button" id="cancelTopicBtn"
+                            class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                            Save
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <!-- Topics Panel -->
-        <div id="topicsPanel" class="tab-content">
-            <div class="flex justify-between items-center mb-stack-sm">
-                <h2 class="font-headline-md text-headline-md text-on-surface">Manage Topics</h2>
-                <button id="addTopicBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2">
+        <!-- Modal: Add/Edit Flashcard -->
+        <div id="flashcardModal"
+            class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+            <div
+                class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md border-2 border-outline-variant">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h3 class="font-headline-md text-headline-md text-on-surface" id="flashcardModalTitle">Add Flashcard
+                    </h3>
+                    <button id="closeFlashcardModal" class="text-on-surface-variant hover:text-on-surface">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="flashcardForm" class="flex flex-col gap-stack-sm">
+                    <input type="hidden" id="flashcardId" />
+                    <input type="hidden" id="flashcardTopicId" />
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="flashcardWord">Word</label>
+                        <input id="flashcardWord" type="text" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit"
+                            for="flashcardMeaning">Meaning</label>
+                        <input id="flashcardMeaning" type="text" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit"
+                            for="flashcardExample">Example</label>
+                        <textarea id="flashcardExample" rows="2" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="flashcardAudioUrl">Audio URL
+                            (optional)</label>
+                        <input id="flashcardAudioUrl" type="url"
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div id="flashcardImageSection" class="hidden">
+                        <label class="block font-label-md text-on-surface mb-unit">Image</label>
+                        <div class="flex items-center gap-4">
+                            <img id="flashcardImagePreview" src="" alt=""
+                                class="hidden w-20 h-20 object-cover rounded-xl border-2 border-outline-variant" />
+                            <input id="flashcardImageFile" type="file" accept="image/jpeg,image/png"
+                                class="flex-1 font-body-sm" />
+                            <button type="button" id="uploadFlashcardImageBtn"
+                                class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-4 mt-stack-sm">
+                        <button type="button" id="cancelFlashcardBtn"
+                            class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal: Add/Edit Quiz -->
+        <div id="quizModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+            <div
+                class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-lg p-stack-md border-2 border-outline-variant">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h3 class="font-headline-md text-headline-md text-on-surface" id="quizModalTitle">Add Quiz</h3>
+                    <button id="closeQuizModal" class="text-on-surface-variant hover:text-on-surface">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="quizForm" class="flex flex-col gap-stack-sm">
+                    <input type="hidden" id="quizId" />
+                    <input type="hidden" id="quizTopicId" />
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="quizTitle">Title</label>
+                        <input id="quizTitle" type="text" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div class="flex justify-end gap-4 mt-stack-sm">
+                        <button type="button" id="cancelQuizBtn"
+                            class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal: Manage Questions (list + inline Add/Edit form) -->
+        <div id="questionsModal"
+            class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+            <div
+                class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-3xl p-stack-md max-h-[90vh] overflow-y-auto border-2 border-outline-variant">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h3 class="font-headline-md text-headline-md text-on-surface" id="questionsModalTitle">Manage
+                        Questions</h3>
+                    <button id="closeQuestionsModal" class="text-on-surface-variant hover:text-on-surface">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div id="questionsList" class="flex flex-col gap-3 mb-stack-md"></div>
+
+                <button id="addQuestionBtn"
+                    class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 mb-stack-md">
                     <span class="material-symbols-outlined text-lg">add</span>
-                    Add Topic
+                    Add Question
                 </button>
-            </div>
 
-          <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[600px]">
-                        <thead class="bg-surface-container-low border-b-2 border-outline-variant">
-                            <tr>
-                                <th class="hidden sm:table-cell text-left p-4 font-label-md text-on-surface">ID</th>
-                                <th class="text-left p-4 font-label-md text-on-surface">Title</th>
-                                <th class="text-left p-4 font-label-md text-on-surface">Level</th>
-                                <th class="hidden md:table-cell text-left p-4 font-label-md text-on-surface">Description</th>
-                                <th class="text-right p-4 font-label-md text-on-surface">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="topicsTableBody" class="divide-y-2 divide-outline-variant">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Flashcards Panel -->
-        <div id="flashcardsPanel" class="tab-content hidden">
-            <div class="mb-stack-sm">
-                <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Flashcards</h2>
-                <div class="flex gap-4 items-center">
-                    <label class="font-label-md text-on-surface">Topic:</label>
-                    <select id="flashcardTopicFilter" class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">-- Select a topic --</option>
-                    </select>
-                    <button id="addFlashcardBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
-                        <span class="material-symbols-outlined text-lg">add</span>
-                        Add Flashcard
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="flashcardsGrid">
-                <div class="col-span-full text-center p-stack-lg text-on-surface-variant">Chọn 1 Topic để xem Flashcard</div>
-            </div>
-        </div>
-
-        <!-- Quizzes Panel -->
-        <div id="quizzesPanel" class="tab-content hidden">
-            <div class="mb-stack-sm">
-                <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Quizzes</h2>
-                <div class="flex gap-4 items-center">
-                    <label class="font-label-md text-on-surface">Topic:</label>
-                    <select id="quizTopicFilter" class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">-- Select a topic --</option>
-                    </select>
-                    <button id="addQuizBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
-                        <span class="material-symbols-outlined text-lg">add</span>
-                        Add Quiz
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
-                <div id="quizzesList" class="divide-y-2 divide-outline-variant">
-                    <div class="p-stack-lg text-center text-on-surface-variant">Chọn 1 Topic để xem Quiz</div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal: Add/Edit Topic -->
-    <div id="topicModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md border-2 border-outline-variant">
-            <div class="flex justify-between items-center mb-stack-sm">
-                <h3 class="font-headline-md text-headline-md text-on-surface" id="topicModalTitle">Add Topic</h3>
-                <button id="closeTopicModal" class="text-on-surface-variant hover:text-on-surface">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <form id="topicForm" class="flex flex-col gap-stack-sm">
-                <input type="hidden" id="topicId"/>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="topicTitle">Title</label>
-                    <input id="topicTitle" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
-                </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="topicDescription">Description</label>
-                    <textarea id="topicDescription" rows="3" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
-                </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="topicLevel">Level</label>
-                    <select id="topicLevel" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="BEGINNER">Beginner</option>
-                        <option value="INTERMEDIATE">Intermediate</option>
-                        <option value="ADVANCED">Advanced</option>
-                    </select>
-                </div>
-                <div id="topicImageSection" class="hidden">
-                    <label class="block font-label-md text-on-surface mb-unit">Image</label>
-                    <div class="flex items-center gap-4">
-                        <img id="topicImagePreview" src="" alt="" class="hidden w-24 h-16 object-cover rounded-xl border-2 border-outline-variant"/>
-                        <input id="topicImageFile" type="file" accept="image/jpeg,image/png" class="flex-1 font-body-sm"/>
-                        <button type="button" id="uploadTopicImageBtn" class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                <form id="questionForm"
+                    class="hidden flex flex-col gap-stack-sm border-t-2 border-outline-variant pt-stack-md">
+                    <input type="hidden" id="questionId" />
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="questionText">Question</label>
+                        <textarea id="questionText" rows="2" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
                     </div>
-                </div>
-                <div class="flex justify-end gap-4 mt-stack-sm">
-                    <button type="button" id="cancelTopicBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
-                        Save
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal: Add/Edit Flashcard -->
-    <div id="flashcardModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl p-stack-md border-2 border-outline-variant">
-            <div class="flex justify-between items-center mb-stack-sm">
-                <h3 class="font-headline-md text-headline-md text-on-surface" id="flashcardModalTitle">Add Flashcard</h3>
-                <button id="closeFlashcardModal" class="text-on-surface-variant hover:text-on-surface">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <form id="flashcardForm" class="flex flex-col gap-stack-sm">
-                <input type="hidden" id="flashcardId"/>
-                <input type="hidden" id="flashcardTopicId"/>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardWord">Word</label>
-                    <input id="flashcardWord" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
-                </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardMeaning">Meaning</label>
-                    <input id="flashcardMeaning" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
-                </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardExample">Example</label>
-                    <textarea id="flashcardExample" rows="2" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
-                </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="flashcardAudioUrl">Audio URL (optional)</label>
-                    <input id="flashcardAudioUrl" type="url" class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
-                </div>
-                <div id="flashcardImageSection" class="hidden">
-                    <label class="block font-label-md text-on-surface mb-unit">Image</label>
-                    <div class="flex items-center gap-4">
-                        <img id="flashcardImagePreview" src="" alt="" class="hidden w-20 h-20 object-cover rounded-xl border-2 border-outline-variant"/>
-                        <input id="flashcardImageFile" type="file" accept="image/jpeg,image/png" class="flex-1 font-body-sm"/>
-                        <button type="button" id="uploadFlashcardImageBtn" class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit">Options (select the radio next to the
+                            correct answer)</label>
+                        <div id="optionsContainer" class="flex flex-col gap-2"></div>
+                        <button type="button" id="addOptionBtn"
+                            class="mt-2 text-primary font-label-sm font-bold hover:underline">+ Add option</button>
                     </div>
-                </div>
-                <div class="flex justify-end gap-4 mt-stack-sm">
-                    <button type="button" id="cancelFlashcardBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
-                        Save
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal: Add/Edit Quiz -->
-    <div id="quizModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-lg p-stack-md border-2 border-outline-variant">
-            <div class="flex justify-between items-center mb-stack-sm">
-                <h3 class="font-headline-md text-headline-md text-on-surface" id="quizModalTitle">Add Quiz</h3>
-                <button id="closeQuizModal" class="text-on-surface-variant hover:text-on-surface">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
+                    <div class="flex justify-end gap-4 mt-stack-sm">
+                        <button type="button" id="cancelQuestionBtn"
+                            class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
+                            Save Question
+                        </button>
+                    </div>
+                </form>
             </div>
-            <form id="quizForm" class="flex flex-col gap-stack-sm">
-                <input type="hidden" id="quizId"/>
-                <input type="hidden" id="quizTopicId"/>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="quizTitle">Title</label>
-                    <input id="quizTitle" type="text" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"/>
-                </div>
-                <div class="flex justify-end gap-4 mt-stack-sm">
-                    <button type="button" id="cancelQuizBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
-                        Save
-                    </button>
-                </div>
-            </form>
         </div>
+
+        <div id="app-footer-container"></div>
     </div>
-
-    <!-- Modal: Manage Questions (list + inline Add/Edit form) -->
-    <div id="questionsModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-3xl p-stack-md max-h-[90vh] overflow-y-auto border-2 border-outline-variant">
-            <div class="flex justify-between items-center mb-stack-sm">
-                <h3 class="font-headline-md text-headline-md text-on-surface" id="questionsModalTitle">Manage Questions</h3>
-                <button id="closeQuestionsModal" class="text-on-surface-variant hover:text-on-surface">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-
-            <div id="questionsList" class="flex flex-col gap-3 mb-stack-md"></div>
-
-            <button id="addQuestionBtn" class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 mb-stack-md">
-                <span class="material-symbols-outlined text-lg">add</span>
-                Add Question
-            </button>
-
-            <form id="questionForm" class="hidden flex flex-col gap-stack-sm border-t-2 border-outline-variant pt-stack-md">
-                <input type="hidden" id="questionId"/>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit" for="questionText">Question</label>
-                    <textarea id="questionText" rows="2" required class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
-                </div>
-                <div>
-                    <label class="block font-label-md text-on-surface mb-unit">Options (chọn radio ở đáp án đúng)</label>
-                    <div id="optionsContainer" class="flex flex-col gap-2"></div>
-                    <button type="button" id="addOptionBtn" class="mt-2 text-primary font-label-sm font-bold hover:underline">+ Add option</button>
-                </div>
-                <div class="flex justify-end gap-4 mt-stack-sm">
-                    <button type="button" id="cancelQuestionBtn" class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all">
-                        Save Question
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="app-footer-container"></div>
-        </div>
 
     <script type="module">
         import { checkAdmin } from './js/auth.js';
@@ -328,7 +386,7 @@
         let editingQuestionId = null;
         let currentQuestionsCache = [];
         let optionRowCount = 0;
-        
+
         function renderTopicsTableSkeleton(count = 5) {
             document.getElementById('topicsTableBody').innerHTML = Array.from({ length: count }).map(() => `
                 <tr>
@@ -392,7 +450,7 @@
                 default: return 'bg-surface-container text-on-surface-variant';
             }
         }
-        
+
         function truncate(text, maxLen) {
             return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
         }
@@ -479,7 +537,7 @@
                     document.getElementById('topicModal').classList.add('hidden');
                 } else {
                     const created = await api.adminCreateTopic(data);
-                    showToast('Topic created! Bạn có thể upload ảnh ngay bên dưới.', 'success');
+                    showToast('Topic created! You can upload an image below.', 'success');
                     editingTopicId = created.id;
                     document.getElementById('topicModalTitle').textContent = 'Edit Topic';
                     document.getElementById('topicImageSection').classList.remove('hidden');
@@ -525,7 +583,7 @@
 
         document.getElementById('uploadTopicImageBtn').addEventListener('click', async () => {
             const fileInput = document.getElementById('topicImageFile');
-            if (!fileInput.files[0]) { showToast('Chọn 1 file ảnh trước', 'error'); return; }
+            if (!fileInput.files[0]) { showToast('Select an image file first', 'error'); return; }
             try {
                 const updated = await api.adminUploadTopicImage(editingTopicId, fileInput.files[0]);
                 const preview = document.getElementById('topicImagePreview');
@@ -549,14 +607,14 @@
         async function loadFlashcards() {
             const grid = document.getElementById('flashcardsGrid');
             if (!currentFlashcardTopicId) {
-                grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Chọn 1 Topic để xem Flashcard</div>';
+                grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Select a topic to view its flashcards</div>';
                 return;
             }
             renderFlashcardsSkeleton();
             try {
                 const flashcards = await api.getFlashcards(currentFlashcardTopicId);
                 if (flashcards.length === 0) {
-                    grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Chưa có Flashcard nào trong Topic này</div>';
+                    grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">No flashcards in this topic yet</div>';
                     return;
                 }
                 grid.innerHTML = flashcards.map(fc => `
@@ -581,7 +639,7 @@
         }
 
         document.getElementById('addFlashcardBtn').addEventListener('click', () => {
-            if (!currentFlashcardTopicId) { showToast('Chọn 1 Topic trước', 'error'); return; }
+            if (!currentFlashcardTopicId) { showToast('Select a topic first', 'error'); return; }
             editingFlashcardId = null;
             document.getElementById('flashcardModalTitle').textContent = 'Add Flashcard';
             document.getElementById('flashcardForm').reset();
@@ -610,7 +668,7 @@
                     document.getElementById('flashcardModal').classList.add('hidden');
                 } else {
                     const created = await api.adminCreateFlashcard(document.getElementById('flashcardTopicId').value, data);
-                    showToast('Flashcard created! Bạn có thể upload ảnh ngay bên dưới.', 'success');
+                    showToast('Flashcard created! You can upload an image below.', 'success');
                     editingFlashcardId = created.id;
                     document.getElementById('flashcardModalTitle').textContent = 'Edit Flashcard';
                     document.getElementById('flashcardImageSection').classList.remove('hidden');
@@ -657,7 +715,7 @@
 
         document.getElementById('uploadFlashcardImageBtn').addEventListener('click', async () => {
             const fileInput = document.getElementById('flashcardImageFile');
-            if (!fileInput.files[0]) { showToast('Chọn 1 file ảnh trước', 'error'); return; }
+            if (!fileInput.files[0]) { showToast('Select an image file first', 'error'); return; }
             try {
                 const updated = await api.adminUploadFlashcardImage(editingFlashcardId, fileInput.files[0]);
                 const preview = document.getElementById('flashcardImagePreview');
@@ -681,14 +739,14 @@
         async function loadQuizzes() {
             const list = document.getElementById('quizzesList');
             if (!currentQuizTopicId) {
-                list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Chọn 1 Topic để xem Quiz</div>';
+                list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Select a topic to view its quizzes</div>';
                 return;
             }
             renderQuizzesSkeleton();
             try {
                 const quizzes = await api.getQuizzesByTopic(currentQuizTopicId);
                 if (quizzes.length === 0) {
-                    list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Chưa có Quiz nào trong Topic này</div>';
+                    list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">No quizzes in this topic yet</div>';
                     return;
                 }
                 list.innerHTML = quizzes.map(q => `
@@ -713,7 +771,7 @@
         }
 
         document.getElementById('addQuizBtn').addEventListener('click', () => {
-            if (!currentQuizTopicId) { showToast('Chọn 1 Topic trước', 'error'); return; }
+            if (!currentQuizTopicId) { showToast('Select a topic first', 'error'); return; }
             editingQuizId = null;
             document.getElementById('quizModalTitle').textContent = 'Add Quiz';
             document.getElementById('quizForm').reset();
@@ -753,7 +811,7 @@
         };
 
         window.deleteQuiz = async (id) => {
-            if (!confirm('Are you sure? Nếu Quiz đã có người làm bài, thao tác sẽ bị từ chối (409).')) return;
+            if (!confirm('Are you sure? If the quiz already has attempts, the action will be rejected (409).')) return;
             try {
                 await api.adminDeleteQuiz(id);
                 showToast('Quiz deleted!', 'success');
@@ -778,7 +836,7 @@
             try {
                 currentQuestionsCache = await api.adminGetQuestionsForQuiz(currentQuestionsQuizId);
                 if (currentQuestionsCache.length === 0) {
-                    list.innerHTML = '<div class="text-center p-stack-md text-on-surface-variant">Chưa có câu hỏi nào</div>';
+                    list.innerHTML = '<div class="text-center p-stack-md text-on-surface-variant">No questions yet</div>';
                     return;
                 }
                 list.innerHTML = currentQuestionsCache.map(q => `
@@ -824,7 +882,7 @@
                 </button>
             `;
             row.querySelector('.remove-option').addEventListener('click', () => {
-                if (container.children.length <= 2) { showToast('Cần ít nhất 2 lựa chọn', 'error'); return; }
+                if (container.children.length <= 2) { showToast('At least 2 options are required', 'error'); return; }
                 row.remove();
             });
             container.appendChild(row);
@@ -868,7 +926,7 @@
             const rows = [...document.getElementById('optionsContainer').children];
             const options = rows.map(row => row.querySelector('.option-text').value.trim());
             const checkedRadio = document.querySelector('input[name="correctOption"]:checked');
-            if (!checkedRadio) { showToast('Chọn 1 đáp án đúng', 'error'); return; }
+            if (!checkedRadio) { showToast('Select the correct answer', 'error'); return; }
             const checkedRow = rows.find(row => row.dataset.rowId === checkedRadio.value);
             const correctAnswer = checkedRow.querySelector('.option-text').value.trim();
 
@@ -914,4 +972,5 @@
         }
     </script>
 </body>
+
 </html>

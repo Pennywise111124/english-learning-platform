@@ -2,9 +2,9 @@
 # Project 1 — Nền tảng học tiếng Anh tích hợp AI
 *(AI English Learning Platform — trước đây gọi là "Chatbot Học Tiếng Anh"; đổi tên vì phạm vi đã lớn hơn 1 chatbot đơn thuần: gồm AI Chat, Topic/Flashcard, Quiz, Progress, Vocabulary/SRS, Dictation, Search)*
 
-**Phiên bản:** 1.6
-**Ngày tạo:** 28/08/2026 — cập nhật lần 6 (23/09/2026, hoàn thành M9)
-**Trạng thái:** M1–M9 hoàn thành (MVP đầy đủ, Backend + Frontend, đã polish UI + QA tổng thể) — sẵn sàng bắt đầu M10
+**Phiên bản:** 1.7
+**Ngày tạo:** 28/08/2026 — cập nhật lần 7 (29/09/2026, hoàn thành M10 + M11)
+**Trạng thái:** M1–M11 hoàn thành (MVP + Search/Filter/Pagination cho Topic + Vocabulary/SRS) — sẵn sàng bắt đầu M12
 
 ---
 
@@ -53,6 +53,14 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - Lưu ý: phát hiện ở M9 (lặp lại nhiều lần trong lúc code FE) — gắn `addEventListener` cho 1 `id` không tồn tại trên DOM tại thời điểm script chạy sẽ ném `TypeError` đồng bộ ngay tại dòng đó; vì đây là top-level statement trong `<script type="module">`, **toàn bộ code phía sau trong cùng module dừng chạy hoàn toàn** (kể cả lệnh gọi hàm khởi tạo dữ liệu ở cuối file) — không có exception nào hiện ra ngoài Console, dễ nhầm là "trang không load được gì cả" thay vì đúng nguyên nhân là 1 dòng bị lỗi giữa file. Luôn kiểm tra Console trước khi đoán nguyên nhân khi 1 trang JS đột nhiên "im lặng không làm gì".
 - Lưu ý: phát hiện ở M9 — khi mở public 1 API vốn trước đó yêu cầu JWT (VD: `GET /api/topics`), cần sửa **cả 2 lớp** cùng lúc: (1) `SecurityConfig` thêm `permitAll()` cho đúng method + path, và (2) tầng FE dùng chung (`navbar.js`) phải có nhánh render riêng cho "khách chưa đăng nhập" — nếu chỉ sửa Backend, trang vẫn tải được dữ liệu nhưng phần điều hướng/thanh nav sẽ trống trơn với khách vãng lai (vì logic cũ giả định luôn có `user` mới render).
 - Lưu ý: phát hiện ở M9 — dịch vụ tunnel dev (VD: ngrok free tier) chèn trang cảnh báo (interstitial) chặn request đầu tiên từ 1 trình duyệt/phiên chưa từng xác nhận; cần thêm header `ngrok-skip-browser-warning` vào **mọi request `fetch()` tự viết**. Riêng các thư viện bên thứ 3 tự thực hiện request nội bộ không qua code của mình (VD: bước dò `/info` của SockJS trước khi nâng WebSocket) sẽ **không** có header này và có thể vẫn bị chặn ở phiên trình duyệt hoàn toàn mới (ẩn danh) — đây là giới hạn của môi trường dev qua tunnel, không phải bug code, và biến mất khi deploy domain thật.
+- Lưu ý: phát hiện ở M10 — khi 1 method `@Cacheable` đổi chữ ký (thêm tham số mới), `condition`/`key` SpEL PHẢI đổi cùng lúc, nếu không cache cũ (key theo chữ ký cũ) vẫn nằm trong Redis và có thể bị đọc nhầm nếu key mới trùng tình cờ; an toàn nhất là đổi định dạng key đủ khác biệt (VD thêm tiền tố) để không bao giờ đụng entry cũ, thay vì tin tưởng TTL tự dọn kịp.
+- Lưu ý: phát hiện ở M10 — sort theo cột kiểu Enum lưu dạng String (`ORDER BY level`) sẽ ra thứ tự theo alphabet của tên hằng số (`ADVANCED, BEGINNER, INTERMEDIATE`), không phải thứ tự cấp độ thật; nếu cần sort theo "độ khó" phải map thủ công sang số hoặc dùng `CASE WHEN`, không dùng thẳng cột enum.
+- Lưu ý: phát hiện ở M10 — mọi nhánh `ORDER BY` áp dụng cho 1 danh sách phân trang phải có tie-break theo cột duy nhất (`id`), nếu không thứ tự giữa các bản ghi bằng điểm nhau (VD cùng lượt học) có thể xáo trộn giữa 2 lần gọi, gây trùng/sót bản ghi khi client duyệt qua nhiều trang.
+- Lưu ý: phát hiện ở M10 — 1 `Specification` dùng chung cho cả query dữ liệu lẫn query đếm (`count`) của Spring Data JPA; `ORDER BY` (đặc biệt kèm subquery) chỉ được áp dụng nhánh dữ liệu, phải tự kiểm tra `query.getResultType()` khác `Long`/`long` trước khi gọi `query.orderBy(...)`, nếu không count query sẽ sai hoặc lỗi.
+- Lưu ý: phát hiện ở M10/M11 (lặp lại nhiều lần) — thêm 1 tham số constructor mới vào Service (VD thêm Repository để retrofit check) mà quên thêm `@Mock` tương ứng trong test class cũ sẽ KHÔNG gây lỗi biên dịch — Mockito lặng lẽ truyền `null` vào tham số không có mock khớp, và test chỉ vỡ lúc chạy (`NullPointerException`) tại đúng nhánh code mới chạm tới tham số đó; phải rà lại mọi test dùng `@InjectMocks` của Service đó ngay khi đổi constructor.
+- Lưu ý: phát hiện ở M10/M11 — `MockitoExtension` dùng strict stubbing mặc định: nếu 1 test stub sẵn 1 lời gọi nhưng nhánh code thực tế throw exception SỚM HƠN (trước khi chạm tới lời gọi đó), test sẽ vỡ với `UnnecessaryStubbingException` dù logic đúng — chỉ stub đúng những gì nhánh code thật sự sẽ gọi tới trong test đó.
+- Lưu ý: phát hiện ở M11 — `GlobalExceptionHandler` ban đầu (từ M1-M7) chưa bắt `HttpMessageNotReadableException` (body JSON hỏng hoặc sai kiểu, VD gửi chuỗi cho field `Boolean`) và `MethodArgumentTypeMismatchException` (path variable sai kiểu, VD `/api/vocabulary/abc/save`) — cả 2 rơi xuống handler `Exception.class` chung, trả nhầm `500` thay vì `400`. Vá ở M11 bằng 2 `@ExceptionHandler` riêng. Lỗi có từ trước M11 nhưng chỉ lộ rõ khi M11 là milestone đầu tiên có field kiểu `Boolean` trong request body.
+- Lưu ý: phát hiện ở M11 — 1 tính năng cho phép sửa/xoá dữ liệu Admin quản lý (Topic/Flashcard) phải được rà lại MỖI KHI thêm 1 entity cá nhân mới tham chiếu tới nó qua FK (ở đây là `UserVocabulary` tham chiếu `Flashcard`), nếu không sẽ vi phạm rule "không cascade xoá lịch sử cá nhân" (mục 2.3) một cách âm thầm — Admin xoá Flashcard/Topic thành công nhưng để lại bản ghi `UserVocabulary` mồ côi, hoặc tệ hơn là câu lệnh xoá tự nổ lỗi 500 do vi phạm ràng buộc FK nếu FK đó có cascade ở tầng DB.
 
 ---
 
@@ -91,7 +99,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - FR-3.4 (User): Xem danh sách Topic, xem chi tiết Flashcard theo Topic
 - FR-3.5: Danh sách Topic/Flashcard được cache bằng Redis, invalidate cache khi Admin **C**reate/**U**pdate/**D**elete Topic hoặc Flashcard. Quy ước cache:
   - Cache key phải bao gồm toàn bộ tham số ảnh hưởng tới kết quả (VD dự kiến cho M10 khi có đủ search/filter/sort: `topic:list:{keyword}:{level}:{page}:{size}:{sort}`)
-  - **Cache key thực tế đã code ở M5** (vì API `GET /api/topics` hiện chỉ có `page`/`size`, chưa có search/filter/sort — để dành M10): `topics::{size}` (chỉ cache khi `page = 0`), `topicDetails::{id}`, `flashcardsByTopic::{topicId}`. Sẽ mở rộng đúng theo key dự kiến ở trên khi M10 thêm search/filter/sort.
+  - **Cache key thực tế — ĐÃ CHỐT 29/09/2026 (M10):** `topics::{level|ALL}:{sort}:{size}` (VD `topics::BEGINNER:POPULAR:9`, `topics::ALL:NEWEST:20`), `topicDetails::{id}`, `flashcardsByTopic::{topicId}`. Chỉ cache khi `page = 0` **và** không có `keyword` (search tự do không cache, đúng tinh thần "chỉ cache query có lợi ích rõ ràng" ở trên). Định dạng key mới khác hẳn key cũ M5 (`topics::{size}`), nên không có rủi ro đọc nhầm entry cũ còn sót trong Redis chờ hết TTL.
   - Khi dữ liệu nguồn thay đổi (Admin CUD Topic/Flashcard), invalidate các cache liên quan
   - Không bắt buộc cache mọi biến thể search/filter/pagination — chỉ cache các query có lợi ích rõ ràng (VD: trang đầu, không filter), tránh biến Redis thành hàng nghìn cache key khó kiểm soát khi có FR-9 (search/filter)
   - **Dependency Topic ↔ Flashcard — ĐÃ CHỐT tại M5:** `TopicResponse` hiện **không** có field tổng hợp từ Flashcard (không có `flashcardCount` hay tương tự), nên cập nhật Flashcard **không** cần invalidate chéo cache Topic — 2 cache (`topics`/`topicDetails` và `flashcardsByTopic`) hoàn toàn độc lập. Nếu sau này `TopicResponse` được bổ sung field tổng hợp từ Flashcard, phải quay lại bổ sung evict chéo ở `FlashcardService` (evict thêm cache `topics`/`topicDetails` khi Flashcard CUD).
@@ -165,6 +173,11 @@ Nâng cấp Flashcard hiện có thành hệ thống ôn từ vựng cá nhân h
 - FR-8.3: Hệ thống tính `nextReviewAt` theo thuật toán SRS đơn giản. **Thuật toán cụ thể sẽ được quyết định khi implement M11** (không commit SM-2 hay bất kỳ thuật toán chuẩn nào ngay trong Requirements — có thể tự thiết kế kiểu khoảng cách tăng dần 1/3/7/14/30 ngày, đơn giản hơn và vẫn đủ để hiểu bản chất SRS)
 - FR-8.4: API trả về danh sách từ cần ôn hôm nay (`nextReviewAt <= now`)
 - FR-8.5: Từ bị đánh "chưa nhớ" nhiều lần được ưu tiên xuất hiện lại sớm hơn
+- **ĐÃ CHỐT 29/09/2026 (M11) — thuật toán SRS (FR-8.3):** thang khoảng cách cố định 5 bậc `interval_level` (0–4) tương ứng 1/3/7/14/30 ngày, không dùng SM-2. Lưu từ mới: `status=NEW`, `intervalLevel=0`, `nextReviewAt = now` (đến hạn ôn ngay). Đánh "đã nhớ": `nextReviewAt = now + thang[intervalLevel hiện tại]`, `status` chuyển `KNOWN` nếu đang ở bậc 4 (30 ngày) trước khi tăng, ngược lại `LEARNING`, rồi `intervalLevel = min(intervalLevel + 1, 4)`. Đánh "chưa nhớ": reset `intervalLevel = 0`, `difficulty++`, `nextReviewAt = now + 1 ngày`, `status = LEARNING`. Toàn bộ tính bằng `Instant` thuần (không chia theo ranh giới ngày dương lịch), qua 1 bean `Clock` inject vào Service để unit test được với thời gian cố định.
+- **ĐÃ CHỐT 29/09/2026 (M11) — FR-8.5 (ưu tiên từ hay quên):** không thêm cơ chế riêng, chỉ dùng `ORDER BY difficulty DESC, nextReviewAt ASC, id ASC` khi trả `GET /api/vocabulary/today` — từ bị đánh "chưa nhớ" nhiều lần có `difficulty` cao hơn nên nổi lên đầu danh sách.
+- **ĐÃ CHỐT 29/09/2026 (M11) — lưu trùng:** `POST /api/vocabulary/{flashcardId}/save` trả `409 Conflict` nếu Flashcard đó đã có trong sổ từ của chính User (check `existsBy` trước, đồng thời bắt `DataIntegrityViolationException` theo tên constraint `uq_user_vocabulary_user_flashcard` để chặn race condition khi double-click).
+- **ĐÃ CHỐT 29/09/2026 (M11) — retrofit rule "không cascade xoá lịch sử cá nhân" (mục 2.3):** `UserVocabulary` tham chiếu `Flashcard` (mà `Flashcard` tham chiếu `Topic`), nên cả `FlashcardService.deleteFlashcard()` lẫn `TopicService.deleteTopic()` đều phải thêm check `UserVocabularyRepository.existsByFlashcard_Id()`/`existsByFlashcard_Topic_Id()`, trả `409` nếu đã có User lưu từ liên quan — áp dụng đúng nguyên tắc đã có ở mục 2.3, chỉ là bổ sung thêm 1 điều kiện chặn mới phát sinh từ M11.
+- **ĐÃ CHỐT 29/09/2026 (M11) — bổ sung ngoài phạm vi ban đầu, phát sinh khi FE test thực tế:** 3 endpoint mới không có trong bản Requirements gốc của FR-8, xem mục 5 (API Endpoints) để biết chi tiết: `GET /api/vocabulary/topics/{topicId}/saved-ids` (kiểm tra nhanh các Flashcard nào trong 1 Topic đã được User lưu, để FE hiện đúng trạng thái nút Save khi quay lại trang), `GET /api/vocabulary?page=&size=` (xem toàn bộ sổ từ đã lưu, không giới hạn theo hạn ôn — thiếu sót của bản gốc, không có cách nào xem lại sổ từ đầy đủ nếu chỉ có `/today`), `DELETE /api/vocabulary/{id}` (xoá 1 từ khỏi sổ, dùng ownership qua `findByIdAndUser_Id` như các API khác, trả 404 nếu không phải chủ sở hữu).
 
 ### FR-9: Search & Filter & Pagination `[v1.1]`
 Áp dụng cho danh sách Topic/Flashcard khi dữ liệu lớn dần. Giữ đúng 4 tiêu chí này, chưa cần thêm filter khác (skill/difficulty/duration...) vì dữ liệu hiện tại chưa đủ lớn để các filter đó có ý nghĩa thực tế.
@@ -172,6 +185,10 @@ Nâng cấp Flashcard hiện có thành hệ thống ôn từ vựng cá nhân h
 - FR-9.2: Filter theo `level`
 - FR-9.3: Pagination áp dụng cho các API danh sách có khả năng tăng lớn; danh sách nhỏ có thể không cần pagination
 - FR-9.4: Sort theo mới nhất / phổ biến (dựa trên lượt học)
+- **ĐÃ CHỐT 29/09/2026 (M10):** `sort` chỉ nhận đúng 3 giá trị `newest` (mặc định) / `popular` / `title`, không phân biệt hoa/thường. Bỏ hẳn ý định sort theo `level` (Enum lưu String, sort trực tiếp ra sai thứ tự cấp độ — xem lưu ý mục 1.4) và sort Z-A (không cần thiết cho catalogue nhỏ).
+- **ĐÃ CHỐT 29/09/2026 (M10) — "lượt học" cho `sort=popular`:** đếm số **người học riêng biệt** của Topic đó, dựa trên số bản ghi `UserProgress` (đã có `UNIQUE(user, topic)` sẵn từ M3, không cần counter/entity mới). Không tính lượt xem `GET /api/topics/{id}` (endpoint public, đếm ở đó sẽ ghi DB trên mỗi lượt đọc của khách và dễ bị spam). Đánh đổi đã biết: thứ hạng `popular` có thể "cũ" tối đa bằng TTL cache list (10 phút) sau khi có hoạt động học mới, vì tạo/update `UserProgress` không trigger evict cache `topics`.
+- **ĐÃ CHỐT 29/09/2026 (M10) — index:** KHÔNG thêm index mới cho `Topic.title`/`level` ở M10 (khác dự kiến ban đầu ở mục 2.3) — B-tree không hỗ trợ `LIKE '%keyword%'` (wildcard đứng đầu), `level` chỉ có 3 giá trị nên index gần như vô ích, và `UNIQUE(title, level)` đã tự tạo sẵn 1 index dùng được một phần. Để dành lại nếu sau này cần, sẽ dùng `pg_trgm` (GIN) cho search thay vì B-tree thường.
+- **ĐÃ CHỐT 29/09/2026 (M10) — giới hạn keyword:** `keyword` tối đa 50 ký tự, vượt quá trả `400`. Ký tự đặc biệt của SQL `LIKE` (`%`, `_`, `\`) được escape trước khi query, để gõ đúng các ký tự này không bị hiểu nhầm thành wildcard.
 
 **Phạm vi áp dụng cụ thể — tránh nhầm lẫn đâu cần search đầy đủ, đâu chỉ cần phân trang:**
 - **Search + Filter + Sort + Pagination đầy đủ:** chỉ `GET /api/topics` (đây là danh sách chính người dùng duyệt/tìm, xứng đáng đầu tư đầy đủ)
@@ -292,7 +309,8 @@ Topic
  ├─ title: String
  ├─ description: String
  ├─ level: Enum(BEGINNER, INTERMEDIATE, ADVANCED)
- └─ imageUrl: String
+ ├─ imageUrl: String
+ └─ createdAt: Instant   — ĐÃ CHỐT 29/09/2026 (M10), thêm qua migration V8, dùng cho sort=newest (FR-9.4); dòng cũ backfill = NOW() lúc migrate
   [DB constraint: UNIQUE(title, level) — chốt 02/09/2026, cho phép trùng title nếu khác level]
 
 Flashcard
@@ -376,16 +394,19 @@ DictationResult
  ├─ accuracy: Double
  └─ createdAt: Instant
 
-UserVocabulary
+ UserVocabulary          — ĐÃ IMPLEMENT 29/09/2026 (M11), migration V9
  ├─ id: Long
  ├─ user: User (ManyToOne)
  ├─ flashcard: Flashcard (ManyToOne)
  ├─ status: Enum(NEW, LEARNING, KNOWN)
  ├─ reviewCount: Integer
- ├─ lastReviewedAt: Instant
- ├─ nextReviewAt: Instant
- └─ difficulty: Integer
- [DB constraint: UNIQUE(user, flashcard) — 1 User chỉ có tối đa 1 bản ghi ôn tập cho mỗi Flashcard, tránh trùng lặp khi lưu từ nhiều lần]
+ ├─ difficulty: Integer          — số lần bị đánh "chưa nhớ", dùng để ưu tiên sắp xếp (FR-8.5)
+ ├─ intervalLevel: Integer       — bậc hiện tại trên thang 1/3/7/14/30 ngày (0..4), xem thuật toán SRS ở FR-8.3
+ ├─ lastReviewedAt: Instant (nullable)
+ └─ nextReviewAt: Instant
+ [DB constraint: UNIQUE(user_id, flashcard_id) — 1 User chỉ có tối đa 1 bản ghi ôn tập cho mỗi Flashcard]
+ [Index: (user_id, next_review_at) — phục vụ trực tiếp truy vấn GET /api/vocabulary/today]
+
 ```
 
 **Lưu ý khi implement:** cân nhắc kỹ Lazy vs Eager Loading giữa các quan hệ trên (Phase 3) để tránh N+1, đặc biệt khi load `Conversation` kèm `Message`, hoặc `Topic` kèm `Flashcard`.
@@ -426,7 +447,7 @@ UserVocabulary
 ### Topic & Flashcard (User học) `[MVP]`
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
-| GET | `/api/topics?page=&size=` | **Public** | Danh sách topic — hiện chỉ có `page`/`size`; `keyword`/`level`/`sort` để dành M10 (FR-9) |
+| GET | `/api/topics?page=&size=&keyword=&level=&sort=` | **Public** | Danh sách topic — search/filter/sort/pagination đầy đủ theo FR-9, ĐÃ IMPLEMENT 29/09/2026 (M10). `sort`: `newest` (mặc định) / `popular` / `title`. `keyword` tối đa 50 ký tự, tìm trong `title`+`description`, không phân biệt hoa/thường |
 | GET | `/api/topics/{id}` | **Public** | Chi tiết 1 topic |
 | GET | `/api/topics/{id}/flashcards` | **Public** | Danh sách flashcard theo topic |
 
@@ -472,12 +493,15 @@ UserVocabulary
 | POST | `/api/dictation/{id}/submit` | USER | Nộp kết quả, nhận accuracy + highlight, lưu `DictationResult` |
 | GET | `/api/dictation/{id}/results?page=&size=` | USER | Lịch sử kết quả của chính mình cho bài dictation này |
 
-### Vocabulary/SRS `[v1.1]` (FR-8)
+### Vocabulary/SRS — ĐÃ IMPLEMENT 29/09/2026 (M11) (FR-8)
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
-| POST | `/api/vocabulary/{flashcardId}/save` | USER | Lưu từ vào sổ từ vựng cá nhân |
-| PATCH | `/api/vocabulary/{id}/review` | USER | Đánh dấu đã/chưa nhớ sau khi ôn |
-| GET | `/api/vocabulary/today?page=&size=` | USER | Danh sách từ cần ôn hôm nay, phân trang đơn giản |
+| POST | `/api/vocabulary/{flashcardId}/save` | USER | Lưu từ vào sổ từ vựng cá nhân. `201` khi thành công, `409` nếu đã lưu rồi |
+| PATCH | `/api/vocabulary/{id}/review` | USER | Đánh dấu đã/chưa nhớ sau khi ôn, `id` là id bản ghi `UserVocabulary` (không phải `flashcardId`). Body `{remembered: boolean}` |
+| GET | `/api/vocabulary/today?page=&size=` | USER | Danh sách từ cần ôn hôm nay (`nextReviewAt <= now`), sort `difficulty DESC, nextReviewAt ASC, id ASC` |
+| GET | `/api/vocabulary?page=&size=` | USER | *(bổ sung ngoài phạm vi gốc)* Toàn bộ sổ từ đã lưu, không lọc theo hạn ôn, mới lưu gần nhất trước |
+| GET | `/api/vocabulary/topics/{topicId}/saved-ids` | USER | *(bổ sung ngoài phạm vi gốc)* Set `flashcardId` đã lưu của User trong 1 Topic, dùng cho FE hiện đúng trạng thái nút Save |
+| DELETE | `/api/vocabulary/{id}` | USER | *(bổ sung ngoài phạm vi gốc)* Xoá 1 từ khỏi sổ cá nhân, `204` khi thành công |
 
 ---
 
@@ -527,8 +551,8 @@ frontend/
 | M7 | File upload ảnh flashcard/avatar (FR-6) | **Hoàn thành 10/09/2026** |
 | M8 | Viết Unit Test cho các Service chính (NFR-5) | **Hoàn thành 13/09/2026** — 110 test: `QuizAttemptService`(19), `UserProgressService`(3), `AuthService`(10), `TopicService`(18), `FlashcardService`(12) [chính]; `FileStorageServiceImpl`(14), `ChatServiceImpl`(21) [optional]; `JwtUtil`(7), `TopicCacheEvictionListener`(4), `FlashcardCacheEvictionListener`(2) [phát sinh] |
 | M9 | Hoàn thiện `admin.html`, polish UI toàn bộ, test tổng thể end-to-end | **Hoàn thành 23/09/2026** — chi tiết đầy đủ ở mục 10 (mới, Frontend Design System) |
-| **M10** | **(v1.1)** Search/Filter/Pagination cho Topic (FR-9) | Chưa bắt đầu |
-| **M11** | **(v1.1)** Vocabulary & SRS — lưu từ, thuật toán ôn tập (FR-8) | Chưa bắt đầu |
+| **M10** | **(v1.1)** Search/Filter/Pagination cho Topic (FR-9) | **Hoàn thành 29/09/2026** |
+| **M11** | **(v1.1)** Vocabulary & SRS — lưu từ, thuật toán ôn tập (FR-8) | **Hoàn thành 29/09/2026** — bổ sung 3 endpoint ngoài phạm vi gốc (xem mục 5, Vocabulary/SRS) |
 | **M12** | **(v1.1)** Dictation — nghe, so sánh transcript, tính accuracy (FR-7) | Chưa bắt đầu |
 
 *Thứ tự này ưu tiên CRUD/domain logic (Auth → Topic → Quiz) trước, rồi mới tới 2 phần "khó" là tích hợp AI và Redis/WebSocket — tránh việc học nhiều kỹ thuật khó cùng lúc ở M2 như bản trước. Mỗi milestone backend đều có bước test Postman + dựng mini-frontend ngay sau đó, thay vì dồn toàn bộ tích hợp frontend vào 1 milestone cuối (dễ gây debug integration dồn cục, khó xác định lỗi nằm ở đâu). M1–M9 là MVP bắt buộc; M10–M12 làm ngay sau khi MVP chạy ổn định. Các tính năng mở rộng khác (mục 9) vẫn nằm trong kế hoạch dài hạn, làm sau M12 hoặc song song với việc quay lại Project 2 tùy thời gian thực tế.*
@@ -545,12 +569,12 @@ Các điểm dưới đây **cố ý chưa khóa cứng** ngay trong Requirement
 | Có dùng Refresh Token hay chỉ Access Token đơn giản | ~~M1~~ **Đã chốt 01/09/2026: cả Access + Refresh Token** | Refresh Token lưu DB để có thể revoke, không chỉ dựa vào thời gian hết hạn |
 | Kiểu lưu `QuizQuestion.options` (JSONB / `@ElementCollection`) | ~~M3~~ **Đã chốt 03/09/2026: `@ElementCollection`** | Không dùng JSONB dù PostgreSQL hỗ trợ — ưu tiên database-independent, đơn giản hơn cho quy mô hiện tại |
 | Công thức tính `UserProgress.progressPercent` và điều kiện `COMPLETED` (FR-5.4) | ~~M3~~ **Đã chốt 03/09/2026** | 1 Quiz được coi là "đạt" ⟺ tồn tại ít nhất 1 QuizAttempt của User cho Quiz đó có score ≥ 70 progressPercent = round(100 × (số Quiz "đạt") / (tổng số Quiz thuộc Topic)) status = COMPLETED  ⟺  (số Quiz "đạt") == (tổng số Quiz thuộc Topic)  VÀ  tổng số Quiz > 0 status = IN_PROGRESS trong mọi trường hợp còn lại (đã có ít nhất 1 lần hoạt động nhưng chưa COMPLETED) |
-| Định nghĩa "lượt học" dùng cho `sort=popular` (FR-9.4) — tính khi User mở Topic? Làm Quiz? Hoàn thành Quiz? | **M10** | Chưa thêm counter/entity nào (VD: `studyCount`) ngay bây giờ — chỉ quyết định và implement khi tới M10, tránh thiết kế sai rồi phải sửa lại |
+| Định nghĩa "lượt học" dùng cho `sort=popular` (FR-9.4) | ~~M10~~ **Đã chốt 29/09/2026** | Đếm số người học riêng biệt qua `UserProgress` (đã có `UNIQUE(user, topic)` sẵn), không thêm counter/entity mới. Xem chi tiết ở FR-9.4 |
 | Cách tạo `Conversation.title` | ~~M4~~ **Đã chốt 04/09/2026** | Tự động lấy từ nội dung `Message` đầu tiên của User trong Conversation, cắt tối đa 50 ký tự (thêm "..." nếu bị cắt). Chỉ set 1 lần, không ghi đè ở các message sau |
 | Số lượng message lịch sử đính kèm làm AI context (FR-2.8) | ~~M4~~ **Đã chốt 04/09/2026** | N = 10 message gần nhất (bao gồm cả message User vừa gửi). Config qua `app.ai.context-message-limit` trong `application.yml`, không hardcode |
 | Chọn cụ thể model AI trên xKiro | ~~M4~~ **Đã chốt 04/09/2026** | `qwen/qwen3.6-plus:free` — tier free để test không tốn phí, multilingual tốt (hợp cho response tiếng Việt + tiếng Anh). Model ID dạng `vendor/model`, đổi được qua config nếu cần chất lượng cao hơn |
 | Format JSON chuẩn cho phản hồi AI (`reply`/`correction`/`explanation`) | ~~M4~~ **Đã chốt 04/09/2026** | Ép qua system prompt yêu cầu model trả đúng 1 JSON object 3 field. Parse bằng Jackson, có fallback: nếu parse lỗi (model trả kèm text/markdown fence dù đã cấm), coi toàn bộ raw text là `reply`, `correction`/`explanation` = null — không throw 500 vì lỗi format của model |
-| Thuật toán SRS cụ thể (FR-8.3) | **M11** | Không commit SM-2, có thể tự thiết kế đơn giản hơn (xem FR-8.3) |
+| Thuật toán SRS cụ thể (FR-8.3) | ~~M11~~ **Đã chốt 29/09/2026** | Thang khoảng cách cố định 5 bậc 1/3/7/14/30 ngày qua cột `intervalLevel`, không dùng SM-2. Chi tiết đầy đủ ở FR-8.3 |
 | Chiến lược Cache Eviction & Phòng ngừa Race Condition | ~~M5~~ **Đã chốt 05/09/2026** | Không dùng @CacheEvict trực tiếp trên method có @Transactional để tránh race condition evict-trước-commit (Redis bị xóa trước khi DB commit, dẫn đến request đọc lại đúng lúc đó sẽ cache lại dữ liệu cũ). Giải pháp: Dùng @TransactionalEventListener(phase = AFTER_COMMIT) lắng nghe Domain Event do Service phát ra sau khi DB update thành công, rồi xóa cache thủ công qua CacheManager. Nếu Transaction bị Rollback, event xóa cache hoàn toàn bị hủy, giữ an toàn tuyệt đối cho Redis Cache. |
 | Kiến trúc WebSocket Streaming (FR-2.5/FR-2.7) | ~~M6~~ **Đã chốt 08/09/2026** | **Ownership (FR-2.7) áp dụng 2 điểm khác REST:** xác thực JWT ở STOMP CONNECT (qua `ChannelInterceptor`, không qua `JwtAuthenticationFilter` cũ vì STOMP frame sau CONNECT không đi qua HTTP filter chain), check ownership `Conversation` ở STOMP SUBSCRIBE (method `chatService.isOwner()` mới thêm). **Lỗi ở tầng ChannelInterceptor/subscribe callback không đi qua `@MessageExceptionHandler`** (chỉ bắt exception đồng bộ trong `@MessageMapping`) — cần `StompSubProtocolErrorHandler` riêng để trả STOMP ERROR frame rõ ràng trước khi Spring đóng kết nối (đóng kết nối là hành vi đúng chuẩn STOMP, không tránh được). **Tách reply/meta khi stream:** xem chi tiết ở FR-2.5. **Known limitation chấp nhận:** `save()` JPA là blocking call chạy trên Reactor event loop thread trong `sendMessageStream()` — chấp nhận ở quy mô hiện tại, cân nhắc `Schedulers.boundedElastic()` nếu traffic tăng lớn. |
 
@@ -676,7 +700,8 @@ Mọi khu vực nội dung chính chờ API phải có skeleton (khung `div.skel
 
 ### 10.9. Backlog/giới hạn đã biết, chưa xử lý
 
-- `topics.html`: 3 ô Search/Level/Sort hiện **chưa có tác dụng lọc thật** — Backend `GET /api/topics` chỉ nhận `page`/`size`, `keyword`/`level`/`sort` bị bỏ qua. Cố ý để dành M10 (FR-9) làm trọn vẹn cùng lúc.
+- ~~`topics.html`: 3 ô Search/Level/Sort hiện chưa có tác dụng lọc thật~~ **Đã nối thật 29/09/2026 (M10)** — có debounce 300ms cho ô search, guard chống response trả về trễ ghi đè kết quả mới hơn, `maxlength=50` khớp giới hạn Backend.
+- `vocabulary.html` (M11): tab "Due Today" giữ `queue` trong bộ nhớ trình duyệt, không tự đồng bộ real-time nếu dữ liệu đổi từ nguồn khác (VD: xoá 1 từ ở tab "All Words" khi từ đó đang nằm trong `queue` của tab Due — đã vá bằng cách đồng bộ thủ công `queue` ngay trong `handleDeleteWord`, nhưng đây vẫn là state 2 nơi cần giữ khớp tay, không phải nguồn dữ liệu single source of truth thật sự).
 - Accessibility nâng cao (skip link, `focus-visible` toàn diện, `aria-hidden` cho icon trang trí) mới chỉ áp dụng đầy đủ cho `index.html` (qua audit Impeccable) — 9 trang còn lại chưa rà theo cùng chuẩn, để dành đợt polish sau nếu cần.
 
 ---

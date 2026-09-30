@@ -57,7 +57,7 @@ public class ChatWebSocketController {
         log.error("Lỗi trong lúc stream chat cho user [{}], conversation [{}]: ", username, conversationId, ex);
         String message = ex instanceof AiProviderException
                 ? ex.getMessage()
-                : "Có lỗi hệ thống xảy ra. Vui lòng thử lại sau";
+                : "A system error occurred. Please try again later";
 
         messagingTemplate.convertAndSendToUser(
                 username,

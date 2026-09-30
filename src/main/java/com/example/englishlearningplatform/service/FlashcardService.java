@@ -13,9 +13,11 @@ import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
 import com.example.englishlearningplatform.event.FlashcardChangedEvent;
+import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.FlashcardRepository;
 import com.example.englishlearningplatform.repository.TopicRepository;
+import com.example.englishlearningplatform.repository.UserVocabularyRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,13 +29,16 @@ public class FlashcardService {
     private final TopicRepository topicRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
+    private final UserVocabularyRepository userVocabularyRepository;
 
     public FlashcardService(FlashcardRepository flashcardRepository, TopicRepository topicRepository,
-            ApplicationEventPublisher eventPublisher, FileStorageService fileStorageService) {
+            ApplicationEventPublisher eventPublisher, FileStorageService fileStorageService,
+            UserVocabularyRepository userVocabularyRepository) {
         this.flashcardRepository = flashcardRepository;
         this.topicRepository = topicRepository;
         this.eventPublisher = eventPublisher;
         this.fileStorageService = fileStorageService;
+        this.userVocabularyRepository = userVocabularyRepository;
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +46,7 @@ public class FlashcardService {
     public List<FlashcardResponse> getFlashcardsByTopic(Long topicId) {
 
         if (!topicRepository.existsById(topicId)) {
-            throw new ResourceNotFoundException("Topic không tồn tại với Id: " + topicId);
+            throw new ResourceNotFoundException("Topic not found with id: " + topicId);
         }
 
         return flashcardRepository.findByTopicId(topicId)
@@ -53,7 +58,7 @@ public class FlashcardService {
     @Transactional
     public FlashcardResponse createFlashcard(Long topicId, FlashcardCreateRequest request) {
         Topic topic = topicRepository.findById(topicId)
-                .orElseThrow(() -> new ResourceNotFoundException("Topic không tồn tại với Id: " + topicId));
+                .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + topicId));
 
         Flashcard flashcard = new Flashcard();
         flashcard.setTopic(topic);
@@ -70,7 +75,7 @@ public class FlashcardService {
     @Transactional
     public FlashcardResponse updateFlashcard(Long id, FlashcardUpdateRequest request) {
         Flashcard flashcard = flashcardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Flashcard không tồn tại với Id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Flashcard not found with id: " + id));
 
         flashcard.setWord(request.getWord());
         flashcard.setMeaning(request.getMeaning());
@@ -85,7 +90,11 @@ public class FlashcardService {
     @Transactional
     public void deleteFlashcard(Long id) {
         Flashcard flashcard = flashcardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Flashcard không tồn tại với Id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Flashcard not found with id: " + id));
+
+        if (userVocabularyRepository.existsByFlashcard_Id(id)) {
+            throw new ResourceConflictException("Cannot delete flashcard: users have saved it");
+        }
 
         Long topicId = flashcard.getTopic().getId();
         String oldImageUrl = flashcard.getImageUrl();
@@ -102,7 +111,7 @@ public class FlashcardService {
     @Transactional
     public FlashcardResponse updateFlashcardImage(Long id, MultipartFile file) {
         Flashcard flashcard = flashcardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Flashcard không tồn tại với Id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Flashcard not found with id: " + id));
 
         String oldImageUrl = flashcard.getImageUrl();
 

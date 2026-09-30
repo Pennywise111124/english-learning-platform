@@ -40,7 +40,7 @@ public class QuizService {
     @Transactional(readOnly = true)
     public List<QuizSummaryResponse> getQuizzesByTopic(Long topicId) {
         if (!topicRepository.existsById(topicId)) {
-            throw new ResourceNotFoundException("Topic không tồn tại với Id: " + topicId);
+            throw new ResourceNotFoundException("Topic not found with id: " + topicId);
         }
         return quizRepository.findByTopicId(topicId).stream()
                 .map(quiz -> QuizSummaryResponse.from(quiz, quizQuestionRepository.countByQuizId(quiz.getId())))
@@ -50,7 +50,7 @@ public class QuizService {
     @Transactional(readOnly = true)
     public QuizDetailResponse getQuizDetail(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId));
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         List<QuizQuestionPublicResponse> questions = quizQuestionRepository.findByQuizId(quizId).stream()
                 .map(QuizQuestionPublicResponse::from)
@@ -64,7 +64,7 @@ public class QuizService {
     @Transactional(readOnly = true)
     public List<AdminQuizQuestionResponse> getQuestionsForAdmin(Long quizId) {
         if (!quizRepository.existsById(quizId)) {
-            throw new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId);
+            throw new ResourceNotFoundException("Quiz not found with id: " + quizId);
         }
         return quizQuestionRepository.findByQuizId(quizId).stream()
                 .map(AdminQuizQuestionResponse::from)
@@ -74,10 +74,10 @@ public class QuizService {
     @Transactional
     public QuizSummaryResponse createQuiz(Long topicId, QuizRequest request) {
         Topic topic = topicRepository.findById(topicId)
-                .orElseThrow(() -> new ResourceNotFoundException("Topic không tồn tại với Id: " + topicId));
+                .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + topicId));
 
         if (quizRepository.existsByTopicIdAndTitleIgnoreCase(topicId, request.getTitle())) {
-            throw new ResourceConflictException("Topic này đã có Quiz trùng tên: " + request.getTitle());
+            throw new ResourceConflictException("This topic already has a quiz with the title: " + request.getTitle());
         }
 
         Quiz quiz = new Quiz();
@@ -90,11 +90,11 @@ public class QuizService {
     @Transactional
     public QuizSummaryResponse updateQuiz(Long quizId, QuizRequest request) {
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId));
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         if (quizRepository.existsByTopicIdAndTitleIgnoreCaseAndIdNot(quiz.getTopic().getId(), request.getTitle(),
                 quizId)) {
-            throw new ResourceConflictException("Topic này đã có Quiz trùng tên: " + request.getTitle());
+            throw new ResourceConflictException("This topic already has a quiz with the title: " + request.getTitle());
         }
 
         quiz.setTitle(request.getTitle());
@@ -102,23 +102,13 @@ public class QuizService {
         return QuizSummaryResponse.from(updated, quizQuestionRepository.countByQuizId(updated.getId()));
     }
 
-    /**
-     * DELETE /api/admin/quizzes/{id}
-     *
-     * TODO: check quizAttemptRepository.existsByQuiz_Id(quizId) TRƯỚC khi xoá —
-     * nếu true, throw ResourceConflictException (409). Đây là bài tập lặp lại
-     * CÙNG PATTERN vừa làm ở TopicService.deleteTopic() phía trên, chỉ khác
-     * repository/field — cố ý để bạn tự áp dụng lại không cần nhắc chi tiết.
-     * Nếu pass check, xoá bình thường — DB tự cascade QuizQuestion (+ options
-     * qua ElementCollection) theo FK đã cấu hình.
-     */
     @Transactional
     public void deleteQuiz(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId));
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         if (quizAttemptRepository.existsByQuiz_Id(quizId)) {
-            throw new ResourceConflictException("Quiz đã có bài làm từ người dùng.");
+            throw new ResourceConflictException("Quiz already has attempts from users");
         }
 
         quizRepository.delete(quiz);
@@ -127,7 +117,7 @@ public class QuizService {
     @Transactional
     public QuizQuestionPublicResponse createQuestion(Long quizId, QuizQuestionRequest request) {
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quiz không tồn tại với Id: " + quizId));
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         QuizQuestion question = new QuizQuestion();
         question.setQuiz(quiz);
@@ -141,7 +131,7 @@ public class QuizService {
     @Transactional
     public QuizQuestionPublicResponse updateQuestion(Long questionId, QuizQuestionRequest request) {
         QuizQuestion question = quizQuestionRepository.findById(questionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Câu hỏi không tồn tại với Id: " + questionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Question not found with id: " + questionId));
 
         question.setQuestion(request.getQuestion());
         question.setOptions(request.getOptions());
@@ -150,14 +140,10 @@ public class QuizService {
         return QuizQuestionPublicResponse.from(quizQuestionRepository.save(question));
     }
 
-    // Không cần check 409 khi xoá Question — QuizAttempt chỉ lưu kết quả TỔNG
-    // QUAN (score/correctAnswers/totalQuestions), không tham chiếu tới từng
-    // Question cụ thể nào (đã chốt phạm vi ở mục 4 Requirements), nên xoá 1
-    // Question không phá vỡ tính toàn vẹn của QuizAttempt cũ.
     @Transactional
     public void deleteQuestion(Long questionId) {
         QuizQuestion question = quizQuestionRepository.findById(questionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Câu hỏi không tồn tại với Id: " + questionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Question not found with id: " + questionId));
 
         quizQuestionRepository.delete(question);
     }

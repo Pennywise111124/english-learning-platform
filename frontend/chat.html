@@ -7,10 +7,10 @@
     <title>LinguistAI - English Tutor</title>
     <!-- Chống nháy sáng/tối lúc tải trang -->
     <script>
-      if (localStorage.getItem('linguistai_theme') === 'dark' ||
-          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
+        if (localStorage.getItem('linguistai_theme') === 'dark' ||
+            (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
     </script>
     <!-- Fonts -->
     <link
@@ -18,7 +18,7 @@
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
-        <!-- Tailwind CSS -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
     <script src="js/tailwind-config.js"></script>
     <!-- Markdown rendering cho tin nhắn AI -->
@@ -27,7 +27,7 @@
     <!-- WebSocket (STOMP over SockJS) cho AI Chat streaming -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
-    
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/style.css" />
     <style>
@@ -60,78 +60,81 @@
         <!-- Main Workspace -->
         <main
             class="flex-grow pt-stack-md pb-stack-md px-gutter max-w-container-max mx-auto w-full flex gap-gutter h-[calc(100vh-80px)]">
-            
-        <!-- Backdrop cho sidebar dạng drawer trên mobile -->
-        <div id="sidebarBackdrop" class="hidden fixed inset-0 bg-on-surface/40 z-30 md:hidden"></div>
 
-        <!-- Left Sidebar: Conversations History -->
-        <aside id="conversationsSidebar"
-            class="hidden md:flex w-[320px] flex-shrink-0 flex-col bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm overflow-hidden">
-            <div class="p-4 border-b-2 border-outline-variant">
-                <button id="newConversationBtn"
-                    class="btn-3d w-full bg-primary border-primary-shadow text-on-primary font-label-md text-label-md py-3 px-4 rounded-2xl flex items-center justify-center gap-2 hover:brightness-105 transition-all">
-                    <span class="material-symbols-outlined text-[20px]">add_circle</span>
-                    New Conversation
-                </button>
-            </div>
-            <div id="conversationsList" class="flex-grow overflow-y-auto p-2">
-                <!-- Conversations loaded dynamically -->
-            </div>
-        </aside>
+            <!-- Backdrop cho sidebar dạng drawer trên mobile -->
+            <div id="sidebarBackdrop" class="hidden fixed inset-0 bg-on-surface/40 z-30 md:hidden"></div>
 
-        <!-- Main Chat Panel -->
-        <section
-            class="flex-grow flex flex-col bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm overflow-hidden">
-            <!-- Chat Header -->
-            <div class="h-16 flex items-center px-6 border-b-2 border-outline-variant bg-surface/50">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <button id="mobileSidebarToggle" class="md:hidden p-2 -ml-2 text-on-surface-variant hover:text-primary rounded-xl hover:bg-surface-container-low transition-colors flex-shrink-0">
-                        <span class="material-symbols-outlined">menu</span>
+            <!-- Left Sidebar: Conversations History -->
+            <aside id="conversationsSidebar"
+                class="hidden md:flex w-[320px] flex-shrink-0 flex-col bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm overflow-hidden">
+                <div class="p-4 border-b-2 border-outline-variant">
+                    <button id="newConversationBtn"
+                        class="btn-3d w-full bg-primary border-primary-shadow text-on-primary font-label-md text-label-md py-3 px-4 rounded-2xl flex items-center justify-center gap-2 hover:brightness-105 transition-all">
+                        <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                        New Conversation
                     </button>
-                    <div class="min-w-0 flex-1">
-                        <h2 id="conversationTitle" class="font-headline-md text-body-lg font-bold text-on-surface truncate">
-                            Select or start a conversation</h2>
-                        <p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5 truncate">Practice English with AI</p>
+                </div>
+                <div id="conversationsList" class="flex-grow overflow-y-auto p-2">
+                    <!-- Conversations loaded dynamically -->
+                </div>
+            </aside>
+
+            <!-- Main Chat Panel -->
+            <section
+                class="flex-grow flex flex-col bg-surface-container-lowest rounded-xl border-2 border-outline-variant shadow-sm overflow-hidden">
+                <!-- Chat Header -->
+                <div class="h-16 flex items-center px-6 border-b-2 border-outline-variant bg-surface/50">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button id="mobileSidebarToggle"
+                            class="md:hidden p-2 -ml-2 text-on-surface-variant hover:text-primary rounded-xl hover:bg-surface-container-low transition-colors flex-shrink-0">
+                            <span class="material-symbols-outlined">menu</span>
+                        </button>
+                        <div class="min-w-0 flex-1">
+                            <h2 id="conversationTitle"
+                                class="font-headline-md text-body-lg font-bold text-on-surface truncate">
+                                Select or start a conversation</h2>
+                            <p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5 truncate">Practice
+                                English with AI</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Messages Area -->
-            <div id="messagesArea"
-                class="flex-grow overflow-y-auto p-6 flex flex-col gap-6 bg-surface-bright chat-messages">
-                <div class="text-center text-on-surface-variant font-body-md">
-                    Hi there! I'm your AI English Assistant. How can I help you practice your English today?
-                </div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="p-4 border-t-2 border-outline-variant bg-surface-container-lowest">
-                <div class="relative flex items-end gap-2">
-                    <button
-                        class="p-3 text-outline hover:text-primary hover:bg-surface-container-low rounded-full transition-colors flex-shrink-0 mb-1">
-                        <span class="material-symbols-outlined">mic</span>
-                    </button>
-                    <div
-                        class="flex-grow relative bg-surface-container-low rounded-2xl border-2 border-outline-variant focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden">
-                        <textarea id="messageInput"
-                            class="w-full bg-transparent border-none focus:ring-0 font-body-md text-body-md text-on-surface py-4 pl-4 pr-12 resize-none max-h-32 min-h-[56px]"
-                            placeholder="Type your message here..." rows="1"></textarea>
+                <!-- Messages Area -->
+                <div id="messagesArea"
+                    class="flex-grow overflow-y-auto p-6 flex flex-col gap-6 bg-surface-bright chat-messages">
+                    <div class="text-center text-on-surface-variant font-body-md">
+                        Hi there! I'm your AI English Assistant. How can I help you practice your English today?
                     </div>
-                    <button id="sendBtn"
-                        class="btn-3d p-3 bg-primary border-primary-shadow text-on-primary rounded-full hover:brightness-105 transition-all flex-shrink-0 mb-1">
-                        <span class="material-symbols-outlined">send</span>
-                    </button>
                 </div>
-                <div class="text-center mt-2">
-                    <span class="font-label-sm text-[11px] text-outline">Press Enter to send, Shift + Enter for new
-                        line. Responses are AI-generated.</span>
-                </div>
-            </div>
-        </section>
-    </main>
 
-    <!-- Footer -->
-    <div id="app-footer-container"></div>
+                <!-- Input Area -->
+                <div class="p-4 border-t-2 border-outline-variant bg-surface-container-lowest">
+                    <div class="relative flex items-end gap-2">
+                        <button
+                            class="p-3 text-outline hover:text-primary hover:bg-surface-container-low rounded-full transition-colors flex-shrink-0 mb-1">
+                            <span class="material-symbols-outlined">mic</span>
+                        </button>
+                        <div
+                            class="flex-grow relative bg-surface-container-low rounded-2xl border-2 border-outline-variant focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden">
+                            <textarea id="messageInput"
+                                class="w-full bg-transparent border-none focus:ring-0 font-body-md text-body-md text-on-surface py-4 pl-4 pr-12 resize-none max-h-32 min-h-[56px]"
+                                placeholder="Type your message here..." rows="1"></textarea>
+                        </div>
+                        <button id="sendBtn"
+                            class="btn-3d p-3 bg-primary border-primary-shadow text-on-primary rounded-full hover:brightness-105 transition-all flex-shrink-0 mb-1">
+                            <span class="material-symbols-outlined">send</span>
+                        </button>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span class="font-label-sm text-[11px] text-outline">Press Enter to send, Shift + Enter for new
+                            line. Responses are AI-generated.</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <div id="app-footer-container"></div>
     </div>
 
     <script type="module">
@@ -154,7 +157,7 @@
         }
 
         // ── Render helpers ──
-        
+
         function renderConversationSkeletons(count = 5) {
             document.getElementById('conversationsList').innerHTML = Array.from({ length: count }).map(() => `
                 <div class="px-3 py-3 mb-1 flex flex-col gap-2">
@@ -249,7 +252,7 @@
                 ` : ''}
             `;
         }
-        
+
         function openMobileSidebar() {
             document.getElementById('conversationsSidebar').classList.remove('hidden');
             document.getElementById('conversationsSidebar').classList.add('fixed', 'inset-y-0', 'left-0', 'z-40', 'w-[85%]', 'max-w-[320px]', 'rounded-none', 'border-none', 'shadow-2xl');
@@ -343,7 +346,7 @@
             currentConversationId = id;
             liveBubbleEl = null;
             thinkingBubbleEl = null;
-            
+
             closeMobileSidebar();
             renderMessageSkeletons();
 
@@ -417,7 +420,7 @@
             const area = document.getElementById('messagesArea');
             const div = document.createElement('div');
             div.className = 'text-center text-error font-body-sm';
-            div.textContent = err.message || 'Có lỗi xảy ra với kết nối chat';
+            div.textContent = err.message || 'A chat connection error occurred';
             area.appendChild(div);
             area.scrollTop = area.scrollHeight;
         }
@@ -445,7 +448,7 @@
                     await loadConversations();
                 } catch (error) {
                     console.error('Failed to create conversation:', error);
-                    handleWsError({ message: 'Không tạo được conversation mới, thử lại sau' });
+                    handleWsError({ message: 'Could not create a new conversation, please try again later' });
                     return;
                 }
             }

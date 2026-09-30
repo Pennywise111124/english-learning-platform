@@ -33,7 +33,7 @@ public class UserProgressService {
     public List<UserProgressResponse> getMyProgress() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại!"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
         return userProgressRepository.findByUser_Id(user.getId()).stream()
                 .map(UserProgressResponse::from)

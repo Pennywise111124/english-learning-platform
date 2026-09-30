@@ -12,6 +12,7 @@ import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.QuizAttemptRepository;
 import com.example.englishlearningplatform.repository.TopicRepository;
 import com.example.englishlearningplatform.repository.UserProgressRepository;
+import com.example.englishlearningplatform.repository.UserVocabularyRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,8 @@ class TopicServiceTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private FileStorageService fileStorageService;
+    @Mock
+    private UserVocabularyRepository userVocabularyRepository;
 
     @InjectMocks
     private TopicService topicService;
@@ -229,7 +232,7 @@ class TopicServiceTest {
         assertThrows(ResourceConflictException.class, () -> topicService.deleteTopic(TOPIC_ID));
 
         verify(quizAttemptRepository, never()).existsByQuiz_Topic_Id(any());
-        verify(topicRepository, never()).delete(any());
+        verify(topicRepository, never()).delete(any(Topic.class));
     }
 
     @Test
@@ -240,7 +243,7 @@ class TopicServiceTest {
 
         assertThrows(ResourceConflictException.class, () -> topicService.deleteTopic(TOPIC_ID));
 
-        verify(topicRepository, never()).delete(any());
+        verify(topicRepository, never()).delete(any(Topic.class));
     }
 
     @Test
@@ -249,6 +252,7 @@ class TopicServiceTest {
         when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
         when(userProgressRepository.existsByTopic_Id(TOPIC_ID)).thenReturn(false);
         when(quizAttemptRepository.existsByQuiz_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(userVocabularyRepository.existsByFlashcard_Topic_Id(TOPIC_ID)).thenReturn(false);
 
         topicService.deleteTopic(TOPIC_ID);
 
@@ -263,6 +267,7 @@ class TopicServiceTest {
         when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
         when(userProgressRepository.existsByTopic_Id(TOPIC_ID)).thenReturn(false);
         when(quizAttemptRepository.existsByQuiz_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(userVocabularyRepository.existsByFlashcard_Topic_Id(TOPIC_ID)).thenReturn(false);
 
         topicService.deleteTopic(TOPIC_ID);
 
@@ -278,6 +283,18 @@ class TopicServiceTest {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("FileDeletionEvent was not published"));
         assertEquals("uploads/topics/old.jpg", fileEvent.getFileUrl());
+    }
+
+    @Test
+    void deleteTopic_whenSavedFlashcardExists_shouldThrowResourceConflictException() {
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+        when(userProgressRepository.existsByTopic_Id(TOPIC_ID)).thenReturn(false);
+        when(quizAttemptRepository.existsByQuiz_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(userVocabularyRepository.existsByFlashcard_Topic_Id(TOPIC_ID)).thenReturn(true);
+
+        assertThrows(ResourceConflictException.class, () -> topicService.deleteTopic(TOPIC_ID));
+
+        verify(topicRepository, never()).delete(any(Topic.class));
     }
 
     // ------------------------------------------------------------------

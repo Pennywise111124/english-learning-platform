@@ -147,13 +147,13 @@ public class ChatServiceImpl implements ChatService {
 
     private User loadUser(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
     }
 
     private Conversation loadOwnedConversation(String username, Long conversationId) {
         User user = loadUser(username);
         return conversationRepository.findByIdAndUser(conversationId, user)
-                .orElseThrow(() -> new ResourceNotFoundException("Conversation không tồn tại: " + conversationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found: " + conversationId));
     }
 
     private List<AiChatMessage> toAiContext(List<Message> history, int limit) {

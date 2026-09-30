@@ -1,5 +1,7 @@
 package com.example.englishlearningplatform.entity;
 
+import java.time.Instant;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -22,6 +24,9 @@ public class Topic {
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 
     // ── Getters & Setters ──────────────────────────────────────────────
 
@@ -63,5 +68,9 @@ public class Topic {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 }
