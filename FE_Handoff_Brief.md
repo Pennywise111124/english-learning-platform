@@ -1,5 +1,5 @@
 # FRONTEND — TÀI LIỆU TRA CỨU NHANH KHI CODE THÊM TRANG
-*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9. File này giờ dùng khi build tiếp trang mới ở M10+, tra nhanh contract API + quy ước design system, không cần đọc lại toàn bộ Requirements.md mỗi lần.)*
+*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination) + M11 (Vocabulary/SRS). File này dùng khi build tiếp trang mới ở M12+, tra nhanh contract API + quy ước design system, không cần đọc lại toàn bộ Requirements.md mỗi lần. Cập nhật lần gần nhất: 29/09/2026, sau M11.)*
 
 **Repo:** `github.com/Pennywise111124/english-learning-platform`, nhánh `main`
 **Vai trò:** code trong thư mục `frontend/`. Không động vào Backend Java (thư mục gốc, ngoài `frontend/`).
@@ -19,11 +19,12 @@
 frontend/
 ├── index.html (landing page công khai — có footer riêng, không dùng footer.js)
 ├── chat.html (yêu cầu đăng nhập)
-├── topics.html (PUBLIC — khách xem được)
-├── topic-detail.html (PUBLIC — khách xem được)
+├── topics.html (PUBLIC — khách xem được; M10: nối thật Search/Level/Sort)
+├── topic-detail.html (PUBLIC — khách xem được; M11: thêm nút Save flashcard)
 ├── quiz.html (yêu cầu đăng nhập — checkAuth() ngay đầu)
 ├── progress.html (yêu cầu đăng nhập)
 ├── profile.html (yêu cầu đăng nhập)
+├── vocabulary.html (yêu cầu đăng nhập — mới hoàn toàn ở M11, tab "Due Today"/"All Words")
 ├── admin.html (yêu cầu đăng nhập + role ADMIN — checkAdmin())
 ├── test-websocket.html (công cụ test riêng, không tính vào bộ chính)
 ├── js/
@@ -50,7 +51,7 @@ frontend/
 - `api.js` tự động: gắn `Authorization: Bearer <token>`, tự gọi `/api/auth/refresh` khi gặp `401` rồi thử lại request gốc 1 lần, nếu vẫn thất bại mới `clearAuth()` + redirect `index.html?auth=login`.
 - Route bị chặn bởi `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal Login qua query param). Logout chủ động → redirect `index.html` **trơn**, không kèm query param.
 
-## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M9)
+## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M11)
 
 ### Auth
 
@@ -73,7 +74,10 @@ GET /api/users/me/quiz-attempts?page=&size= → PageResponse<QuizAttempt> — T�
 ### Topics — **PUBLIC**, không cần JWT
 
 ```
-GET /api/topics?page=&size= → PageResponse<Topic> (CHƯA có keyword/level/sort — để dành M10)
+GET /api/topics?page=&size=&keyword=&level=&sort= → PageResponse<Topic> — ĐẦY ĐỦ từ M10
+keyword: tối đa 50 ký tự, tìm trong title+description, không phân biệt hoa/thường
+level: BEGINNER | INTERMEDIATE | ADVANCED, không phân biệt hoa/thường
+sort: newest (mặc định) | popular | title — SAI giá trị trả 400, không có sort theo level
 GET /api/topics/{id} → Topic
 GET /api/topics/{id}/flashcards → mảng Flashcard (không phân trang)
 GET /api/topics/{id}/quizzes → mảng { id, title, questionCount } — PUBLIC, chỉ tên+số câu hỏi, KHÔNG phải nội dung
@@ -85,6 +89,19 @@ GET /api/topics/{id}/quizzes → mảng { id, title, questionCount } — PUBLIC,
 GET /api/quizzes/{id} → { id, title, questions: [{id, question, options}] } — KHÔNG có correctAnswer
 POST /api/quizzes/{id}/submit {answers: [{questionId, answer}]} → QuizResult (mục 6)
 GET /api/quizzes/{id}/attempts?page=&size= → PageResponse<QuizAttempt> — CHỈ riêng Quiz này
+```
+
+### Vocabulary/SRS — cần JWT (mới hoàn toàn ở M11)
+
+```
+
+POST /api/vocabulary/{flashcardId}/save → VocabularyResponse (201). 409 nếu đã lưu rồi
+PATCH /api/vocabulary/{id}/review {remembered: boolean} → VocabularyResponse
+id ở đây là id của bản ghi UserVocabulary (lấy từ response của /save), KHÔNG PHẢI flashcardId — nhầm 2 cái này ra 404
+GET /api/vocabulary/today?page=&size= → PageResponse<VocabularyResponse> — chỉ từ đến hạn (nextReviewAt <= now), sort difficulty DESC rồi nextReviewAt ASC
+GET /api/vocabulary?page=&size= → PageResponse<VocabularyResponse> — TOÀN BỘ sổ từ đã lưu, không lọc theo hạn, mới lưu gần nhất trước
+GET /api/vocabulary/topics/{topicId}/saved-ids → mảng flashcardId (Set<Long>, không phân trang) — dùng để hiện đúng trạng thái nút Save khi vào lại 1 Topic
+DELETE /api/vocabulary/{id} → 204. Ownership qua id của UserVocabulary, sai chủ trả 404 (không phải của người khác cũng không phải không tồn tại — đồng nhất)
 ```
 
 ### Conversations — cần JWT
@@ -113,7 +130,7 @@ GET /api/admin/quizzes/{quizId}/questions → mảng { id, question, options, co
 POST/PUT/DELETE /api/admin/quizzes/{id}/questions, /api/admin/questions/{id}
 ```
 
-*(Dictation/Vocabulary-SRS/Search nâng cao — chưa có, chờ M10-M12)*
+*(Dictation — chưa có, chờ M12. Vocabulary-SRS và Search nâng cao đã xong ở M10/M11, xem 2 khối phía trên.)*
 
 ## 5. Quy ước chung
 
@@ -132,6 +149,7 @@ POST/PUT/DELETE /api/admin/quizzes/{id}/questions, /api/admin/questions/{id}
 
 // Topic
 { "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "/uploads/topics/<uuid>.jpg" }
+// KHÔNG có createdAt trong response dù entity đã có field này từ M10 — chỉ dùng nội bộ để sort=newest
 
 // Flashcard
 { "id": 1, "word": "airport", "meaning": "sân bay", "example": "...", "imageUrl": "...", "audioUrl": null }
@@ -162,6 +180,12 @@ POST/PUT/DELETE /api/admin/quizzes/{id}/questions, /api/admin/questions/{id}
 
 // Message
 { "id": 1, "sender": "USER", "content": "...", "correction": null, "explanation": null, "createdAt": "..." }
+
+// VocabularyResponse — mới ở M11, dùng chung cho response của save/review/today/list
+{ "id": 1, "flashcardId": 17, "word": "Boarding Pass", "meaning": "...", "example": "...", "imageUrl": null, "audioUrl": null,
+"status": "LEARNING", "reviewCount": 1, "difficulty": 0, "lastReviewedAt": "2026-09-29T08:06:10Z", "nextReviewAt": "2026-09-30T08:06:10Z" }
+// status: NEW | LEARNING | KNOWN. id là id của UserVocabulary, không phải flashcardId — 2 field này khác nhau và đều có mặt trong cùng response
+
 ```
 
 ## 7. Design System — tóm tắt thực dụng (chi tiết đầy đủ + lý do quyết định: `Requirements.md` mục 10)
@@ -205,7 +229,7 @@ Component dùng thư viện có palette riêng (VD: Tailwind Typography `prose`)
         import { initFooter } from './js/footer.js';
 
         checkAuth();
-        initNavBar('<activePage>');  // 'chat'|'topics'|'progress'|'admin'|'' 
+        initNavBar('<activePage>');  // 'chat'|'topics'|'vocabulary'|'progress'|'admin'|'' 
         initFooter();
         // ... logic riêng của trang
     </script>

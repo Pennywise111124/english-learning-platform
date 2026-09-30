@@ -40,13 +40,13 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                throw new AuthenticationCredentialsNotFoundException("Thiếu hoặc sai định dạng JWT");
+                throw new AuthenticationCredentialsNotFoundException("Missing or malformed JWT");
             }
 
             String token = authHeader.substring(7);
 
             if (!jwtUtil.validateToken(token)) {
-                throw new AuthenticationCredentialsNotFoundException("JWT không hợp lệ");
+                throw new AuthenticationCredentialsNotFoundException("Invalid JWT");
             }
 
             String username = jwtUtil.extractUsername(token);
@@ -71,17 +71,17 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                     Long conversationId = Long.parseLong(conversationIdStr);
 
                     if (accessor.getUser() == null || accessor.getUser().getName() == null) {
-                        throw new AuthenticationCredentialsNotFoundException("Chưa xác thực người dùng");
+                        throw new AuthenticationCredentialsNotFoundException("User is not authenticated");
                     }
 
                     String username = accessor.getUser().getName();
                     boolean isOwner = chatService.isOwner(username, conversationId);
 
                     if (!isOwner) {
-                        throw new AccessDeniedException("Bạn không có quyền truy cập vào cuộc trò chuyện này");
+                        throw new AccessDeniedException("You do not have access to this conversation");
                     }
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Định dạng conversationId không hợp lệ");
+                    throw new IllegalArgumentException("Invalid conversationId format");
                 }
             }
         }

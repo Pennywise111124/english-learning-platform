@@ -19,7 +19,7 @@ public class StompErrorHandler extends StompSubProtocolErrorHandler {
             rootCause = rootCause.getCause();
         }
 
-        String errorMessage = rootCause.getMessage() != null ? rootCause.getMessage() : "Lỗi hệ thống WebSocket";
+        String errorMessage = rootCause.getMessage() != null ? rootCause.getMessage() : "WebSocket system error";
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.ERROR);
         accessor.setMessage(errorMessage);

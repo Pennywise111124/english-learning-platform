@@ -6,9 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -46,14 +48,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
-        ErrorResponse error = new ErrorResponse("File vượt quá dung lượng cho phép", HttpStatus.BAD_REQUEST.value());
+        ErrorResponse error = new ErrorResponse("File exceeds the maximum allowed size",
+                HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
         ErrorResponse error = new ErrorResponse(
-                "Thiếu file upload bắt buộc: " + ex.getRequestPartName(),
+                "Missing required file upload: " + ex.getRequestPartName(),
                 HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
@@ -65,7 +68,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAiProviderException(AiProviderException ex) {
         log.error("AI provider error: ", ex);
         ErrorResponse error = new ErrorResponse(
-                "AI service tạm thời không khả dụng, vui lòng thử lại sau",
+                "AI service is temporarily unavailable, please try again later",
                 HttpStatus.SERVICE_UNAVAILABLE.value());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
@@ -92,5 +95,18 @@ public class GlobalExceptionHandler {
         log.error("Internal Server Error: ", ex);
         ErrorResponse error = new ErrorResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR.value());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        ErrorResponse error = new ErrorResponse("Malformed or missing request body", HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        ErrorResponse error = new ErrorResponse("Invalid value for parameter: " + ex.getName(),
+                HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }

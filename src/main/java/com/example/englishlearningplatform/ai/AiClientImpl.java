@@ -86,18 +86,18 @@ public class AiClientImpl implements AiClient {
                     .retryWhen(Retry.backoff(props.getMaxRetries(), Duration.ofMillis(300))
                             .filter(this::isRetryable)
                             .onRetryExhaustedThrow((spec, signal) -> new AiProviderException(
-                                    "xKiro không phản hồi sau " + props.getMaxRetries() + " lần thử lại",
+                                    "xKiro did not respond after " + props.getMaxRetries() + " retries",
                                     signal.failure())))
                     .block();
         } catch (AiProviderException e) {
             throw e;
         } catch (Exception e) {
             log.error("Gọi xKiro thất bại: {}", e.getMessage());
-            throw new AiProviderException("Không thể lấy phản hồi từ AI provider", e);
+            throw new AiProviderException("Unable to get a response from the AI provider", e);
         }
 
         if (response == null || response.choices() == null || response.choices().isEmpty()) {
-            throw new AiProviderException("xKiro trả về response rỗng/không hợp lệ");
+            throw new AiProviderException("xKiro returned an empty or invalid response");
         }
 
         String rawContent = response.choices().get(0).message().content();
@@ -243,7 +243,7 @@ public class AiClientImpl implements AiClient {
             return e;
         }
         log.error("Lỗi giữa lúc stream từ xKiro: {}", ex.getMessage());
-        return new AiProviderException("Không thể stream phản hồi từ AI provider", ex);
+        return new AiProviderException("Unable to stream the response from the AI provider", ex);
     }
 
     private List<Map<String, String>> buildMessages(String systemPrompt, List<AiChatMessage> history) {

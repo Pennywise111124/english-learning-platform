@@ -42,3 +42,7 @@ uploads/
 
 ### Local run scripts (chứa secret thật) ###
 run-backend.bat
+
+### Local tools / generated files ###
+ngrok.exe
+openapi.json

@@ -29,7 +29,7 @@ export function connectChat({ onError, onDisconnected } = {}) {
         resolve();
       },
       onStompError: (frame) => {
-        const msg = frame.headers?.message || 'Lỗi kết nối WebSocket';
+        const msg = frame.headers?.message || 'WebSocket connection error';
         reject(new Error(msg));
       },
       onWebSocketClose: () => {
@@ -69,7 +69,7 @@ export function unsubscribeConversation() {
 
 export function sendChatMessage(conversationId, content) {
   if (!client || !client.connected) {
-    throw new Error('WebSocket chưa kết nối, thử lại sau giây lát');
+    throw new Error('WebSocket is not connected, please try again in a moment');
   }
   client.publish({
     destination: `/app/chat.sendMessage/${conversationId}`,

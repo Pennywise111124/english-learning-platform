@@ -1,7 +1,7 @@
 # TÓM TẮT TOÀN BỘ QUÁ TRÌNH — Project "Nền tảng học tiếng Anh tích hợp AI"
 *(Dùng để tiếp tục ở cuộc trò chuyện mới)*
 
-**Ngày tóm tắt:** 23/09/2026 (cập nhật sau M9 — MVP hoàn chỉnh, sẵn sàng M10)
+**Ngày tóm tắt:** 29/09/2026 (cập nhật sau M10 + M11 — Search/Filter/Pagination cho Topic + Vocabulary/SRS hoàn thành, sẵn sàng M12)
 
 ---
 
@@ -22,9 +22,9 @@
 
 ---
 
-## 2. Tài liệu Requirements — hiện tại: **v1.6**
+## 2. Tài liệu Requirements — hiện tại: **v1.7**
 
-File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (bump từ v1.5 lên v1.6 ở đợt review 23/09/2026 sau M9, xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
+File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (bump từ v1.6 lên v1.7 ở đợt review 29/09/2026 sau M10+M11, xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
 - Mục 2.3 và mục 4: toàn bộ `LocalDateTime` → `Instant` cho timestamp (quyết định phát sinh khi code M1).
 - Mục 7 (Roadmap): M1, M2 đã đánh dấu hoàn thành.
 - Mục 8: 2 điểm mở đã chốt — Database (PostgreSQL), Refresh Token (có).
@@ -56,7 +56,9 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (bump từ v1.5 
 
 **Đã đồng bộ đầy đủ ở đợt review 23/09/2026 (sau M9):** bump lên **v1.6**. Thêm mục 10 hoàn toàn mới — "Frontend Design System" (bảng màu, component signature "nút 3D", dark mode, cấu trúc app shell, module JS dùng chung) — bắt buộc tham chiếu khi code thêm trang mới. Cập nhật đầy đủ 6 endpoint mới phát sinh trong lúc làm M9 (không có trong Requirements gốc, xem mục 6 bên dưới), cập nhật FR-1.2 (login hỗ trợ username/email), thêm ràng buộc unique tên Quiz trong Topic, ghi nhận quyết định mở public 4 route Topic/Quiz-list.
 
-**Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= 70`, MIME ảnh upload = JPEG/PNG only (5MB max).
+**Đã đồng bộ đầy đủ ở đợt review 29/09/2026 (sau M10+M11):** bump lên **v1.7**. FR-3.5: cập nhật cache key thật cho M10 (`topics::{level|ALL}:{sort}:{size}`, chỉ cache khi `page=0` và không có `keyword`). FR-9: chốt 4 điểm còn mở của FR-9 (bộ giá trị `sort`, định nghĩa "lượt học" = đếm `UserProgress` riêng biệt, quyết định không thêm index ở M10, giới hạn `keyword` 50 ký tự có escape). FR-8: chốt thuật toán SRS (thang 5 bậc 1/3/7/14/30 ngày), cách hiện thực FR-8.5 (sort theo `difficulty`), rule lưu trùng trả 409, retrofit rule "không cascade" cho `UserVocabulary`. Thêm cột `Topic.createdAt` (migration V8) và entity `UserVocabulary` đầy đủ (migration V9) vào mục 4. Cập nhật mục 5 (API Endpoints): `GET /api/topics` thêm đủ tham số, mục Vocabulary/SRS thêm 3 endpoint phát sinh ngoài phạm vi gốc (`GET /api/vocabulary`, `GET /api/vocabulary/topics/{topicId}/saved-ids`, `DELETE /api/vocabulary/{id}`). Mục 7 (Roadmap): M10, M11 đánh dấu hoàn thành. Mục 10.9 (Backlog): gỡ dòng "Search/Level/Sort chưa có tác dụng" (đã làm xong), thêm 1 giới hạn đã biết mới của `vocabulary.html`. Mục 1.4: thêm 7 bullet lưu ý kỹ thuật mới từ M10/M11 (cache key theo chữ ký method, sort Enum-as-String sai thứ tự, tie-break bắt buộc trong ORDER BY phân trang, Specification dùng chung cho count query, thiếu `@Mock` khi đổi constructor không lỗi biên dịch mà lỗi lúc chạy, `UnnecessaryStubbingException` khi code throw sớm hơn dòng stub, `GlobalExceptionHandler` thiếu 2 handler cho lỗi kiểu dữ liệu, retrofit rule cascade khi thêm entity cá nhân mới tham chiếu FK).
+
+**Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= 70`, MIME ảnh upload = JPEG/PNG only (5MB max), `Topic` sort mặc định = mới nhất, "lượt học" (popular) = số người học riêng biệt qua `UserProgress`, SRS = thang cố định 5 bậc 1/3/7/14/30 ngày (không SM-2).
 
 ---
 
@@ -79,7 +81,7 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (bump từ v1.5 
 ## 4. Tech stack đã chốt
 
 - **Backend:** Java 21, Spring Boot 4.1.1, Maven, package `com.example.englishlearningplatform`
-- **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V6**
+- **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V9** (V8: thêm `Topic.createdAt` cho sort=newest — M10; V9: bảng `user_vocabulary` — M11)
 - **Security:** Spring Security + JWT (Access + Refresh), BCrypt, `@Enumerated(EnumType.STRING)`, role-based (`hasRole("ADMIN")` cho `/api/admin/**`)
 - **Timestamp:** `Instant` (Entity) ↔ `TIMESTAMPTZ` (PostgreSQL) — xuyên suốt mọi entity
 - **Frontend:** HTML/JS thuần + Tailwind CSS qua CDN, `js/api.js` gọi API thật (không còn mock từ M9) — chi tiết đầy đủ xem mục 5
@@ -88,6 +90,7 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (bump từ v1.5 
 - **File upload:** Local filesystem qua `app.upload.dir` (ngoài classpath), validate MIME header + nội dung ảnh thật qua `javax.imageio.ImageIO`, filename `UUID` theo format ảnh thật đọc được (không theo Content-Type/tên file client), serve qua `/uploads/**` (`WebMvcConfig` + `permitAll()`), dọn file cũ khi update/xoá qua `FileDeletionEvent`/`FileDeletionListener` — tái dùng đúng pattern `AFTER_COMMIT` đã chốt ở M5 cho cache — chốt tại M7
 - **CORS:** cấu hình tường minh qua `CorsConfigurationSource` bean (không có mặc định) — `setAllowedOriginPatterns` (không phải `setAllowedOrigins`, bắt buộc khi kết hợp `allowCredentials(true)`), preflight `OPTIONS` permitAll riêng — chốt tại M9
 - **API Documentation:** springdoc-openapi 3.1.1, Swagger UI tại `/swagger-ui.html` — thêm tại M9, dùng làm nguồn đối chiếu contract thật khi có sai lệch với Requirements
+- **Testing:** JUnit 5 + Mockito, tổng **124 test case** tính tới hết M11 (110 từ M8 + 14 mới ở M10/M11: `TopicSortTest` phần logic parse thuần + các test conflict/ownership mới ở `TopicServiceTest`/`FlashcardServiceTest`/`VocabularyServiceTest`) — không có test riêng cho `TopicSpecifications` (logic query, được phủ qua bộ Postman thay vì Mockito) và không có test cho `getTopics()`/`getAllSaved()` (method chỉ dựng Specification/Pageable rồi uỷ quyền, không có nhánh rẽ, theo đúng quy tắc coverage đã chốt ở M8)
 
 ---
 
@@ -104,11 +107,15 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (bump từ v1.5 
 
 **Redesign UI hoàn chỉnh (Duolingo-inspired):** đổi bảng màu, thêm component "nút 3D" (`btn-3d` + `border-*-shadow`), dark mode thật (CSS custom property, không phải chỉ khai báo `darkMode: "class"` suông như dự kiến ban đầu), skeleton loading toàn site, empty/error state chuẩn hoá. Chi tiết đầy đủ đã chuyển hẳn vào Requirements mục 10 (không lặp lại ở đây, tránh 2 nguồn dễ lệch nhau) — **khi cần chi tiết design system, luôn tham chiếu Requirements, không phải file này**.
 
-`FE_Handoff_Brief.md` — không còn cần thiết cho việc phát triển tiếp (toàn bộ contract đã được thực thi và test qua M9, sai lệch nào phát hiện được đã sửa trực tiếp ở code, không update ngược lại file brief nữa). Giữ lại chỉ mang tính lịch sử, không dùng làm nguồn tham chiếu — nguồn đúng nhất từ giờ là Swagger UI (`/swagger-ui.html`) hoặc đọc thẳng code Controller/DTO.
+**Cập nhật M10:** `topics.html` nối thật 3 ô Search/Level/Sort (trước đó chỉ có UI, `keyword`/`level`/`sort` bị Backend bỏ qua) — thêm debounce 300ms cho ô search, guard chống response trả về trễ ghi đè kết quả mới hơn (biến đếm `requestSeq`), `maxlength=50` khớp giới hạn Backend, đổi 4 option sort cũ (A-Z/Z-A/Level asc/desc) thành 3 option mới (`newest`/`popular`/`title`) khớp đúng bộ giá trị `sort` server chấp nhận.
+
+**Cập nhật M11:** trang mới `vocabulary.html` (yêu cầu đăng nhập, thêm mục "My Words" vào sidebar `navbar.js`) — gồm 2 tab: "Due Today" (ôn từ đến hạn, lật thẻ, Next/Previous duyệt xem không cần đánh giá, Remembered/Not yet gọi API rồi loại khỏi hàng đợi tại chỗ) và "All Words" (xem + xoá toàn bộ sổ từ đã lưu, phân trang, badge trạng thái NEW/LEARNING/KNOWN theo màu). Nút Save mới thêm vào `topic-detail.html` (trên mặt trước flashcard) — hiện đúng trạng thái đã lưu/chưa lưu ngay khi tải trang (gọi song song 1 API riêng lấy set `flashcardId` đã lưu trong Topic đang xem), khách chưa đăng nhập bấm Save sẽ mở modal Login thay vì gọi API.
+
+`FE_Handoff_Brief.md` — **CẬP NHẬT 29/09/2026:** đã được "hồi sinh" lại làm tài liệu tra cứu nhanh (khác hẳn vai trò brief-build-mock ban đầu ở M1-M8), đồng bộ đầy đủ endpoint + shape dữ liệu mới của M10 (`GET /api/topics` đủ tham số) và M11 (khối Vocabulary/SRS, gồm cả 3 endpoint bổ sung ngoài phạm vi gốc). Từ giờ nên gửi kèm file này khi cần tra nhanh contract API mà không muốn đọc lại toàn bộ Requirements — Swagger UI (`/swagger-ui.html`) vẫn là nguồn xác nhận cao nhất khi có sai lệch.
 
 ---
 
-## 6. Tiến độ Backend — cấu trúc project hiện tại (sau M8, 13/09/2026)
+## 6. Tiến độ Backend — cấu trúc project hiện tại (sau M11, 29/09/2026)
 
 ```
 src/main/java/com/example/englishlearningplatform/
@@ -116,10 +123,10 @@ src/main/java/com/example/englishlearningplatform/
 ├── ai/
 │ ├── {AiChatMessage, AiChatResult, AiClient, AiClientImpl, AiProviderException, AiStreamEvent}
 │ └── dto/{XkiroChatRequest, XkiroChatResponse, XkiroChatStreamChunk}
-├── config/{AiProperties, AiWebClientConfig, SecurityConfig, RedisConfig, WebSocketConfig, WebMvcConfig} — class cuối mới thêm ở M7 (serve /uploads/**)
+├── config/{AiProperties, AiWebClientConfig, SecurityConfig, RedisConfig, WebSocketConfig, WebMvcConfig, TimeConfig} — class cuối mới thêm ở M11 (bean Clock, inject vào VocabularyService để unit test SRS với thời gian cố định)
 ├── controller/
 │ ├── AuthController, ConversationController, ChatWebSocketController, ProgressController, UserController
-│ ├── TopicController, QuizController
+│ ├── TopicController, QuizController, VocabularyController — class cuối mới thêm ở M11
 │ └── Admin*: AdminTopicController, AdminFlashcardController, AdminQuizController, AdminQuizQuestionController
 │   (UserController mới thêm ở M7 — POST /api/users/me/avatar)
 ├── dto/
@@ -128,50 +135,58 @@ src/main/java/com/example/englishlearningplatform/
 │ ├── common/PageResponse.java
 │ ├── progress/UserProgressResponse.java
 │ ├── quiz/{QuizRequest, QuizSummaryResponse, QuizQuestionRequest, QuizQuestionPublicResponse, QuizDetailResponse, SubmitAnswerItem, SubmitQuizRequest, QuizResultResponse, QuizAttemptResponse}
-│ └── topic/{TopicCreateRequest, TopicUpdateRequest, TopicResponse, FlashcardCreateRequest, FlashcardUpdateRequest, FlashcardResponse}
+│ ├── topic/{TopicCreateRequest, TopicUpdateRequest, TopicResponse, TopicSort, FlashcardCreateRequest, FlashcardUpdateRequest, FlashcardResponse} — TopicSort mới thêm ở M10
+│ └── vocabulary/{ReviewRequest, VocabularyResponse} — package mới hoàn toàn ở M11
 ├── entity/
 │ ├── {User, RefreshToken, Role}
-│ ├── {Topic, Flashcard, Level}
+│ ├── {Topic, Flashcard, Level} — Topic thêm field createdAt ở M10
 │ ├── {Quiz, QuizQuestion, QuizAttempt, UserProgress, ProgressStatus}
+│ ├── {UserVocabulary, VocabularyStatus} — mới hoàn toàn ở M11
 │ └── {Conversation, Message, Sender}
 ├── event/
 │ ├── {TopicChangedEvent, TopicCacheEvictionListener} — M5
 │ ├── {FlashcardChangedEvent, FlashcardCacheEvictionListener} — M5
 │ └── {FileDeletionEvent, FileDeletionListener} — mới thêm ở M7 (dọn file ảnh cũ, cùng pattern AFTER_COMMIT với cache eviction)
-├── exception/{GlobalExceptionHandler, ErrorResponse, ResourceNotFoundException, ResourceConflictException, InvalidFileException} — class cuối mới thêm ở M7
+├── exception/{GlobalExceptionHandler, ErrorResponse, ResourceNotFoundException, ResourceConflictException, InvalidFileException} — M11: GlobalExceptionHandler thêm 2 handler mới (HttpMessageNotReadableException, MethodArgumentTypeMismatchException), vá lỗ hổng cũ từ M1-M7 (2 loại lỗi này trước đó rơi vào 500 thay vì 400), chỉ lộ ra khi M11 có field kiểu Boolean trong request body
 ├── repository/
 │ ├── {UserRepository, RefreshTokenRepository}
-│ ├── {TopicRepository, FlashcardRepository}
+│ ├── {TopicRepository, TopicSpecifications, FlashcardRepository} — TopicSpecifications mới ở M10 (JpaSpecificationExecutor, gộp filter+sort search Topic)
 │ ├── {QuizRepository, QuizQuestionRepository, QuizAttemptRepository, UserProgressRepository}
+│ ├── UserVocabularyRepository — mới ở M11
 │ └── {ConversationRepository, MessageRepository}
 ├── security/{JwtUtil, JwtAuthenticationFilter, CustomUserDetailsService, StompAuthChannelInterceptor, StompErrorHandler} — 2 class cuối mới thêm ở M6
 ├── service/
 │ ├── AuthService, ChatService, ChatServiceImpl
-│ ├── {TopicService, FlashcardService}
+│ ├── {TopicService, FlashcardService} — cả 2 retrofit thêm check UserVocabularyRepository ở M11 (chặn xoá khi đã có User lưu từ)
 │ ├── {QuizService, QuizAttemptService, UserProgressService}
+│ ├── VocabularyService — mới hoàn toàn ở M11
 │ └── {FileStorageService, FileStorageServiceImpl, UserService} — mới thêm ở M7
 └── util/PaginationUtils.java
 
 src/main/resources/
 ├── application.yml — thêm mục `app.upload.*` + `spring.servlet.multipart.*` ở M7
-└── db/migration/ (V1 → V6, không đổi ở M5/M6/M7 — M7 không thêm entity/bảng mới, imageUrl/avatarUrl đã có sẵn từ M2/M1)
+└── db/migration/ (V1 → V9 — V8 thêm cột Topic.createdAt ở M10, V9 tạo bảng user_vocabulary ở M11)
 
 frontend/ — trạng thái thật đã đổi hoàn toàn ở M9, xem mục 5 (không mô tả lại ở đây để tránh 2 nguồn lệch nhau)
 ```
 
-src/test/java/com/example/englishlearningplatform/ — MỚI HOÀN TOÀN Ở M8, trước đó chưa có
+src/test/java/com/example/englishlearningplatform/ — dựng nền ở M8, mở rộng ở M10/M11
 ├── service/
 │ ├── QuizAttemptServiceTest.java (19 test)
 │ ├── UserProgressServiceTest.java (3 test)
 │ ├── AuthServiceTest.java (10 test)
-│ ├── TopicServiceTest.java (18 test)
-│ ├── FlashcardServiceTest.java (12 test)
+│ ├── TopicServiceTest.java (thêm test conflict "đã có flashcard được lưu" ở M11)
+│ ├── FlashcardServiceTest.java (thêm test conflict "đã được User lưu" ở M11)
+│ ├── VocabularyServiceTest.java — mới hoàn toàn ở M11 (applyReview từng bậc SRS, saveWord, review ownership, getAllSaved, deleteSavedWord)
 │ ├── FileStorageServiceImplTest.java (14 test)
 │ └── ChatServiceImplTest.java (21 test)
+├── dto/topic/TopicSortTest.java — mới ở M10 (parse null/blank/hoa-thường/giá trị lạ)
 ├── security/JwtUtilTest.java (7 test)
 └── event/
   ├── TopicCacheEvictionListenerTest.java (4 test)
   └── FlashcardCacheEvictionListenerTest.java (2 test)
+
+Tổng cộng tới hết M11: 124 test case, toàn bộ PASSED.
 
 ### M9 — Hoàn thiện Admin, Polish UI, Nối Backend thật, Test tổng thể: **HOÀN THÀNH 23/09/2026**
 
@@ -196,6 +211,37 @@ Khối lượng lớn nhất từ trước tới giờ, gồm cả Backend lẫn
 **Công cụ mới dùng ở M9, không có trong danh sách công cụ ở mục 3:**
 - **ngrok** (free tier) — expose Backend chạy trên máy Windows thật ra ngoài cho Linux VM gọi vào qua HTTPS, vì 2 máy khác mạng/khác origin. Giới hạn đã biết: trang cảnh báo interstitial của ngrok free chặn request đầu tiên từ phiên trình duyệt mới — đã vá cho REST (header `ngrok-skip-browser-warning` gắn trong `api.js`), **chưa vá được cho SockJS** (thư viện tự gọi request nội bộ riêng, không có header đó) — chỉ ảnh hưởng lúc test qua tunnel dev, biến mất khi deploy domain thật.
 - **Impeccable** (`pbakaus/impeccable`, cài qua `npx impeccable install`) — skill audit/polish UI chạy trong Claude Code, dùng cho 1 đợt audit accessibility/performance trên `index.html` (phát hiện: thiếu skip link, logo không phải link, ảnh hero thiếu `loading="lazy"`, thiếu `focus-visible`...) và 1 lần polish khu vực `#resultView` của `quiz.html` (SVG progress ring animated thay khung viền tĩnh). Chỉ dùng 2 lần trong toàn bộ M9 — phần lớn redesign còn lại làm trực tiếp trong chat để giữ đúng `id`/logic.
+
+### M10 — Search/Filter/Pagination cho Topic: **HOÀN THÀNH 29/09/2026**
+
+`GET /api/topics` mở rộng nhận `keyword`/`level`/`sort` cùng `page`/`size` cũ, giữ nguyên public. Migration V8 (thêm `Topic.createdAt`), `TopicSpecifications` (gộp filter + `ORDER BY` vào 1 `Specification` dùng chung cho cả query dữ liệu lẫn count, phải tự kiểm tra `query.getResultType()` để không áp `orderBy` vào nhánh count), `TopicSort` enum (`NEWEST`/`POPULAR`/`TITLE`, parse không phân biệt hoa/thường, ném lỗi rõ ràng cho giá trị lạ thay vì âm thầm rơi về mặc định). Cache key đổi từ `topics::{size}` (M5) sang `topics::{level|ALL}:{sort}:{size}`, chỉ cache khi `page=0` và không có `keyword`. `topics.html` nối thật (xem mục 5). Bộ Postman ~40 case (search/filter/sort/pagination/cache/hồi quy) đều PASSED.
+
+**Quyết định chốt tại M10:**
+- "Lượt học" cho `sort=popular` = đếm số bản ghi `UserProgress` riêng biệt theo Topic (không thêm counter/entity mới, không đếm lượt xem `GET /api/topics/{id}` vì endpoint đó public và đang cache, đếm ở đó sẽ ghi DB trên mỗi lượt đọc của khách).
+- Không thêm index mới cho `Topic.title`/`level` ở M10 (khác dự kiến ban đầu ở Requirements) — B-tree không hỗ trợ `LIKE '%kw%'`, `level` chỉ 3 giá trị nên gần như vô ích, `UNIQUE(title, level)` đã có sẵn 1 index dùng được 1 phần. Để dành `pg_trgm` (GIN) nếu sau này thật sự cần.
+- Sort theo `level` (Enum-as-String) bị loại khỏi bộ `sort` — `ORDER BY level` cho ra thứ tự alphabet (`ADVANCED, BEGINNER, INTERMEDIATE`), không phải thứ tự cấp độ thật. Chỉ giữ `newest`/`popular`/`title`.
+- Mọi nhánh `ORDER BY` đều có tie-break `id` để đảm bảo phân trang ổn định qua nhiều lần gọi.
+- `keyword` giới hạn 50 ký tự, escape ký tự đặc biệt của `LIKE` (`%`, `_`, `\`) theo đúng thứ tự (escape `\` trước để không escape đôi).
+- Bug build phát sinh do thêm `JpaSpecificationExecutor` vào `TopicRepository`: method `delete(any())` trong test cũ trở nên "ambiguous" (khớp cả `delete(T)` lẫn `delete(DeleteSpecification<T>)`) — sửa bằng `any(Topic.class)`.
+
+### M11 — Vocabulary & SRS: **HOÀN THÀNH 29/09/2026**, có 4 việc bổ sung ngoài phạm vi Requirements gốc
+
+3 endpoint gốc theo FR-8 (`save`/`review`/`today`) cộng thêm 4 việc phát sinh khi FE test thực tế phát hiện thiếu (xem chi tiết ở phần Frontend, mục 5, và ở Requirements FR-8): `saved-ids` (hiện trạng thái nút Save khi quay lại trang), `GET /api/vocabulary` (xem toàn bộ sổ từ, không giới hạn theo hạn ôn), `DELETE /api/vocabulary/{id}` (xoá từ khỏi sổ). Migration V9 (bảng `user_vocabulary`, `UNIQUE(user_id, flashcard_id)`, index `(user_id, next_review_at)`). `VocabularyService` — `saveWord()`/`review()`/`getToday()`/`getAllSaved()`/`getSavedFlashcardIds()`/`deleteSavedWord()`, đều lấy user qua `SecurityContextHolder` (không tin `userId` từ client), ownership qua `findByIdAndUser_Id` trả 404 đồng nhất cho "không tồn tại" và "của người khác". Bean `Clock` (`TimeConfig`) inject vào Service để `applyReview()` (static, pure function) unit test được với thời gian cố định qua từng bậc SRS. Bộ Postman đầy đủ (nhóm A-G theo `save`/`review`/`today`/retrofit xoá/hồi quy, cộng nhóm test riêng cho 3 endpoint bổ sung) đều PASSED, xác nhận cả bằng dữ liệu thật (chuỗi 5 lần "đã nhớ" liên tiếp đạt đúng bậc 4/30 ngày/status KNOWN).
+
+**Quyết định chốt tại M11:**
+- Thuật toán SRS: thang cố định 5 bậc `intervalLevel` (0-4) = 1/3/7/14/30 ngày, không dùng SM-2. Nhớ: tăng 1 bậc, `nextReviewAt` theo bậc hiện tại trước khi tăng, `status=KNOWN` khi đạt bậc 4. Quên: reset về bậc 0, `difficulty++`, hẹn lại sau 1 ngày.
+- FR-8.5 (ưu tiên từ hay quên) hiện thực bằng `ORDER BY difficulty DESC, nextReviewAt ASC, id ASC` ở `getToday()`, không thêm cơ chế riêng.
+- Lưu trùng trả `409` (check `existsBy` trước + bắt `DataIntegrityViolationException` theo tên constraint để chặn race condition double-click).
+- Retrofit rule "không cascade xoá lịch sử cá nhân" (đã có ở Requirements mục 2.3 từ M1): cả `FlashcardService.deleteFlashcard()` và `TopicService.deleteTopic()` phải thêm check `UserVocabularyRepository`, trả `409` nếu đã có User lưu từ liên quan — dễ bỏ sót nhất milestone, vì đây là 2 Service cũ từ M2/M3, không phải code mới viết trong M11.
+- `GlobalExceptionHandler` vá 2 lỗ hổng cũ (từ M1-M7, chỉ lộ ra ở M11): `HttpMessageNotReadableException` (body JSON sai kiểu) và `MethodArgumentTypeMismatchException` (path variable sai kiểu) trước đó rơi vào handler `Exception` chung, trả nhầm 500 thay vì 400.
+
+**Bug/sự cố đã xử lý trong lúc làm M11 (đáng nhớ cho các milestone sau):**
+- Test cũ (`TopicServiceTest`, `FlashcardServiceTest`) vỡ `NullPointerException` khi thêm tham số constructor mới vào Service (`UserVocabularyRepository`) mà quên thêm `@Mock` tương ứng — Mockito lặng lẽ truyền `null`, không báo lỗi biên dịch, chỉ vỡ lúc chạy đúng nhánh code mới. Phải rà lại toàn bộ test `@InjectMocks` của Service đó mỗi khi đổi constructor.
+- `UnnecessaryStubbingException` khi stub 1 lời gọi nhưng nhánh code throw exception SỚM HƠN (trước khi chạm tới lời gọi đó) — chỉ stub đúng những gì nhánh test đó thực sự chạy tới.
+- `VocabularyServiceTest` ban đầu mock sai cách lấy user (`authentication.getPrincipal()` + `userRepository.findById()`) trong khi code thật dùng `authentication.getName()` + `userRepository.findByUsername()` — mock không khớp implementation thật khiến test luôn đi vào nhánh lỗi sai (throw "User not found" thay vì nhánh đang muốn test), phải đối chiếu đúng luồng code thật trước khi viết mock, không đoán theo tên biến.
+- FE `vocabulary.html`: quên hẳn đoạn gắn `addEventListener('click', ...)` để lật thẻ khi tạo trang mới dựa theo `topic-detail.html` — lỗi "thiếu code" chứ không phải bug logic, class CSS `flipped` không bao giờ được toggle nên không lật được; kiểm tra qua DevTools Elements panel (class có đổi khi bấm hay không) là cách nhanh nhất phân biệt lỗi JS (thiếu listener) với lỗi CSS (style bị đè).
+- FE `vocabulary.html`: mất nút phân trang dù `totalPages > 1` — nguyên nhân là 1 vòng lặp dọn dẹp UI khi chuyển tab (`switchTab`) thêm nhầm class `hidden` vào chính `#allWordsPagination` (div chứa nút), trong khi hàm render nút chỉ đổ `innerHTML` chứ không tự gỡ `hidden` khỏi div cha — nút được tạo ra thật nhưng vô hình vì cha đang `display: none`.
+- FE `vocabulary.html`: sau khi thêm tính năng xoá từ ở tab "All Words", tab "Due Today" có thể vẫn hiện 1 card đã bị xoá dưới DB (2 tab giữ state riêng trong bộ nhớ trình duyệt, không tự đồng bộ) — vá bằng cách chủ động loại phần tử khỏi mảng `queue` trong bộ nhớ ngay khi xoá thành công, nếu id trùng khớp; đây là giới hạn đã biết của cách quản lý state hiện tại (không phải single source of truth thật sự), ghi vào Requirements mục 10.9.
 
 ### M1 — Auth + JWT: **HOÀN THÀNH 01/09/2026**
 
@@ -298,15 +344,15 @@ JUnit 5 + Mockito, Unit test thuần (mock toàn bộ Repository/dependency), kh
 
 ---
 
-## 7. Trạng thái hiện tại — M1-M9 hoàn thành, sẵn sàng M10
+## 7. Trạng thái hiện tại — M1-M11 hoàn thành, sẵn sàng M12
 
-Không còn việc nào nợ lại từ các milestone trước. Backend + Frontend đã nối thật, redesign UI hoàn chỉnh, QA tổng thể xong.
+Không còn việc nào nợ lại từ các milestone trước. Backend + Frontend đã nối thật, redesign UI hoàn chỉnh, QA tổng thể xong, cả M10 (Search/Filter/Pagination) lẫn M11 (Vocabulary/SRS, cộng 4 việc bổ sung ngoài phạm vi gốc) đều hoàn thành.
 
-**Việc còn treo, cố ý để dành M10 (không phải nợ/sai sót):**
-- `topics.html`: 3 ô Search/Level/Sort đã có UI nhưng chưa có tác dụng lọc thật — `GET /api/topics` hiện chỉ nhận `page`/`size` (đúng FR-9 chưa làm, đúng kế hoạch)
-- Accessibility nâng cao (skip link, `focus-visible`, `aria-hidden`...) mới áp dụng đầy đủ cho `index.html` qua Impeccable — 9 trang còn lại chưa rà theo cùng chuẩn
+**Việc còn treo, cố ý để dành sau (không phải nợ/sai sót):**
+- Accessibility nâng cao (skip link, `focus-visible`, `aria-hidden`...) mới áp dụng đầy đủ cho `index.html` qua Impeccable — các trang còn lại (kể cả trang mới `vocabulary.html`) chưa rà theo cùng chuẩn
+- Giới hạn đã biết ở `vocabulary.html`: state 2 tab ("Due Today"/"All Words") giữ riêng trong bộ nhớ trình duyệt, chỉ đồng bộ thủ công cho đúng 1 trường hợp đã phát hiện (xoá từ đang nằm trong hàng đợi Due), không phải cơ chế đồng bộ tổng quát
 
-**M10 (Search/Filter/Pagination cho Topic, FR-9):** chưa bắt đầu, đây sẽ là việc tiếp theo.
+**M12 (Dictation, FR-7):** chưa bắt đầu, đây sẽ là việc tiếp theo.
 
 ---
 
@@ -314,11 +360,11 @@ Không còn việc nào nợ lại từ các milestone trước. Backend + Front
 
 **Bắt buộc:**
 1. File tóm tắt này (`Session_Summary.md`)
-2. `Project1_Requirements_ChatbotHocTiengAnh_v1.6.md` (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
+2. `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
 
-**Không còn cần gửi:** `FE_Handoff_Brief.md` (đã lỗi thời từ M9, xem mục 5) — nếu cần chi tiết API contract, dùng Swagger UI (`/swagger-ui.html`) hoặc đọc thẳng code.
+**Tuỳ chọn, nên gửi nếu cần tra nhanh API:** `FE_Handoff_Brief.md` (đã cập nhật lại tới hết M11, xem mục 5) — vẫn không bắt buộc như 2 file trên, dùng khi muốn tra contract nhanh mà không đọc lại toàn bộ Requirements; Swagger UI (`/swagger-ui.html`) là nguồn xác nhận cao nhất khi có sai lệch.
 
 **Nếu đang code dở:** file `.java`/`.html`/`.js` đang dở + file nó phụ thuộc trực tiếp.
 
 **Câu mở đầu gợi ý cho cuộc trò chuyện mới:**
-> "Đây là tóm tắt project mình đang làm (đính kèm), M1-M9 đã xong toàn bộ MVP (Backend đầy đủ + Frontend đã nối thật + redesign UI Duolingo-style + QA tổng thể), giờ bắt đầu M10 (Search/Filter/Pagination cho Topic), tiếp tục giúp mình nhé."
+> "Đây là tóm tắt project mình đang làm (đính kèm), M1-M11 đã xong (MVP đầy đủ + Search/Filter/Pagination cho Topic + Vocabulary/SRS), giờ bắt đầu M12 (Dictation), tiếp tục giúp mình nhé."

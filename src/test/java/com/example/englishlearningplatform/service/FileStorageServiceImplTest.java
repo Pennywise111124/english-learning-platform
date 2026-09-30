@@ -84,7 +84,7 @@ class FileStorageServiceImplTest {
 
         InvalidFileException exception = assertThrows(InvalidFileException.class,
                 () -> fileStorageService.storeImage(fakeImage, "topics"));
-        assertTrue(exception.getMessage().contains("không phải là hình ảnh hợp lệ"));
+        assertTrue(exception.getMessage().contains("not a valid image"));
     }
 
     @Test

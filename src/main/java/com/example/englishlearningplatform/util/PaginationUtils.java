@@ -9,10 +9,10 @@ public final class PaginationUtils {
 
     public static void validate(int page, int size) {
         if (size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("Page size không được vượt quá: " + MAX_PAGE_SIZE);
+            throw new IllegalArgumentException("Page size must not exceed: " + MAX_PAGE_SIZE);
         }
         if (page < 0 || size < 1) {
-            throw new IllegalArgumentException("Page index phải >= 0 và size phải >= 1.");
+            throw new IllegalArgumentException("Page index must be >= 0 and size must be >= 1");
         }
     }
 }

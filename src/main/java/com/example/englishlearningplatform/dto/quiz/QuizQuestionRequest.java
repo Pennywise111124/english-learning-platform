@@ -12,7 +12,7 @@ public class QuizQuestionRequest {
     private String question;
 
     @NotEmpty
-    @Size(min = 2, message = "Phải có ít nhất 2 lựa chọn")
+    @Size(min = 2, message = "At least 2 options are required")
     private List<String> options;
 
     @NotBlank

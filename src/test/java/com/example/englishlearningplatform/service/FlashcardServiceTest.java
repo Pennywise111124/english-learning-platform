@@ -7,9 +7,11 @@ import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
 import com.example.englishlearningplatform.event.FlashcardChangedEvent;
+import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.FlashcardRepository;
 import com.example.englishlearningplatform.repository.TopicRepository;
+import com.example.englishlearningplatform.repository.UserVocabularyRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,8 @@ class FlashcardServiceTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private FileStorageService fileStorageService;
+    @Mock
+    private UserVocabularyRepository userVocabularyRepository;
 
     @InjectMocks
     private FlashcardService flashcardService;
@@ -165,6 +169,7 @@ class FlashcardServiceTest {
     void deleteFlashcard_whenNoImageUrl_shouldDeleteAndPublishOnlyFlashcardChangedEvent() {
         testFlashcard.setImageUrl(null);
         when(flashcardRepository.findById(FLASHCARD_ID)).thenReturn(Optional.of(testFlashcard));
+        when(userVocabularyRepository.existsByFlashcard_Id(FLASHCARD_ID)).thenReturn(false);
 
         flashcardService.deleteFlashcard(FLASHCARD_ID);
 
@@ -181,6 +186,7 @@ class FlashcardServiceTest {
     void deleteFlashcard_whenImageUrlExists_shouldPublishBothEvents() {
         testFlashcard.setImageUrl("uploads/flashcards/old.jpg");
         when(flashcardRepository.findById(FLASHCARD_ID)).thenReturn(Optional.of(testFlashcard));
+        when(userVocabularyRepository.existsByFlashcard_Id(FLASHCARD_ID)).thenReturn(false);
 
         flashcardService.deleteFlashcard(FLASHCARD_ID);
 
@@ -197,6 +203,16 @@ class FlashcardServiceTest {
                 .orElseThrow(() -> new AssertionError("FileDeletionEvent was not published"));
 
         assertEquals("uploads/flashcards/old.jpg", fileEvent.getFileUrl());
+    }
+
+    @Test
+    void deleteFlashcard_whenSavedByUser_shouldThrowResourceConflictException() {
+        when(flashcardRepository.findById(FLASHCARD_ID)).thenReturn(Optional.of(testFlashcard));
+        when(userVocabularyRepository.existsByFlashcard_Id(FLASHCARD_ID)).thenReturn(true);
+
+        assertThrows(ResourceConflictException.class, () -> flashcardService.deleteFlashcard(FLASHCARD_ID));
+
+        verify(flashcardRepository, never()).delete(any(Flashcard.class));
     }
 
     // ------------------------------------------------------------------

@@ -45,10 +45,10 @@ public class QuizAttemptService {
     public QuizResultResponse submitQuiz(Long quizId, SubmitQuizRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại!"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quiz không tồn tại!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found!"));
 
         List<QuizQuestion> realQuestions = quizQuestionRepository.findByQuizId(quizId);
 
@@ -65,16 +65,16 @@ public class QuizAttemptService {
 
                 QuizQuestion question = questionMap.get(qId);
                 if (question == null) {
-                    throw new IllegalArgumentException("Câu hỏi ID " + qId + " không thuộc Quiz này!");
+                    throw new IllegalArgumentException("Question id " + qId + " does not belong to this quiz!");
                 }
 
                 if (!processedQuestionIds.add(qId)) {
-                    throw new IllegalArgumentException("Phát hiện câu hỏi trùng lặp ID: " + qId);
+                    throw new IllegalArgumentException("Duplicate question id: " + qId);
                 }
 
                 if (userAnswers == null || userAnswers.isBlank() || !question.getOptions().contains(userAnswers)) {
                     throw new IllegalArgumentException(
-                            "Đáp án không hợp lệ hoặc không nằm trong tập lựa chọn của câu hỏi ID: " + qId);
+                            "Invalid answer or answer not among the options for question id: " + qId);
                 }
 
                 if (userAnswers.trim().equalsIgnoreCase(question.getCorrectAnswer().trim())) {
@@ -144,7 +144,7 @@ public class QuizAttemptService {
     public Page<QuizAttemptResponse> getMyAttempts(Long quizId, Pageable pageable) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Username " + username + " không tồn tại!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Username " + username + " not found!"));
 
         return quizAttemptRepository.findByUser_IdAndQuiz_Id(user.getId(), quizId, pageable)
                 .map(QuizAttemptResponse::from);
@@ -154,7 +154,7 @@ public class QuizAttemptService {
     public Page<QuizAttemptResponse> getMyRecentAttempts(Pageable pageable) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Username " + username + " không tồn tại!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Username " + username + " not found!"));
 
         return quizAttemptRepository.findByUser_IdOrderByCompletedAtDesc(user.getId(), pageable)
                 .map(QuizAttemptResponse::from);
