@@ -67,6 +67,18 @@ const MODAL_HTML = `
 `;
 
 let modalEl = null;
+let pendingRedirect = null;   // nơi sẽ đến sau khi đăng nhập; chỉ có giá trị khi hộp thoại đang mở với một điểm đến
+
+// Chỉ nhận tên trang .html tương đối (kèm query): chặn URL tuyệt đối hoặc "//host" để không bị lợi dụng chuyển hướng ra ngoài
+const SAFE_REDIRECT = /^[A-Za-z0-9_-]+\.html(\?[A-Za-z0-9_%=&.-]*)?$/;
+
+// Tham số có thể là 'login' | 'register' | { mode, redirectTo } (event 'open-auth-modal' cũ vẫn dùng chuỗi)
+function normalizeOpenArgs(arg) {
+    if (typeof arg === 'object' && arg !== null) {
+        return { mode: arg.mode || 'login', redirectTo: arg.redirectTo };
+    }
+    return { mode: arg || 'login', redirectTo: null };
+}
 
 export function initAuthModal() {
   if (document.getElementById('authModal')) return; // tránh chèn trùng nếu lỡ gọi 2 lần
@@ -95,10 +107,11 @@ export function initAuthModal() {
     e.preventDefault();
     const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
+    const destination = pendingRedirect || 'chat.html'; 
     try {
       const response = await api.login(username, password);
       saveAuth(response);
-      window.location.href = 'chat.html';
+      window.location.href = destination; 
     } catch (error) {
       showToast(error.message || 'Login failed. Please try again.', 'error');
     }
@@ -156,14 +169,17 @@ export function initAuthModal() {
   }
 }
 
-export function openAuthModal(mode = 'login') {
-  if (!modalEl) return;
-  modalEl.classList.remove('hidden');
-  document.body.classList.add('overflow-hidden');
-  modalEl._switchAuthTab(mode);
+export function openAuthModal(arg = 'login') {
+    if (!modalEl) return;
+    const { mode, redirectTo } = normalizeOpenArgs(arg);
+    pendingRedirect = (typeof redirectTo === 'string' && SAFE_REDIRECT.test(redirectTo)) ? redirectTo : null;
+    modalEl.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    modalEl._switchAuthTab(mode);
 }
 
 function closeAuthModal() {
-  modalEl.classList.add('hidden');
-  document.body.classList.remove('overflow-hidden');
+    pendingRedirect = null;
+    modalEl.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
 }

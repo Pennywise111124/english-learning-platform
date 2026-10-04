@@ -1,4 +1,7 @@
-// navbar.js — App shell: sidebar (thu gọn được) + topbar, dùng chung cho trang đã đăng nhập.
+// navbar.js — App shell: sidebar (thu gọn được) + topbar.
+// - Đã đăng nhập: sidebar đầy đủ, avatar, đăng xuất.
+// - Khách: vẫn thấy sidebar; mục cần đăng nhập có ổ khoá, bấm vào sẽ mở hộp thoại đăng nhập.
+// - Trang không có app shell (ví dụ landing page): thanh điều hướng đơn giản như cũ.
 // Vẫn export initNavBar(activePage) để không phải đổi cách gọi ở các trang.
 
 import { getUser, clearAuth } from './auth.js';
@@ -9,30 +12,47 @@ const SIDEBAR_COLLAPSED_KEY = 'linguistai_sidebar_collapsed';
 const SIDEBAR_WIDTH_EXPANDED = 256; // px
 const SIDEBAR_WIDTH_COLLAPSED = 80; // px
 
+// public: true = khách dùng được; false = cần đăng nhập
+const NAV_ITEMS = [
+  { id: 'chat', label: 'Chat', href: 'chat.html', icon: 'forum', public: false },
+  { id: 'topics', label: 'Topics', href: 'topics.html', icon: 'style', public: true },
+  { id: 'vocabulary', label: 'My Words', href: 'vocabulary.html', icon: 'bookmark', public: false },
+  { id: 'dictation', label: 'Dictation', href: 'dictation.html', icon: 'headphones', public: false },
+  { id: 'progress', label: 'Progress', href: 'progress.html', icon: 'monitoring', public: false }
+];
+const ADMIN_NAV_ITEM = { id: 'admin', label: 'Admin', href: 'admin.html', icon: 'admin_panel_settings', public: false };
+
+function openLoginModal(redirectTo) {
+  window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login', redirectTo } }));
+}
+
 export function initNavBar(activePage = '') {
   const user = getUser();
 
   if (!user) {
-    renderGuestNavBar();
+    const hasAppShell = document.getElementById('app-sidebar-container') && document.getElementById('app-topbar-container');
+    if (hasAppShell) renderGuestShell(activePage);
+    else renderGuestNavBar();
     return;
   }
 
-  const navItems = [
-    { id: 'chat', label: 'Chat', href: 'chat.html', icon: 'forum' },
-    { id: 'topics', label: 'Topics', href: 'topics.html', icon: 'style' },
-    { id: 'vocabulary', label: 'My Words', href: 'vocabulary.html', icon: 'bookmark' },
-    { id: 'progress', label: 'Progress', href: 'progress.html', icon: 'monitoring' }
-  ];
-
-  if (user.role === 'ADMIN') {
-    navItems.push({ id: 'admin', label: 'Admin', href: 'admin.html', icon: 'admin_panel_settings' });
-  }
+  const navItems = [...NAV_ITEMS];
+  if (user.role === 'ADMIN') navItems.push(ADMIN_NAV_ITEM);
 
   const avatarUrl = user.avatarUrl ? imageSrc(user.avatarUrl) : 'https://picsum.photos/seed/default/200/200';
   const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
 
-  renderSidebar(navItems, activePage, isCollapsed);
+  renderSidebar(navItems, activePage, isCollapsed, false);
   renderTopbar(avatarUrl);
+  applySidebarWidth(isCollapsed);
+
+  window.addEventListener('resize', () => applySidebarWidth(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'));
+}
+
+function renderGuestShell(activePage) {
+  const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+  renderSidebar(NAV_ITEMS, activePage, isCollapsed, true);
+  renderGuestTopbar();
   applySidebarWidth(isCollapsed);
 
   window.addEventListener('resize', () => applySidebarWidth(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'));
@@ -40,11 +60,23 @@ export function initNavBar(activePage = '') {
 
 // ─── Sidebar ─────────────────────────────────────────────────────
 
-function renderSidebar(navItems, activePage, isCollapsed) {
+function renderSidebar(navItems, activePage, isCollapsed, isGuest) {
   const container = document.getElementById('app-sidebar-container');
   if (!container) { console.error('[NavBar] Missing #app-sidebar-container'); return; }
 
   const navLinksHTML = navItems.map(item => {
+    // Khách + mục cần đăng nhập: nút có ổ khoá, bấm vào mở hộp thoại đăng nhập
+    if (isGuest && !item.public) {
+      return `
+        <button type="button" data-gated="${item.id}" data-href="${item.href}" title="Log in to use ${item.label}" aria-label="${item.label} (log in required)"
+          class="text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors nav-label-wrap w-full text-left">
+          <span class="material-symbols-outlined flex-shrink-0" aria-hidden="true">${item.icon}</span>
+          <span class="nav-label font-label-md text-label-md whitespace-nowrap flex-1">${item.label}</span>
+          <span class="nav-label material-symbols-outlined text-[18px] opacity-70" aria-hidden="true">lock</span>
+        </button>
+      `;
+    }
+
     const isActive = item.id === activePage;
     const activeClass = isActive
       ? 'bg-primary-fixed text-on-primary-fixed font-bold'
@@ -56,6 +88,18 @@ function renderSidebar(navItems, activePage, isCollapsed) {
       </a>
     `;
   }).join('');
+
+  const guestCardHTML = isGuest ? `
+      <div class="nav-label p-3 border-t-2 border-outline-variant flex-shrink-0">
+        <div class="bg-primary-fixed rounded-2xl p-4 flex flex-col gap-2">
+          <p class="font-label-md text-label-md font-bold text-on-primary-fixed">Unlock everything</p>
+          <p class="font-body-sm text-body-sm text-on-primary-fixed">Log in to chat with AI, save words, practice dictation and track your progress.</p>
+          <button id="sidebarLoginBtn" type="button" class="btn-3d mt-1 px-4 py-2 rounded-xl bg-primary border-primary-shadow text-on-primary font-label-md text-label-md hover:brightness-105 transition-all active:scale-95">
+            Log in
+          </button>
+        </div>
+      </div>
+  ` : '';
 
   container.innerHTML = `
     <!-- Backdrop cho drawer trên mobile -->
@@ -74,6 +118,7 @@ function renderSidebar(navItems, activePage, isCollapsed) {
       <nav class="flex-grow overflow-y-auto p-3 flex flex-col gap-1">
         ${navLinksHTML}
       </nav>
+      ${guestCardHTML}
     </aside>
   `;
 
@@ -91,6 +136,15 @@ function renderSidebar(navItems, activePage, isCollapsed) {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, nowCollapsed ? '1' : '0');
     applySidebarWidth(nowCollapsed);
   });
+
+  // Khách: mục bị khoá và thẻ "Unlock everything" đều mở hộp thoại đăng nhập
+  container.querySelectorAll('[data-gated]').forEach(btn => {
+      btn.addEventListener('click', () => { closeMobileNavDrawer(); openLoginModal(btn.dataset.href); });
+    });
+  const sidebarLoginBtn = document.getElementById('sidebarLoginBtn');
+  if (sidebarLoginBtn) {
+    sidebarLoginBtn.addEventListener('click', () => { closeMobileNavDrawer(); openLoginModal(); });
+  }
 }
 
 export function openMobileNavDrawer() {
@@ -118,6 +172,14 @@ function applySidebarWidth(isCollapsed) {
 }
 
 // ─── Topbar ──────────────────────────────────────────────────────
+
+function bindThemeToggle() {
+  document.getElementById('themeToggleBtn').addEventListener('click', () => {
+    const newTheme = toggleTheme();
+    document.getElementById('themeToggleBtn').querySelector('.material-symbols-outlined').textContent =
+      newTheme === 'dark' ? 'light_mode' : 'dark_mode';
+  });
+}
 
 function renderTopbar(avatarUrl) {
   const container = document.getElementById('app-topbar-container');
@@ -149,12 +211,7 @@ function renderTopbar(avatarUrl) {
   `;
 
   document.getElementById('appSidebarMobileToggle').addEventListener('click', openMobileNavDrawer);
-
-  document.getElementById('themeToggleBtn').addEventListener('click', () => {
-    const newTheme = toggleTheme();
-    document.getElementById('themeToggleBtn').querySelector('.material-symbols-outlined').textContent =
-      newTheme === 'dark' ? 'light_mode' : 'dark_mode';
-  });
+  bindThemeToggle();
 
   document.getElementById('navbarLogoutBtn').addEventListener('click', () => {
     if (confirm('Are you sure you want to logout?')) {
@@ -164,7 +221,36 @@ function renderTopbar(avatarUrl) {
   });
 }
 
-// ─── Guest (chưa đăng nhập) — giữ nguyên topbar đơn giản cũ, không có sidebar ───
+// Topbar cho khách trên trang có sidebar: nút menu (mobile), đổi giao diện, đăng nhập
+function renderGuestTopbar() {
+  const container = document.getElementById('app-topbar-container');
+  if (!container) { console.error('[NavBar] Missing #app-topbar-container'); return; }
+
+  const currentTheme = getTheme();
+
+  container.innerHTML = `
+    <header class="sticky top-0 z-30 h-16 flex items-center justify-between px-4 md:px-6 bg-surface/90 backdrop-blur-xl border-b-2 border-outline-variant">
+      <button id="appSidebarMobileToggle" class="md:hidden text-on-surface-variant hover:bg-surface-container-high rounded-full p-2 flex items-center justify-center" aria-label="Open menu">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+      <div class="flex-grow"></div>
+      <div class="flex items-center gap-2">
+        <button id="themeToggleBtn" class="text-on-surface-variant hover:bg-surface-container-high rounded-full p-2 flex items-center justify-center transition-colors" title="Toggle dark mode">
+          <span class="material-symbols-outlined">${currentTheme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+        </button>
+        <button id="guestLoginBtn" class="btn-3d px-5 py-2.5 rounded-2xl bg-primary border-primary-shadow text-on-primary font-label-md text-label-md hover:brightness-105 transition-all active:scale-95 duration-150">
+          Log In
+        </button>
+      </div>
+    </header>
+  `;
+
+  document.getElementById('appSidebarMobileToggle').addEventListener('click', openMobileNavDrawer);
+  bindThemeToggle();
+  document.getElementById('guestLoginBtn').addEventListener('click', () => openLoginModal());
+}
+
+// ─── Khách trên trang KHÔNG có app shell (ví dụ landing page): thanh điều hướng đơn giản ───
 
 function renderGuestNavBar() {
   const container = document.getElementById('navbar-container') || document.getElementById('app-topbar-container');
@@ -183,7 +269,5 @@ function renderGuestNavBar() {
     </nav>
   `;
 
-  document.getElementById('guestLoginBtn').addEventListener('click', () => {
-    window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'login' }));
-  });
+  document.getElementById('guestLoginBtn').addEventListener('click', () => openLoginModal());
 }

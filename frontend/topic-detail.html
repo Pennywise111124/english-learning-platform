@@ -47,7 +47,7 @@
         </section>
 
         <!-- Entry Points -->
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-stack-lg">
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-stack-lg">
             <!-- Flashcards Card -->
             <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-8 hover:border-primary hover:-translate-y-1 transition-all cursor-pointer" onclick="document.getElementById('flashcardsSection').scrollIntoView({behavior: 'smooth'})">
                 <div class="w-16 h-16 bg-primary-fixed rounded-2xl flex items-center justify-center mb-4">
@@ -65,6 +65,17 @@
                 <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Take Quiz</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">Test your knowledge and track progress</p>
             </div>
+
+            <!-- Dictation Card -->
+            <button id="dictationCard" type="button"
+                class="w-full text-left bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-8 hover:border-tertiary hover:-translate-y-1 transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-tertiary/30">
+                <div class="w-16 h-16 bg-tertiary-fixed rounded-2xl flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined icon-filled text-tertiary text-[32px]" aria-hidden="true">headphones</span>
+                </div>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Dictation</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant">Listen and type what you hear</p>
+                <p id="dictationCardMeta" class="font-label-md text-label-md text-on-surface-variant mt-3 min-h-[1.5rem]" aria-live="polite"></p>
+            </button>
         </section>
 
         <!-- Flashcards Section -->
@@ -131,6 +142,7 @@
         import { showToast } from './js/toast.js';
         import { initFooter } from './js/footer.js';
         import { getUser } from './js/auth.js';
+        import { el } from './js/ui.js';
 
         initNavBar('topics');
         initAuthModal();
@@ -138,6 +150,10 @@
 
         const params = new URLSearchParams(window.location.search);
         const topicId = params.get('id');
+        
+        function promptLogin(redirectTo) {
+            window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login', redirectTo } }));
+        }
 
         if (!topicId) {
             window.location.href = 'topics.html';
@@ -146,27 +162,35 @@
         let flashcards = [];
         let currentIndex = 0;
         let savedIds = new Set();
+        
+        function renderTopicHeader(topic) {
+            const badgeColors = {
+                BEGINNER: 'badge-beginner',
+                INTERMEDIATE: 'badge-intermediate',
+                ADVANCED: 'badge-advanced'
+            };
+
+            const img = el('img', 'w-full h-64 object-cover');
+            img.src = imageSrc(topic.imageUrl);
+            img.alt = topic.title;
+
+            const titleRow = el('div', 'flex flex-wrap items-center gap-3 mb-4');
+            titleRow.append(
+                el('h1', 'font-display-lg text-display-lg text-on-surface break-words min-w-0', topic.title),
+                el('span', `px-4 py-2 rounded-full font-label-md text-label-md ${badgeColors[topic.level] || ''}`, topic.level)
+            );
+
+            const body = el('div', 'p-8');
+            body.append(titleRow, el('p', 'font-body-lg text-body-lg text-on-surface-variant', topic.description ?? ''));
+
+            document.getElementById('topicHeader').replaceChildren(img, body);
+        }
 
         async function loadTopic() {
             try {
                 const topic = await api.getTopicDetail(topicId);
 
-                const badgeColors = {
-                    'BEGINNER': 'badge-beginner',
-                    'INTERMEDIATE': 'badge-intermediate',
-                    'ADVANCED': 'badge-advanced'
-                };
-
-                document.getElementById('topicHeader').innerHTML = `
-                    <img src="${imageSrc(topic.imageUrl)}" alt="${topic.title}" class="w-full h-64 object-cover"/>
-                    <div class="p-8">
-                        <div class="flex items-center gap-3 mb-4">
-                            <h1 class="font-display-lg text-display-lg text-on-surface">${topic.title}</h1>
-                            <span class="px-4 py-2 rounded-full font-label-md text-label-md ${badgeColors[topic.level]}">${topic.level}</span>
-                        </div>
-                        <p class="font-body-lg text-body-lg text-on-surface-variant">${topic.description}</p>
-                    </div>
-                `;
+                renderTopicHeader(topic);
 
                 flashcards = await api.getFlashcards(topicId);
                 document.getElementById('flashcardSkeleton').classList.add('hidden');
@@ -188,15 +212,6 @@
                     document.getElementById('flashcardsSection').insertAdjacentHTML('beforeend',
                         '<p class="text-center text-on-surface-variant font-body-md py-8">No flashcards available for this topic yet.</p>');
                 }
-
-                const quizzes = await api.getQuizzesByTopic(topicId);
-                document.getElementById('quizCard').onclick = () => {
-                    if (quizzes.length > 0) {
-                        window.location.href = `quiz.html?topicId=${topicId}`;
-                    } else {
-                        showToast('No quizzes available for this topic yet', 'info');
-                    }
-                };
             } catch (error) {
                 console.error('Failed to load topic:', error);
                 document.getElementById('topicHeader').innerHTML = '<div class="p-8 text-center text-error">Failed to load topic</div>';
@@ -234,7 +249,7 @@
         
         document.getElementById('saveWordBtn').addEventListener('click', async () => {
             if (!getUser()) {
-                window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'login' }));
+                promptLogin(`topic-detail.html?id=${encodeURIComponent(topicId)}`); 
                 return;
             }
             const btn = document.getElementById('saveWordBtn');
@@ -265,8 +280,65 @@
         document.getElementById('nextBtn').addEventListener('click', () => {
             if (currentIndex < flashcards.length - 1) showFlashcard(currentIndex + 1);
         });
+        
+        async function loadDictationCard() {
+            const card = document.getElementById('dictationCard');
+            const meta = document.getElementById('dictationCardMeta');
+            const isGuest = !getUser();
+            let lessonCount = null;   // null = chưa biết (chưa tải xong hoặc lỗi mạng): vẫn cho vào trang Dictation
+
+            // Gắn sự kiện ngay từ đầu, bấm sớm khi dữ liệu chưa về vẫn đi đúng chỗ
+            card.addEventListener('click', () => {
+                if (isGuest) {
+                    promptLogin(`dictation.html?topicId=${encodeURIComponent(topicId)}`);
+                } else if (lessonCount === 0) {
+                    showToast('No dictation lessons available for this topic yet', 'info');
+                } else {
+                    window.location.href = `dictation.html?topicId=${encodeURIComponent(topicId)}`;
+                }
+            });
+
+            if (isGuest) {
+                meta.textContent = 'Log in to practice';   // không gọi API: khách sẽ bị chuyển sang trang đăng nhập khi gặp 401
+                return;
+            }
+
+            try {
+                const data = await api.getDictationCatalog({ topicId, size: 1 });   // chỉ cần totalElements
+                lessonCount = data.totalElements;
+                meta.textContent = lessonCount === 0
+                    ? 'No lessons yet'
+                    : `${lessonCount} lesson${lessonCount === 1 ? '' : 's'}`;
+            } catch (error) {
+                console.error('Failed to load dictation lessons:', error);   // lỗi phụ, không làm hỏng phần còn lại của trang
+            }
+        }
+        
+        function setupQuizCard() {
+            const card = document.getElementById('quizCard');
+            let quizCount = null;   
+
+            card.addEventListener('click', () => {
+                const quizUrl = `quiz.html?topicId=${encodeURIComponent(topicId)}`;
+                if (!getUser()) {
+                    promptLogin(quizUrl);   
+                } else if (quizCount === 0) {
+                    showToast('No quizzes available for this topic yet', 'info');
+                } else {
+                    window.location.href = quizUrl;
+                }
+            });
+
+            api.getQuizzesByTopic(topicId)
+                .then(quizzes => { quizCount = quizzes.length; })
+                .catch(error => console.error('Failed to load quizzes:', error));
+        }
 
         loadTopic();
+        if (topicId) {
+            setupQuizCard();
+            loadDictationCard();
+        }
     </script>
 </body>
 </html>
