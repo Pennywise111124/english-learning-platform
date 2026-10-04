@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Dictation - LinguistAI</title>
+    <script>
+      if (localStorage.getItem('linguistai_theme') === 'dark' ||
+          (!localStorage.getItem('linguistai_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="font-body-md text-body-md antialiased min-h-screen bg-background text-on-background page-fade-in">
+    <div id="app-sidebar-container"></div>
+    <div id="app-content" class="min-h-screen flex flex-col">
+        <div id="app-topbar-container"></div>
+
+        <main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pt-stack-md pb-stack-lg flex flex-col gap-stack-lg items-center">
+            <section class="flex flex-col gap-stack-sm text-center">
+                <h1 class="font-display-lg text-display-lg text-primary">Dictation 🎧</h1>
+                <p class="font-body-lg text-body-lg text-on-surface-variant">Listen, type what you hear, and see exactly where you slipped.</p>
+            </section>
+
+            <!-- ═══ VIEW 1: danh mục bài ═══ -->
+            <section id="catalogView" class="w-full max-w-3xl flex flex-col gap-stack-md">
+                <a id="topicBackLink" href="#"
+                    class="hidden self-start inline-flex items-center gap-1 max-w-full text-primary hover:text-primary-container font-label-md text-label-md transition-colors">
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    <span id="topicBackLabel" class="truncate"></span>
+                </a>
+                <div id="searchBox"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="topicFilter"></div>
+                    <div id="levelFilter"></div>
+                    <div id="progressFilter"></div>
+                    <div id="sortFilter"></div>
+                </div>
+
+                <div class="flex items-center justify-between min-h-[1.5rem]">
+                    <p id="catalogSummary" class="font-label-md text-label-md text-on-surface-variant" aria-live="polite"></p>
+                    <button id="clearFilters" type="button" class="hidden font-label-md text-label-md text-primary hover:underline">Clear filters</button>
+                </div>
+
+                <div id="catalogSkeleton" class="space-y-3">
+                    <div class="skeleton h-28 w-full rounded-xl"></div>
+                    <div class="skeleton h-28 w-full rounded-xl"></div>
+                    <div class="skeleton h-28 w-full rounded-xl"></div>
+                </div>
+                <div id="catalogList" class="hidden space-y-3"></div>
+                <div id="catalogMessage" class="hidden text-center py-12"></div>
+                <div id="catalogPagination" class="flex justify-center items-center gap-4"></div>
+            </section>
+
+            <!-- ═══ VIEW 2: luyện tập một bài ═══ -->
+            <section id="practiceView" class="hidden w-full max-w-2xl">
+                <div class="flex flex-col gap-stack-md">
+                    <button id="backBtn" type="button" class="flex items-center gap-1 self-start text-on-surface-variant hover:text-on-surface font-label-md text-label-md">
+                        <span class="material-symbols-outlined">arrow_back</span>All lessons
+                    </button>
+
+                    <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-6 flex flex-col gap-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 id="lessonTitle" class="font-headline-md text-headline-md text-on-surface break-words"></h2>
+                                <a id="lessonTopic" href="#"
+                                    class="inline-flex items-center gap-1 max-w-full mt-1 font-label-md text-label-md text-primary hover:underline"></a>
+                            </div>
+                            <div id="lessonLevel" class="flex-shrink-0"></div>
+                        </div>
+                        <audio id="audioPlayer" controls preload="metadata" class="w-full"></audio>
+                        <textarea id="userInput" rows="5" maxlength="5000" placeholder="Type what you hear..."
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                        <button id="submitBtn" type="button" class="btn-3d px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all active:scale-95 disabled:opacity-40">
+                            Check my answer
+                        </button>
+                    </div>
+
+                    <!-- Kết quả sau khi nộp -->
+                    <div id="resultArea" class="hidden bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-6">
+                        <div class="flex flex-col gap-4">
+                            <div class="text-center">
+                                <p class="font-label-sm text-label-sm text-on-surface-variant">ACCURACY</p>
+                                <p id="accuracyValue" class="font-display-lg text-display-lg"></p>
+                                <p id="resultNote" class="font-label-md text-label-md text-on-surface-variant mt-1"></p>
+                            </div>
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed">Correct</span>
+                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm bg-error-container text-on-error-container">Wrong → expected</span>
+                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm bg-tertiary-fixed text-on-tertiary-fixed border-2 border-dashed border-tertiary">[Missing]</span>
+                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant line-through">Extra</span>
+                            </div>
+                            <div id="wordResult" class="flex flex-wrap gap-2"></div>
+                            <div class="pt-4 border-t-2 border-outline-variant">
+                                <p class="font-label-sm text-label-sm text-on-surface-variant mb-2">ORIGINAL TRANSCRIPT</p>
+                                <p id="transcriptText" class="font-body-md text-body-md text-on-surface"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lịch sử các lần làm -->
+                    <div class="flex flex-col gap-3">
+                        <h3 class="font-headline-md text-headline-md text-on-surface">Your attempts</h3>
+                        <div id="historySkeleton" class="hidden space-y-2">
+                            <div class="skeleton h-14 w-full rounded-xl"></div>
+                            <div class="skeleton h-14 w-full rounded-xl"></div>
+                        </div>
+                        <div id="historyList" class="space-y-2"></div>
+                        <p id="historyEmpty" class="hidden font-body-md text-body-md text-on-surface-variant">No attempts yet. Your first result will appear here.</p>
+                        <div id="historyPagination" class="flex justify-center items-center gap-4"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="app-footer-container"></div>
+    </div>
+
+    <script type="module">
+        import * as api from './js/api.js';
+        import { checkAuth } from './js/auth.js';
+        import { initNavBar } from './js/navbar.js';
+        import { initFooter } from './js/footer.js';
+        import { showToast } from './js/toast.js';
+        import { audioSrc } from './js/config.js';
+        import { el, buildLevelBadge, buildPagerButton, buildPageInfo, createSelect, createSearchBox, LEVEL_FILTER_OPTIONS } from './js/ui.js';
+        import { createTopicPicker } from './js/topicPicker.js';
+
+        checkAuth();
+        initNavBar('dictation');
+        initFooter();
+
+        const $ = (id) => document.getElementById(id);
+        const CATALOG_PAGE_SIZE = 10;
+        const HISTORY_PAGE_SIZE = 5;
+
+        const PROGRESS_OPTIONS = [
+            { value: '', label: 'All lessons' },
+            { value: 'NEW', label: 'Not tried yet' },
+            { value: 'PRACTICED', label: 'Practiced' }
+        ];
+        const SORT_OPTIONS = [
+            { value: 'newest', label: 'Newest first' },
+            { value: 'recent', label: 'Recently practiced' },
+            { value: 'title', label: 'Title A–Z' }
+        ];
+        const STATUS_STYLE = {
+            CORRECT: 'bg-primary-fixed text-on-primary-fixed',
+            WRONG: 'bg-error-container text-on-error-container',
+            MISSING: 'bg-tertiary-fixed text-on-tertiary-fixed border-2 border-dashed border-tertiary',
+            EXTRA: 'bg-surface-container-high text-on-surface-variant line-through'
+        };
+        const CHIP_BASE = 'px-3 py-1 rounded-full font-body-md text-body-md inline-flex items-center gap-1';
+
+        function accuracyColor(n) {
+            if (n >= 80) return 'text-primary';
+            if (n >= 50) return 'text-tertiary';
+            return 'text-error';
+        }
+
+        function smallIcon(name) {
+            const icon = el('span', 'material-symbols-outlined flex-shrink-0', name);
+            icon.style.fontSize = '18px';
+            icon.setAttribute('aria-hidden', 'true');
+            return icon;
+        }
+
+        // ───────────────────────── Trạng thái bộ lọc (lưu trên URL) ─────────────────────────
+
+        let currentLesson = null;
+        let historyPage = 0;
+        let catalogRequestId = 0;
+
+        const query = { keyword: '', topicId: null, level: '', progress: '', sort: 'newest', page: 0 };
+
+        function readQueryFromUrl() {
+            const p = new URLSearchParams(window.location.search);
+            query.keyword = (p.get('keyword') || '').trim().slice(0, 50);
+            const topicId = p.get('topicId');
+            query.topicId = topicId && /^\d+$/.test(topicId) ? Number(topicId) : null;
+            const level = (p.get('level') || '').toUpperCase();
+            query.level = LEVEL_FILTER_OPTIONS.some(o => o.value === level) ? level : '';
+            const progress = (p.get('progress') || '').toUpperCase();
+            query.progress = PROGRESS_OPTIONS.some(o => o.value === progress) ? progress : '';
+            const sort = (p.get('sort') || '').toLowerCase();
+            query.sort = SORT_OPTIONS.some(o => o.value === sort) ? sort : 'newest';
+            const page = parseInt(p.get('page') || '1', 10);
+            query.page = Number.isInteger(page) && page > 1 ? page - 1 : 0;
+        }
+
+        function syncUrl() {
+            const url = new URL(window.location.href);
+            const put = (key, value, defaultValue = '') => {
+                if (value === null || value === undefined || String(value) === String(defaultValue)) url.searchParams.delete(key);
+                else url.searchParams.set(key, String(value));
+            };
+            put('keyword', query.keyword);
+            put('topicId', query.topicId);
+            put('level', query.level);
+            put('progress', query.progress);
+            put('sort', query.sort, 'newest');
+            put('page', query.page + 1, 1);   // trên URL, trang đếm từ 1
+            history.replaceState(null, '', url);
+        }
+
+        function hasFilters() {
+            return query.keyword !== '' || query.topicId !== null || query.level !== '' || query.progress !== '';
+        }
+
+        function updateFilterUi() {
+            $('clearFilters').classList.toggle('hidden', !hasFilters());
+        }
+        
+        // Hiện đường quay lại trang Topic khi đang lọc theo một Topic
+        function updateTopicBackLink() {
+            const link = $('topicBackLink');
+            const topic = topicPicker.getValue();
+            if (query.topicId === null || !topic) {
+                link.classList.add('hidden');
+                return;
+            }
+            link.href = `topic-detail.html?id=${query.topicId}`;
+            $('topicBackLabel').textContent = `Back to ${topic.title}`;   // textContent, không đi qua innerHTML
+            link.classList.remove('hidden');
+        }
+
+        readQueryFromUrl();
+
+        // ───────────────────────── Các ô lọc ─────────────────────────
+
+        function applyChange() {
+            query.page = 0;
+            loadCatalog();
+        }
+
+        const searchBox = createSearchBox({
+            container: $('searchBox'), label: 'Search lessons or topics', placeholder: 'Search lessons or topics...',
+            onSearch: (value) => { query.keyword = value; applyChange(); }
+        });
+        searchBox.setValue(query.keyword);
+
+        const topicPicker = createTopicPicker({
+            container: $('topicFilter'), inputId: 'topicFilterInput', ariaLabel: 'Filter by topic', placeholder: 'All topics',
+            onChange: (topic) => { query.topicId = topic ? topic.id : null; applyChange(); }
+        });
+        const levelSelect = createSelect({
+            container: $('levelFilter'), label: 'Filter by level', icon: 'signal_cellular_alt',
+            options: LEVEL_FILTER_OPTIONS, value: query.level,
+            onChange: (value) => { query.level = value; applyChange(); }
+        });
+        const progressSelect = createSelect({
+            container: $('progressFilter'), label: 'Filter by progress', icon: 'task_alt',
+            options: PROGRESS_OPTIONS, value: query.progress,
+            onChange: (value) => { query.progress = value; applyChange(); }
+        });
+        const sortSelect = createSelect({
+            container: $('sortFilter'), label: 'Sort lessons', icon: 'sort',
+            options: SORT_OPTIONS, value: query.sort,
+            onChange: (value) => { query.sort = value; applyChange(); }
+        });
+
+        function clearFilters() {
+            searchBox.setValue('');
+            topicPicker.setValue(null);
+            levelSelect.setValue('');
+            progressSelect.setValue('');
+            query.keyword = '';
+            query.topicId = null;
+            query.level = '';
+            query.progress = '';
+            applyChange();   // giữ nguyên cách sắp xếp đang chọn
+        }
+        $('clearFilters').addEventListener('click', clearFilters);
+
+        // ───────────────────────── Danh mục ─────────────────────────
+
+        function formatDate(iso) {
+            const d = new Date(iso);
+            return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+        }
+
+        // Dựng trạng thái luyện tập: có chữ + icon + viền riêng, không chỉ dựa vào màu
+        function appendStats(row, item) {
+            if (item.attempts === 0) {
+                row.append(el('span', 'inline-flex items-center px-3 py-1 rounded-full border-2 border-dashed border-outline-variant font-label-sm text-label-sm text-on-surface-variant', 'Not tried yet'));
+                return;
+            }
+            const best = Number(item.bestAccuracy) || 0;
+            const bestChip = el('span', `inline-flex items-center gap-1 px-3 py-1 rounded-full border-2 border-outline-variant font-label-sm text-label-sm font-bold ${accuracyColor(best)}`);
+            bestChip.append(smallIcon('emoji_events'), document.createTextNode(`Best ${best}%`));
+            row.append(bestChip, el('span', 'font-label-sm text-label-sm text-on-surface-variant', `${item.attempts} attempt${item.attempts === 1 ? '' : 's'}`));
+            const last = formatDate(item.lastAttemptAt);
+            if (last) row.append(el('span', 'font-label-sm text-label-sm text-on-surface-variant', `· Last ${last}`));
+        }
+
+        function buildLessonCard(item) {
+            const card = el('div', 'bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4');
+
+            const info = el('div', 'flex flex-col gap-2 items-start min-w-0');
+            const topicLine = el('p', 'flex items-center gap-1 font-label-md text-label-md text-on-surface-variant max-w-full');
+            topicLine.append(smallIcon('folder'), el('span', 'truncate', item.topicTitle));
+            const meta = el('div', 'flex flex-wrap items-center gap-2');
+            meta.append(buildLevelBadge(item.level));
+            appendStats(meta, item);
+            info.append(el('h3', 'font-headline-md text-headline-md text-on-surface break-words', item.title), topicLine, meta);
+
+            const label = item.attempts === 0 ? 'Start' : 'Practice again';
+            const btn = el('button', 'btn-3d px-5 py-2.5 bg-primary border-primary-shadow text-on-primary rounded-xl font-label-md text-label-md hover:brightness-105 transition-all active:scale-95 flex-shrink-0', label);
+            btn.type = 'button';
+            btn.setAttribute('aria-label', `${label}: ${item.title}`);
+            btn.addEventListener('click', () => openLesson(item));
+
+            card.append(info, btn);
+            return card;
+        }
+
+        function showMessage(title, body, actionLabel, onAction) {
+            const box = $('catalogMessage');
+            box.replaceChildren(
+                el('p', 'font-headline-md text-headline-md text-on-surface mb-2', title),
+                el('p', 'font-body-md text-body-md text-on-surface-variant', body)
+            );
+            if (actionLabel) {
+                const btn = el('button', 'btn-3d mt-stack-md px-6 py-3 bg-primary border-primary-shadow text-on-primary rounded-2xl font-label-md text-label-md hover:brightness-105 transition-all active:scale-95', actionLabel);
+                btn.type = 'button';
+                btn.addEventListener('click', onAction);
+                box.append(btn);
+            }
+            box.classList.remove('hidden');
+        }
+
+        function renderSummary(data) {
+            const summary = $('catalogSummary');
+            if (data.totalElements === 0) { summary.textContent = ''; return; }
+            const from = data.page * data.size + 1;
+            const to = from + data.content.length - 1;
+            summary.textContent = `Showing ${from}–${to} of ${data.totalElements} lesson${data.totalElements === 1 ? '' : 's'}`;
+        }
+
+        function renderCatalogPagination(data) {
+            const container = $('catalogPagination');
+            container.replaceChildren();
+            if (data.totalPages <= 1) return;
+            const go = (delta) => { query.page += delta; window.scrollTo({ top: 0, behavior: 'smooth' }); loadCatalog(); };
+            container.append(
+                buildPagerButton('Previous', data.page === 0, () => go(-1)),
+                buildPageInfo(`Page ${data.page + 1} of ${data.totalPages}`),
+                buildPagerButton('Next', data.page >= data.totalPages - 1, () => go(1))
+            );
+        }
+
+        async function loadCatalog() {
+            const requestId = ++catalogRequestId;   // bỏ kết quả cũ nếu người dùng đổi bộ lọc liên tiếp
+            syncUrl();
+            updateFilterUi();
+            updateTopicBackLink();
+            $('catalogSkeleton').classList.remove('hidden');
+            $('catalogList').classList.add('hidden');
+            $('catalogMessage').classList.add('hidden');
+            $('catalogPagination').replaceChildren();
+
+            try {
+                const data = await api.getDictationCatalog({ ...query, size: CATALOG_PAGE_SIZE });
+                if (requestId !== catalogRequestId) return;
+                $('catalogSkeleton').classList.add('hidden');
+
+                // Trang hiện tại không còn dữ liệu (ví dụ bài bị gỡ): lùi về trang cuối còn dữ liệu
+                if (data.content.length === 0 && query.page > 0) {
+                    query.page = Math.max(0, data.totalPages - 1);
+                    return loadCatalog();
+                }
+
+                renderSummary(data);
+                if (data.content.length === 0) {
+                    if (hasFilters()) showMessage('No lessons match your filters', 'Try a different search, or clear the filters.', 'Clear filters', clearFilters);
+                    else showMessage('No dictation lessons yet', 'New listening exercises will show up here once they are published.');
+                    return;
+                }
+                $('catalogList').replaceChildren(...data.content.map(buildLessonCard));
+                $('catalogList').classList.remove('hidden');
+                renderCatalogPagination(data);
+            } catch (error) {
+                if (requestId !== catalogRequestId) return;
+                console.error('[loadCatalog]', error);
+                $('catalogSkeleton').classList.add('hidden');
+                $('catalogSummary').textContent = '';
+                showMessage('Could not load lessons', 'Check your connection and try again.', 'Try again', loadCatalog);
+                showToast(error.message || 'Failed to load lessons', 'error');
+            }
+        }
+
+        // ───────────────────────── Luyện tập ─────────────────────────
+
+        function openLesson(item) {
+            currentLesson = item;
+            $('catalogView').classList.add('hidden');
+            $('practiceView').classList.remove('hidden');
+
+            $('lessonTitle').textContent = item.title;
+            const topicLink = $('lessonTopic');
+            topicLink.href = `topic-detail.html?id=${item.topicId}`;
+            topicLink.title = 'Open this topic (flashcards and quizzes)';
+            topicLink.replaceChildren(smallIcon('folder'), el('span', 'truncate', item.topicTitle));
+            $('lessonLevel').replaceChildren(buildLevelBadge(item.level));
+            $('audioPlayer').src = audioSrc(item.mediaUrl);
+            $('userInput').value = '';
+            $('resultArea').classList.add('hidden');
+
+            window.scrollTo({ top: 0 });
+            loadHistory(0);
+        }
+
+        $('backBtn').addEventListener('click', () => {
+            currentLesson = null;   // đặt trước tiên: các request đang chờ sẽ tự bỏ kết quả
+
+            const audioPlayer = $('audioPlayer');
+            audioPlayer.pause();
+            audioPlayer.removeAttribute('src');
+            audioPlayer.load();
+
+            $('practiceView').classList.add('hidden');
+            $('catalogView').classList.remove('hidden');
+            loadCatalog();   // làm mới điểm cao nhất và số lần làm vừa thay đổi
+        });
+
+        $('audioPlayer').addEventListener('error', () => {
+            if (currentLesson) showToast('Could not load the audio. Please try again.', 'error');
+        });
+
+        $('submitBtn').addEventListener('click', async () => {
+            const text = $('userInput').value;
+            if (!text || !text.trim()) {
+                showToast('Please type what you heard', 'error');
+                return;
+            }
+
+            const lesson = currentLesson;
+            if (!lesson) return;
+            const previousBest = lesson.bestAccuracy ?? null;
+
+            const submitBtn = $('submitBtn');
+            submitBtn.disabled = true;
+            try {
+                const result = await api.submitDictation(lesson.id, text);   // gửi nguyên bản, server tự chuẩn hoá
+                if (currentLesson !== lesson) return;   // người dùng đã thoát bài trong lúc chờ
+
+                renderResult(result, previousBest);
+                // Cập nhật bản sao cục bộ để lần nộp tiếp theo so sánh đúng
+                lesson.attempts += 1;
+                lesson.bestAccuracy = previousBest === null ? result.accuracy : Math.max(previousBest, result.accuracy);
+                await loadHistory(0);
+            } catch (error) {
+                if (currentLesson === lesson) showToast(error.message || 'Failed to submit', 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        function renderResult(result, previousBest) {
+            const accuracyNum = Number(result.accuracy) || 0;
+            const accuracyVal = $('accuracyValue');
+            accuracyVal.textContent = `${accuracyNum}%`;
+            accuracyVal.className = `font-display-lg text-display-lg ${accuracyColor(accuracyNum)}`;
+
+            const note = $('resultNote');
+            if (previousBest === null) note.textContent = 'First attempt on this lesson';
+            else if (accuracyNum > previousBest) note.textContent = `New personal best! (previous: ${previousBest}%)`;
+            else note.textContent = `Your best is ${previousBest}%`;
+
+            $('wordResult').replaceChildren(...(result.words || []).map(buildWordChip));
+            $('transcriptText').textContent = result.transcript || '';
+
+            const resultArea = $('resultArea');
+            resultArea.classList.remove('hidden');
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function buildWordChip(item) {
+            const chip = el('span', `${CHIP_BASE} ${STATUS_STYLE[item.status] || 'bg-surface-container-high text-on-surface'}`);
+            if (item.status === 'WRONG') {
+                chip.append(el('span', 'line-through', item.word), el('span', '', ` → ${item.expected}`));
+                chip.title = `Wrong, expected "${item.expected}"`;
+            } else if (item.status === 'MISSING') {
+                chip.textContent = `[${item.word}]`;
+                chip.title = `Missing word: ${item.word}`;
+            } else if (item.status === 'EXTRA') {
+                chip.textContent = item.word;
+                chip.title = `Extra word: ${item.word}`;
+            } else {
+                chip.textContent = item.word;
+                chip.title = `Correct: ${item.word}`;
+            }
+            return chip;
+        }
+
+        // ───────────────────────── Lịch sử ─────────────────────────
+
+        async function loadHistory(page) {
+            const lesson = currentLesson;
+            if (!lesson) return;
+            historyPage = page;
+
+            $('historySkeleton').classList.remove('hidden');
+            $('historyEmpty').classList.add('hidden');
+            $('historyList').replaceChildren();
+            $('historyPagination').replaceChildren();
+
+            try {
+                const data = await api.getDictationResults(lesson.id, page, HISTORY_PAGE_SIZE);
+                if (currentLesson !== lesson) return;
+                $('historySkeleton').classList.add('hidden');
+
+                const content = data.content || [];
+                if (content.length === 0 && page === 0) {
+                    $('historyEmpty').classList.remove('hidden');
+                    return;
+                }
+
+                $('historyList').replaceChildren(...content.map(item => {
+                    const row = el('div', 'bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-3 flex items-center justify-between gap-3');
+                    const left = el('div', 'flex flex-col gap-0.5 overflow-hidden flex-1');
+                    const when = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
+                    // userInput là chuỗi do người dùng gõ: chỉ đi qua textContent
+                    const text = (item.userInput || '').length > 80 ? `${item.userInput.substring(0, 80)}…` : (item.userInput || '');
+                    left.append(
+                        el('span', 'font-label-sm text-label-sm text-on-surface-variant', when),
+                        el('p', 'font-body-md text-body-md text-on-surface truncate', text)
+                    );
+                    const score = Number(item.accuracy) || 0;
+                    row.append(left, el('span', `font-headline-md text-headline-md font-bold whitespace-nowrap ${accuracyColor(score)}`, `${item.accuracy}%`));
+                    return row;
+                }));
+
+                if ((data.totalPages || 0) > 1) {
+                    $('historyPagination').append(
+                        buildPagerButton('Previous', page === 0, () => loadHistory(page - 1)),
+                        buildPageInfo(`Page ${page + 1} of ${data.totalPages}`),
+                        buildPagerButton('Next', page >= data.totalPages - 1, () => loadHistory(page + 1))
+                    );
+                }
+            } catch (error) {
+                if (currentLesson !== lesson) return;
+                $('historySkeleton').classList.add('hidden');
+                showToast(error.message || 'Failed to load history', 'error');
+            }
+        }
+
+        // ───────────────────────── Khởi động ─────────────────────────
+
+        async function init() {
+            if (query.topicId !== null) {
+                const topic = await topicPicker.setValueById(query.topicId);   // null nếu Topic không còn tồn tại
+                if (!topic) query.topicId = null;
+            }
+            loadCatalog();
+        }
+        init();
+    </script>
+</body>
+</html>

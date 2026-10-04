@@ -51,12 +51,12 @@
             class="flex-grow w-full px-gutter md:px-margin-desktop max-w-container-max mx-auto pt-stack-md pb-stack-lg">
             <div class="mb-stack-md">
                 <h1 class="font-headline-lg text-headline-lg text-on-surface">Admin Panel 🛠️</h1>
-                <p class="font-body-md text-on-surface-variant mt-2">Manage topics, flashcards, and quizzes.</p>
+                <p class="font-body-md text-on-surface-variant mt-2">Manage topics, flashcards, quizzes, and dictation lessons.</p>
             </div>
 
             <!-- Tabs -->
             <div class="border-b-2 border-outline-variant mb-stack-md">
-                <div class="flex gap-8" role="navigation" aria-label="Admin tabs">
+                <div class="flex gap-6 md:gap-8 overflow-x-auto" role="navigation" aria-label="Admin tabs">
                     <button id="topicsTab"
                         class="border-b-4 border-primary text-primary font-bold py-3 font-body-md transition-colors">
                         Topics
@@ -69,6 +69,18 @@
                         class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors">
                         Quizzes
                     </button>
+                    <button id="dictationTab"
+                        class="border-b-4 border-transparent text-on-surface-variant py-3 font-body-md hover:text-on-surface transition-colors whitespace-nowrap">
+                        Dictation
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Topic đang làm việc, dùng chung cho Flashcards / Quizzes / Dictation -->
+            <div id="topicPickerBar" class="hidden mb-stack-sm">
+                <div class="max-w-xl">
+                    <label for="topicPickerInput" class="block font-label-md text-label-md text-on-surface-variant mb-2">Working topic</label>
+                    <div id="topicPickerContainer"></div>
                 </div>
             </div>
 
@@ -83,8 +95,28 @@
                     </button>
                 </div>
 
-                <div
-                    class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                <!-- Tìm kiếm / lọc / sắp xếp -->
+                <div class="flex flex-col md:flex-row gap-3 mb-stack-sm">
+                    <div class="relative flex-1">
+                        <label for="topicSearch" class="sr-only">Search topics</label>
+                        <span class="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden="true">search</span>
+                        <input id="topicSearch" type="text" autocomplete="off" placeholder="Search topics..."
+                            class="w-full bg-surface-container-lowest border-2 border-outline-variant rounded-2xl pl-12 pr-12 py-3 font-body-md text-on-surface transition-colors hover:border-primary focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20" />
+                        <button id="topicSearchClear" type="button" aria-label="Clear search"
+                            class="hidden absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-on-surface-variant hover:bg-surface-container-high">
+                            <span class="material-symbols-outlined text-lg">close</span>
+                        </button>
+                    </div>
+                    <div id="topicLevelFilter" class="md:w-52"></div>
+                    <div id="topicSortSelect" class="md:w-52"></div>
+                </div>
+
+                <div class="flex items-center justify-between mb-2 min-h-[1.5rem]">
+                    <p id="topicsSummary" class="font-label-md text-on-surface-variant" aria-live="polite"></p>
+                    <button id="topicsClearFilters" type="button" class="hidden font-label-md text-primary hover:underline">Clear filters</button>
+                </div>
+
+                <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[600px]">
                             <thead class="bg-surface-container-low border-b-2 border-outline-variant">
@@ -92,36 +124,30 @@
                                     <th class="hidden sm:table-cell text-left p-4 font-label-md text-on-surface">ID</th>
                                     <th class="text-left p-4 font-label-md text-on-surface">Title</th>
                                     <th class="text-left p-4 font-label-md text-on-surface">Level</th>
-                                    <th class="hidden md:table-cell text-left p-4 font-label-md text-on-surface">
-                                        Description</th>
+                                    <th class="hidden md:table-cell text-left p-4 font-label-md text-on-surface">Description</th>
                                     <th class="text-right p-4 font-label-md text-on-surface">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="topicsTableBody" class="divide-y-2 divide-outline-variant">
-                            </tbody>
+                            <tbody id="topicsTableBody" class="divide-y-2 divide-outline-variant"></tbody>
                         </table>
                     </div>
                 </div>
+                <div id="topicsPagination" class="flex justify-center items-center gap-4 mt-stack-sm"></div>
             </div>
 
             <!-- Flashcards Panel -->
             <div id="flashcardsPanel" class="tab-content hidden">
-                <div class="mb-stack-sm">
-                    <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Flashcards</h2>
-                    <div class="flex gap-4 items-center">
-                        <label class="font-label-md text-on-surface">Topic:</label>
-                        <select id="flashcardTopicFilter"
-                            class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                            <option value="">-- Select a topic --</option>
-                        </select>
-                        <button id="addFlashcardBtn"
-                            class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
-                            <span class="material-symbols-outlined text-lg">add</span>
-                            Add Flashcard
-                        </button>
-                    </div>
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h2 class="font-headline-md text-headline-md text-on-surface">Manage Flashcards</h2>
+                    <button id="addFlashcardBtn"
+                        class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">add</span>
+                        Add Flashcard
+                    </button>
                 </div>
-
+                
+                <div id="flashcardsFilter"></div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="flashcardsGrid">
                     <div class="col-span-full text-center p-stack-lg text-on-surface-variant">Select a topic to view its
                         flashcards</div>
@@ -130,27 +156,42 @@
 
             <!-- Quizzes Panel -->
             <div id="quizzesPanel" class="tab-content hidden">
-                <div class="mb-stack-sm">
-                    <h2 class="font-headline-md text-headline-md text-on-surface mb-4">Manage Quizzes</h2>
-                    <div class="flex gap-4 items-center">
-                        <label class="font-label-md text-on-surface">Topic:</label>
-                        <select id="quizTopicFilter"
-                            class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                            <option value="">-- Select a topic --</option>
-                        </select>
-                        <button id="addQuizBtn"
-                            class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2 ml-auto">
-                            <span class="material-symbols-outlined text-lg">add</span>
-                            Add Quiz
-                        </button>
-                    </div>
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h2 class="font-headline-md text-headline-md text-on-surface">Manage Quizzes</h2>
+                    <button id="addQuizBtn"
+                        class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">add</span>
+                        Add Quiz
+                    </button>
                 </div>
+                
+                <div id="quizzesFilter"></div>
 
                 <div
                     class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
                     <div id="quizzesList" class="divide-y-2 divide-outline-variant">
                         <div class="p-stack-lg text-center text-on-surface-variant">Select a topic to view its quizzes
                         </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dictation Panel -->
+            <div id="dictationPanel" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h2 class="font-headline-md text-headline-md text-on-surface">Manage Dictation</h2>
+                    <button id="addDictationBtn"
+                        class="btn-3d bg-primary border-primary-shadow text-on-primary font-label-md px-4 py-2.5 rounded-2xl hover:brightness-105 transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">add</span>
+                        Add Lesson
+                    </button>
+                </div>
+                
+                <div id="dictationFilter"></div>
+                
+                <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                    <div id="dictationList" class="divide-y-2 divide-outline-variant">
+                        <div class="p-stack-lg text-center text-on-surface-variant">Select a topic to view its dictation lessons</div>
                     </div>
                 </div>
             </div>
@@ -357,6 +398,67 @@
                 </form>
             </div>
         </div>
+        
+        <!-- Modal: Add/Edit Dictation Lesson -->
+        <div id="dictationModal" class="hidden fixed inset-0 bg-on-surface/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-surface-container-lowest rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-stack-md border-2 border-outline-variant">
+                <div class="flex justify-between items-center mb-stack-sm">
+                    <h3 class="font-headline-md text-headline-md text-on-surface" id="dictationModalTitle">Add Dictation Lesson</h3>
+                    <button id="closeDictationModal" type="button" class="text-on-surface-variant hover:text-on-surface" aria-label="Close">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="dictationForm" class="flex flex-col gap-stack-sm">
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="dictationTitle">Title</label>
+                        <input id="dictationTitle" type="text" required maxlength="255"
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-end mb-unit">
+                            <label class="block font-label-md text-on-surface" for="dictationTranscript">Transcript</label>
+                            <span id="dictationTranscriptCount" class="font-label-sm text-on-surface-variant">0 / 5000</span>
+                        </div>
+                        <textarea id="dictationTranscript" rows="6" required maxlength="5000"
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                        <p class="font-body-sm text-on-surface-variant mt-1">Exactly what is said in the audio. Learners never see this until they submit.</p>
+                    </div>
+                    <div>
+                        <label class="block font-label-md text-on-surface mb-unit" for="dictationLevel">Level</label>
+                        <select id="dictationLevel" required
+                            class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            <option value="BEGINNER">Beginner</option>
+                            <option value="INTERMEDIATE">Intermediate</option>
+                            <option value="ADVANCED">Advanced</option>
+                        </select>
+                    </div>
+
+                    <!-- Chỉ hiện sau khi Lesson đã tồn tại (giống phần ảnh của Topic) -->
+                    <div id="dictationAudioSection" class="hidden flex flex-col gap-2 border-t-2 border-outline-variant pt-stack-sm">
+                        <label class="block font-label-md text-on-surface" for="dictationAudioFile">Audio (MP3, WAV, OGG or M4A, up to 10 MB)</label>
+                        <audio id="dictationAudioPreview" controls preload="metadata" class="hidden w-full"></audio>
+                        <p id="dictationAudioStatus" class="font-body-sm text-on-surface-variant"></p>
+                        <div class="flex items-center gap-4">
+                            <input id="dictationAudioFile" type="file"
+                                accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a" class="flex-1 font-body-sm" />
+                            <button type="button" id="uploadDictationAudioBtn"
+                                class="px-4 py-2 font-label-md bg-secondary text-on-secondary rounded-2xl hover:brightness-105 transition-all whitespace-nowrap">Upload</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-4 mt-stack-sm">
+                        <button type="button" id="cancelDictationBtn"
+                            class="px-6 py-2.5 font-label-md text-on-surface-variant hover:text-on-surface border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
+                            Close
+                        </button>
+                        <button type="submit" id="saveDictationBtn"
+                            class="btn-3d px-6 py-2.5 font-label-md bg-primary border-primary-shadow text-on-primary rounded-2xl hover:brightness-105 transition-all disabled:opacity-40">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <div id="app-footer-container"></div>
     </div>
@@ -365,16 +467,19 @@
         import { checkAdmin } from './js/auth.js';
         import * as api from './js/api.js';
         import { initNavBar } from './js/navbar.js';
-        import { imageSrc } from './js/config.js';
+        import { imageSrc, audioSrc } from './js/config.js';
         import { showToast } from './js/toast.js';
         import { initFooter } from './js/footer.js';
+        import { el, buildLevelBadge, buildPagerButton, buildPageInfo, createFilterBar, createSelect, LEVEL_FILTER_OPTIONS } from './js/ui.js';
+        import { createTopicPicker } from './js/topicPicker.js';
 
         checkAdmin();
         initNavBar('admin');
         initFooter();
 
         let editingTopicId = null;
-        let allTopicsCache = [];
+        let activeTab = 'topics';
+        let workingTopic = null; 
 
         let currentFlashcardTopicId = null;
         let editingFlashcardId = null;
@@ -386,6 +491,56 @@
         let editingQuestionId = null;
         let currentQuestionsCache = [];
         let optionRowCount = 0;
+        
+        let currentDictationTopicId = null;
+        let editingDictationId = null;
+        let dictationLessonsCache = [];
+        let dictationRequestId = 0;
+        
+        // ═══════════════════════ Shared helpers ═══════════════════════
+
+        const byId = (id) => document.getElementById(id);
+        
+        // So khớp từ khoá (đã chuyển chữ thường) với một hoặc nhiều trường
+        function matchesKeyword(keyword, ...fields) {
+            return !keyword || fields.some(f => (f || '').toLowerCase().includes(keyword));
+        }
+
+        function gridMessage(text) {
+            return el('div', 'col-span-full text-center p-stack-lg text-on-surface-variant', text);
+        }
+
+        function listMessage(text) {
+            return el('div', 'p-stack-lg text-center text-on-surface-variant', text);
+        }
+
+        function buildIconButton(icon, label, className, onClick) {
+            const btn = el('button', `${className} p-2 rounded-xl transition-colors`);
+            btn.type = 'button';
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
+            btn.append(el('span', 'material-symbols-outlined text-lg', icon));
+            btn.addEventListener('click', onClick);
+            return btn;
+        }
+
+        // ── Thanh lọc cho 3 tab ──
+        const flashcardFilter = createFilterBar({
+            container: byId('flashcardsFilter'), label: 'Filter flashcards',
+            placeholder: 'Search by word, meaning or example...', noun: 'flashcard',
+            onChange: () => renderFlashcards()
+        });
+        const quizFilter = createFilterBar({
+            container: byId('quizzesFilter'), label: 'Filter quizzes',
+            placeholder: 'Search quizzes by title...', noun: 'quiz',
+            onChange: () => renderQuizzes()
+        });
+        const dictationFilter = createFilterBar({
+            container: byId('dictationFilter'), label: 'Filter dictation lessons',
+            placeholder: 'Search lessons by title...', noun: 'lesson',
+            levelFilter: true, toggleLabel: 'No audio only',
+            onChange: () => renderDictationList()
+        });
 
         function renderTopicsTableSkeleton(count = 5) {
             document.getElementById('topicsTableBody').innerHTML = Array.from({ length: count }).map(() => `
@@ -422,6 +577,7 @@
         // ═══════════════════════ Tab switching ═══════════════════════
 
         function switchTab(tab) {
+            activeTab = tab;
             document.querySelectorAll('[role="navigation"][aria-label="Admin tabs"] button').forEach(btn => {
                 btn.classList.remove('border-primary', 'text-primary', 'font-bold');
                 btn.classList.add('border-transparent', 'text-on-surface-variant');
@@ -432,83 +588,213 @@
 
             document.querySelectorAll('.tab-content').forEach(panel => panel.classList.add('hidden'));
             document.getElementById(`${tab}Panel`).classList.remove('hidden');
+            byId('topicPickerBar').classList.toggle('hidden', tab === 'topics');   // tab Topics không cần chọn Topic
+            syncUrl();
 
             if (tab === 'topics') loadTopics();
             else if (tab === 'flashcards') loadFlashcards();
             else if (tab === 'quizzes') loadQuizzes();
+            else if (tab === 'dictation') loadDictationLessons();
         }
 
         document.getElementById('topicsTab').addEventListener('click', () => switchTab('topics'));
         document.getElementById('flashcardsTab').addEventListener('click', () => switchTab('flashcards'));
         document.getElementById('quizzesTab').addEventListener('click', () => switchTab('quizzes'));
-
-        function getLevelColor(level) {
-            switch (level) {
-                case 'BEGINNER': return 'bg-secondary-fixed text-on-secondary-fixed';
-                case 'INTERMEDIATE': return 'bg-primary-fixed text-on-primary-fixed';
-                case 'ADVANCED': return 'bg-tertiary-fixed text-on-tertiary-fixed';
-                default: return 'bg-surface-container text-on-surface-variant';
-            }
-        }
+        document.getElementById('dictationTab').addEventListener('click', () => switchTab('dictation'));
 
         function truncate(text, maxLen) {
+            if (!text) return '';
             return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
         }
 
         // ═══════════════════════ Topics ═══════════════════════
 
-        async function loadTopics() {
-            try {
-                renderTopicsTableSkeleton();
-                const result = await api.adminGetTopics();
-                allTopicsCache = result.content.slice().sort((a, b) => a.id - b.id);
-                const tbody = document.getElementById('topicsTableBody');
-                tbody.innerHTML = '';
+        const TOPIC_PAGE_SIZE = 10;
+        const topicQuery = { keyword: '', level: '', sort: 'newest', page: 0 };
+        let topicsRequestId = 0;
+        let topicSearchTimer = null;
 
-                if (allTopicsCache.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-on-surface-variant">No topics found</td></tr>';
-                } else {
-                    allTopicsCache.forEach(topic => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-surface-container-low transition-colors';
-                        row.innerHTML = `
-                        <td class="hidden sm:table-cell p-4 font-body-md">${topic.id}</td>
-                        <td class="p-4 font-body-md font-semibold">
-                            <div class="flex items-center gap-3">
-                                <img src="${imageSrc(topic.imageUrl)}" alt="" class="w-14 h-9 object-cover rounded-lg"/>
-                                ${topic.title}
-                            </div>
-                        </td>
-                        <td class="p-4">
-                            <span class="px-2 py-1 rounded-full font-label-sm font-bold ${getLevelColor(topic.level)}">
-                                ${topic.level}
-                            </span>
-                        </td>
-                        <td class="hidden md:table-cell p-4 font-body-md text-on-surface-variant">${truncate(topic.description, 30)}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="editTopic(${topic.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">edit</span>
-                            </button>
-                            <button onclick="deleteTopic(${topic.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">delete</span>
-                            </button>
-                        </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
+        function hasTopicFilters() {
+            return topicQuery.keyword !== '' || topicQuery.level !== '';
+        }
+
+        function updateTopicFilterUi() {
+            byId('topicSearchClear').classList.toggle('hidden', byId('topicSearch').value === '');
+            byId('topicsClearFilters').classList.toggle('hidden', !hasTopicFilters());
+        }
+
+        function buildTopicRow(topic) {
+            const tr = el('tr', 'hover:bg-surface-container-low transition-colors');
+
+            const titleWrap = el('div', 'flex items-center gap-3');
+            const img = el('img', 'w-14 h-9 object-cover rounded-lg flex-shrink-0');
+            img.src = imageSrc(topic.imageUrl);
+            img.alt = '';
+            titleWrap.append(img, el('span', 'break-words min-w-0', topic.title));
+            const titleCell = el('td', 'p-4 font-body-md font-semibold');
+            titleCell.append(titleWrap);
+
+            const levelCell = el('td', 'p-4');
+            levelCell.append(buildLevelBadge(topic.level));
+
+            const editBtn = el('button', 'text-primary hover:text-primary-container p-2 rounded-xl transition-colors');
+            editBtn.type = 'button';
+            editBtn.title = 'Edit topic';
+            editBtn.setAttribute('aria-label', 'Edit topic');
+            editBtn.append(el('span', 'material-symbols-outlined text-lg', 'edit'));
+            editBtn.addEventListener('click', () => window.editTopic(topic.id));
+
+            const deleteBtn = el('button', 'text-error hover:opacity-70 p-2 rounded-xl transition-colors');
+            deleteBtn.type = 'button';
+            deleteBtn.title = 'Delete topic';
+            deleteBtn.setAttribute('aria-label', 'Delete topic');
+            deleteBtn.append(el('span', 'material-symbols-outlined text-lg', 'delete'));
+            deleteBtn.addEventListener('click', () => window.deleteTopic(topic.id));
+
+            const actionsCell = el('td', 'p-4 text-right');
+            actionsCell.append(editBtn, deleteBtn);
+
+            tr.append(
+                el('td', 'hidden sm:table-cell p-4 font-body-md', String(topic.id)),
+                titleCell,
+                levelCell,
+                el('td', 'hidden md:table-cell p-4 font-body-md text-on-surface-variant', truncate(topic.description, 60)),
+                actionsCell
+            );
+            return tr;
+        }
+
+        function renderTopicsMessageRow(message, retryHandler) {
+            const td = el('td', 'p-6 text-center text-on-surface-variant');
+            td.colSpan = 5;
+            td.append(el('p', 'font-body-md', message));
+            if (retryHandler) {
+                const retry = el('button', 'mt-2 text-primary font-label-md hover:underline', 'Try again');
+                retry.type = 'button';
+                retry.addEventListener('click', retryHandler);
+                td.append(retry);
+            }
+            const tr = el('tr');
+            tr.append(td);
+            byId('topicsTableBody').replaceChildren(tr);
+        }
+
+        function renderTopicsSummary(data) {
+            const summary = byId('topicsSummary');
+            if (data.totalElements === 0) {
+                summary.textContent = hasTopicFilters() ? 'No topics match your filters' : 'No topics yet';
+                return;
+            }
+            const from = data.page * data.size + 1;
+            const to = from + data.content.length - 1;
+            summary.textContent = `Showing ${from}–${to} of ${data.totalElements} topic${data.totalElements === 1 ? '' : 's'}`;
+        }
+
+        function renderTopicsPagination(data) {
+            const container = byId('topicsPagination');
+            container.replaceChildren();
+            if (data.totalPages <= 1) return;
+            container.append(
+                buildPagerButton('Previous', data.page === 0, () => { topicQuery.page--; loadTopics(); }),
+                buildPageInfo(`Page ${data.page + 1} of ${data.totalPages}`),
+                buildPagerButton('Next', data.page >= data.totalPages - 1, () => { topicQuery.page++; loadTopics(); })
+            );
+        }
+
+        async function loadTopics() {
+            const requestId = ++topicsRequestId;   // bỏ kết quả cũ nếu người dùng gõ/đổi bộ lọc liên tiếp
+            renderTopicsTableSkeleton();
+            try {
+                const data = await api.adminGetTopics({ ...topicQuery, size: TOPIC_PAGE_SIZE });
+                if (requestId !== topicsRequestId) return;
+
+                // Vừa xoá Topic cuối của một trang: lùi về trang cuối còn dữ liệu
+                if (data.content.length === 0 && topicQuery.page > 0) {
+                    topicQuery.page = Math.max(0, data.totalPages - 1);
+                    return loadTopics();
                 }
 
-                populateTopicFilters();
+                if (data.content.length === 0) {
+                    renderTopicsMessageRow(hasTopicFilters() ? 'No topics match your filters.' : 'No topics yet. Add the first one.');
+                } else {
+                    byId('topicsTableBody').replaceChildren(...data.content.map(buildTopicRow));
+                }
+                renderTopicsSummary(data);
+                renderTopicsPagination(data);
             } catch (error) {
-                showToast('Failed to load topics', 'error');
+                if (requestId !== topicsRequestId) return;
+                console.error('[loadTopics]', error);
+                byId('topicsSummary').textContent = '';
+                byId('topicsPagination').replaceChildren();
+                renderTopicsMessageRow('Could not load topics.', loadTopics);
+                showToast(error.message || 'Failed to load topics', 'error');
             }
         }
 
-        function populateTopicFilters() {
-            const options = allTopicsCache.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
-            document.getElementById('flashcardTopicFilter').innerHTML = '<option value="">-- Select a topic --</option>' + options;
-            document.getElementById('quizTopicFilter').innerHTML = '<option value="">-- Select a topic --</option>' + options;
+        // ── Tìm kiếm / lọc / sắp xếp ──
+
+        function applyTopicSearch() {
+            const keyword = byId('topicSearch').value.trim();
+            if (keyword === topicQuery.keyword) return;   // không đổi thì không gọi lại API
+            topicQuery.keyword = keyword;
+            topicQuery.page = 0;
+            updateTopicFilterUi();
+            loadTopics();
         }
+
+        byId('topicSearch').addEventListener('input', () => {
+            updateTopicFilterUi();
+            clearTimeout(topicSearchTimer);
+            topicSearchTimer = setTimeout(applyTopicSearch, 300);   // debounce: gõ xong mới gọi
+        });
+        byId('topicSearch').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(topicSearchTimer);
+                applyTopicSearch();
+            }
+        });
+        byId('topicSearchClear').addEventListener('click', () => {
+            byId('topicSearch').value = '';
+            clearTimeout(topicSearchTimer);
+            applyTopicSearch();
+            byId('topicSearch').focus();
+        });
+        const TOPIC_SORT_OPTIONS = [
+            { value: 'newest', label: 'Newest first' },
+            { value: 'title', label: 'Title A–Z' },
+            { value: 'popular', label: 'Most popular' }
+        ];
+
+        const topicLevelSelect = createSelect({
+            container: byId('topicLevelFilter'), label: 'Filter by level', icon: 'signal_cellular_alt',
+            options: LEVEL_FILTER_OPTIONS, value: '',
+            onChange: (value) => {
+                topicQuery.level = value;
+                topicQuery.page = 0;
+                updateTopicFilterUi();
+                loadTopics();
+            }
+        });
+        const topicSortSelect = createSelect({
+            container: byId('topicSortSelect'), label: 'Sort topics', icon: 'sort',
+            options: TOPIC_SORT_OPTIONS, value: 'newest',
+            onChange: (value) => {
+                topicQuery.sort = value;
+                topicQuery.page = 0;
+                loadTopics();
+            }
+        });
+        byId('topicsClearFilters').addEventListener('click', () => {
+            clearTimeout(topicSearchTimer);
+            byId('topicSearch').value = '';
+            topicLevelSelect.setValue('');
+            topicQuery.keyword = '';
+            topicQuery.level = '';
+            topicQuery.page = 0;
+            updateTopicFilterUi();
+            loadTopics();
+        });
 
         document.getElementById('addTopicBtn').addEventListener('click', () => {
             editingTopicId = null;
@@ -533,12 +819,14 @@
             try {
                 if (editingTopicId) {
                     await api.adminUpdateTopic(editingTopicId, data);
+                    syncWorkingTopicAfterChange(editingTopicId, { id: editingTopicId, title: data.title, level: data.level });
                     showToast('Topic updated successfully!', 'success');
                     document.getElementById('topicModal').classList.add('hidden');
                 } else {
                     const created = await api.adminCreateTopic(data);
                     showToast('Topic created! You can upload an image below.', 'success');
                     editingTopicId = created.id;
+                    topicQuery.page = 0;
                     document.getElementById('topicModalTitle').textContent = 'Edit Topic';
                     document.getElementById('topicImageSection').classList.remove('hidden');
                 }
@@ -576,6 +864,7 @@
                 await api.adminDeleteTopic(id);
                 showToast('Topic deleted successfully!', 'success');
                 loadTopics();
+                syncWorkingTopicAfterChange(id, null);
             } catch (error) {
                 showToast(error.message || 'Failed to delete topic', 'error');
             }
@@ -598,48 +887,90 @@
         });
 
         // ═══════════════════════ Flashcards ═══════════════════════
+        
+        let flashcardsCache = [];
+        let flashcardsRequestId = 0;
 
-        document.getElementById('flashcardTopicFilter').addEventListener('change', (e) => {
-            currentFlashcardTopicId = e.target.value || null;
-            loadFlashcards();
-        });
+        function buildFlashcardCard(fc) {
+            const card = el('div', 'bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm p-4 flex flex-col gap-2');
+            const img = el('img', 'w-full h-32 object-cover rounded-xl');
+            img.src = imageSrc(fc.imageUrl);
+            img.alt = '';
+            const actions = el('div', 'flex justify-end gap-2 mt-2');
+            actions.append(
+                buildIconButton('edit', 'Edit flashcard', 'text-primary hover:text-primary-container', () => window.editFlashcard(fc.id)),
+                buildIconButton('delete', 'Delete flashcard', 'text-error hover:opacity-70', () => window.deleteFlashcard(fc.id))
+            );
+            card.append(
+                img,
+                el('div', 'font-body-lg font-semibold text-on-surface break-words', fc.word),
+                el('div', 'font-body-md text-on-surface-variant break-words', fc.meaning),
+                el('div', 'font-body-sm text-on-surface-variant italic break-words', fc.example || ''),
+                actions
+            );
+            return card;
+        }
+
+        function renderFlashcards() {
+            const grid = byId('flashcardsGrid');
+            const { keyword, text } = flashcardFilter.getState();
+            const shown = flashcardsCache.filter(fc => matchesKeyword(keyword, fc.word, fc.meaning, fc.example));
+            flashcardFilter.setCount(shown.length, flashcardsCache.length);
+            if (flashcardsCache.length === 0) { grid.replaceChildren(gridMessage('No flashcards in this topic yet')); return; }
+            if (shown.length === 0) { grid.replaceChildren(gridMessage(`No flashcards match “${text}”`)); return; }
+            grid.replaceChildren(...shown.map(buildFlashcardCard));
+        }
 
         async function loadFlashcards() {
-            const grid = document.getElementById('flashcardsGrid');
+            const requestId = ++flashcardsRequestId;   // bỏ kết quả cũ nếu đổi Topic liên tiếp
+            const grid = byId('flashcardsGrid');
             if (!currentFlashcardTopicId) {
-                grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">Select a topic to view its flashcards</div>';
+                flashcardsCache = [];
+                flashcardFilter.setVisible(false);
+                grid.replaceChildren(gridMessage('Search and pick a topic above to view its flashcards'));
                 return;
             }
+            flashcardFilter.setVisible(true);
             renderFlashcardsSkeleton();
             try {
                 const flashcards = await api.getFlashcards(currentFlashcardTopicId);
-                if (flashcards.length === 0) {
-                    grid.innerHTML = '<div class="col-span-full text-center p-stack-lg text-on-surface-variant">No flashcards in this topic yet</div>';
-                    return;
-                }
-                grid.innerHTML = flashcards.map(fc => `
-                    <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl shadow-sm p-4 flex flex-col gap-2">
-                        <img src="${imageSrc(fc.imageUrl)}" alt="" class="w-full h-32 object-cover rounded-xl"/>
-                        <div class="font-body-lg font-semibold text-on-surface">${fc.word}</div>
-                        <div class="font-body-md text-on-surface-variant">${fc.meaning}</div>
-                        <div class="font-body-sm text-on-surface-variant italic">${fc.example}</div>
-                        <div class="flex justify-end gap-2 mt-2">
-                            <button onclick="editFlashcard(${fc.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">edit</span>
-                            </button>
-                            <button onclick="deleteFlashcard(${fc.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">delete</span>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
+                if (requestId !== flashcardsRequestId) return;
+                flashcardsCache = flashcards;
+                renderFlashcards();
             } catch (error) {
-                showToast('Failed to load flashcards', 'error');
+                if (requestId !== flashcardsRequestId) return;
+                console.error('[loadFlashcards]', error);
+                flashcardsCache = [];
+                flashcardFilter.setCount(0, 0);
+                grid.replaceChildren(gridMessage('Could not load flashcards. Try again.'));
+                showToast(error.message || 'Failed to load flashcards', 'error');
             }
         }
 
+        window.editFlashcard = (id) => {
+            // Dùng danh sách đã tải sẵn, không gọi lại API
+            const fc = flashcardsCache.find(f => f.id === id);
+            if (!fc) { showToast('Flashcard not found', 'error'); return; }
+
+            editingFlashcardId = id;
+            document.getElementById('flashcardModalTitle').textContent = 'Edit Flashcard';
+            document.getElementById('flashcardWord').value = fc.word;
+            document.getElementById('flashcardMeaning').value = fc.meaning;
+            document.getElementById('flashcardExample').value = fc.example || '';
+            document.getElementById('flashcardAudioUrl').value = fc.audioUrl || '';
+            document.getElementById('flashcardImageSection').classList.remove('hidden');
+            const preview = document.getElementById('flashcardImagePreview');
+            if (fc.imageUrl) {
+                preview.src = imageSrc(fc.imageUrl);
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+            document.getElementById('flashcardModal').classList.remove('hidden');
+        };
+
         document.getElementById('addFlashcardBtn').addEventListener('click', () => {
-            if (!currentFlashcardTopicId) { showToast('Select a topic first', 'error'); return; }
+            if (!currentFlashcardTopicId) { showToast('Select a topic first', 'error'); workingPicker.focus(); return; }
             editingFlashcardId = null;
             document.getElementById('flashcardModalTitle').textContent = 'Add Flashcard';
             document.getElementById('flashcardForm').reset();
@@ -670,6 +1001,7 @@
                     const created = await api.adminCreateFlashcard(document.getElementById('flashcardTopicId').value, data);
                     showToast('Flashcard created! You can upload an image below.', 'success');
                     editingFlashcardId = created.id;
+                    flashcardFilter.reset();
                     document.getElementById('flashcardModalTitle').textContent = 'Edit Flashcard';
                     document.getElementById('flashcardImageSection').classList.remove('hidden');
                 }
@@ -678,29 +1010,6 @@
                 showToast(error.message || 'Failed to save flashcard', 'error');
             }
         });
-
-        window.editFlashcard = async (id) => {
-            // Không có GET /api/flashcards/{id} riêng — lấy lại từ danh sách của Topic hiện tại
-            const flashcards = await api.getFlashcards(currentFlashcardTopicId);
-            const fc = flashcards.find(f => f.id === id);
-            if (!fc) { showToast('Flashcard not found', 'error'); return; }
-
-            editingFlashcardId = id;
-            document.getElementById('flashcardModalTitle').textContent = 'Edit Flashcard';
-            document.getElementById('flashcardWord').value = fc.word;
-            document.getElementById('flashcardMeaning').value = fc.meaning;
-            document.getElementById('flashcardExample').value = fc.example;
-            document.getElementById('flashcardAudioUrl').value = fc.audioUrl || '';
-            document.getElementById('flashcardImageSection').classList.remove('hidden');
-            const preview = document.getElementById('flashcardImagePreview');
-            if (fc.imageUrl) {
-                preview.src = imageSrc(fc.imageUrl);
-                preview.classList.remove('hidden');
-            } else {
-                preview.classList.add('hidden');
-            }
-            document.getElementById('flashcardModal').classList.remove('hidden');
-        };
 
         window.deleteFlashcard = async (id) => {
             if (!confirm('Are you sure you want to delete this flashcard?')) return;
@@ -731,47 +1040,71 @@
 
         // ═══════════════════════ Quizzes ═══════════════════════
 
-        document.getElementById('quizTopicFilter').addEventListener('change', (e) => {
-            currentQuizTopicId = e.target.value || null;
-            loadQuizzes();
-        });
+        let quizzesCache = [];
+        let quizzesRequestId = 0;
+
+        function buildQuizRow(q) {
+            const row = el('div', 'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4');
+            const manageBtn = el('button', 'px-3 py-1.5 font-label-sm border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors', 'Manage Questions');
+            manageBtn.type = 'button';
+            manageBtn.addEventListener('click', () => window.manageQuestions(q.id));
+            const actions = el('div', 'flex gap-2 items-center justify-end flex-shrink-0');
+            actions.append(
+                manageBtn,
+                buildIconButton('edit', 'Edit quiz', 'text-primary hover:text-primary-container', () => window.editQuiz(q.id)),
+                buildIconButton('delete', 'Delete quiz', 'text-error hover:opacity-70', () => window.deleteQuiz(q.id))
+            );
+            row.append(el('div', 'font-body-md font-semibold text-on-surface break-words min-w-0', q.title), actions);
+            return row;
+        }
+
+        function renderQuizzes() {
+            const list = byId('quizzesList');
+            const { keyword, text } = quizFilter.getState();
+            const shown = quizzesCache.filter(q => matchesKeyword(keyword, q.title));
+            quizFilter.setCount(shown.length, quizzesCache.length);
+            if (quizzesCache.length === 0) { list.replaceChildren(listMessage('No quizzes in this topic yet')); return; }
+            if (shown.length === 0) { list.replaceChildren(listMessage(`No quizzes match “${text}”`)); return; }
+            list.replaceChildren(...shown.map(buildQuizRow));
+        }
 
         async function loadQuizzes() {
-            const list = document.getElementById('quizzesList');
+            const requestId = ++quizzesRequestId;
+            const list = byId('quizzesList');
             if (!currentQuizTopicId) {
-                list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">Select a topic to view its quizzes</div>';
+                quizzesCache = [];
+                quizFilter.setVisible(false);
+                list.replaceChildren(listMessage('Search and pick a topic above to view its quizzes'));
                 return;
             }
+            quizFilter.setVisible(true);
             renderQuizzesSkeleton();
             try {
                 const quizzes = await api.getQuizzesByTopic(currentQuizTopicId);
-                if (quizzes.length === 0) {
-                    list.innerHTML = '<div class="p-stack-lg text-center text-on-surface-variant">No quizzes in this topic yet</div>';
-                    return;
-                }
-                list.innerHTML = quizzes.map(q => `
-                    <div class="flex justify-between items-center p-4">
-                        <div class="font-body-md font-semibold text-on-surface">${q.title}</div>
-                        <div class="flex gap-2 items-center">
-                            <button onclick="manageQuestions(${q.id})" class="px-3 py-1.5 font-label-sm border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors">
-                                Manage Questions
-                            </button>
-                            <button onclick="editQuiz(${q.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">edit</span>
-                            </button>
-                            <button onclick="deleteQuiz(${q.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">delete</span>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
+                if (requestId !== quizzesRequestId) return;
+                quizzesCache = quizzes;
+                renderQuizzes();
             } catch (error) {
-                showToast('Failed to load quizzes', 'error');
+                if (requestId !== quizzesRequestId) return;
+                console.error('[loadQuizzes]', error);
+                quizzesCache = [];
+                quizFilter.setCount(0, 0);
+                list.replaceChildren(listMessage('Could not load quizzes. Try again.'));
+                showToast(error.message || 'Failed to load quizzes', 'error');
             }
         }
 
+        window.editQuiz = (id) => {
+            const quiz = quizzesCache.find(q => q.id === id);
+            if (!quiz) { showToast('Quiz not found', 'error'); return; }
+            editingQuizId = id;
+            document.getElementById('quizModalTitle').textContent = 'Edit Quiz';
+            document.getElementById('quizTitle').value = quiz.title;
+            document.getElementById('quizModal').classList.remove('hidden');
+        };
+
         document.getElementById('addQuizBtn').addEventListener('click', () => {
-            if (!currentQuizTopicId) { showToast('Select a topic first', 'error'); return; }
+            if (!currentQuizTopicId) { showToast('Select a topic first', 'error'); workingPicker.focus(); return; }
             editingQuizId = null;
             document.getElementById('quizModalTitle').textContent = 'Add Quiz';
             document.getElementById('quizForm').reset();
@@ -792,6 +1125,7 @@
                 } else {
                     await api.adminCreateQuiz(document.getElementById('quizTopicId').value, data);
                     showToast('Quiz created!', 'success');
+                    quizFilter.reset();
                 }
                 document.getElementById('quizModal').classList.add('hidden');
                 loadQuizzes();
@@ -799,16 +1133,6 @@
                 showToast(error.message || 'Failed to save quiz', 'error');
             }
         });
-
-        window.editQuiz = async (id) => {
-            const quizzes = await api.getQuizzesByTopic(currentQuizTopicId);
-            const quiz = quizzes.find(q => q.id === id);
-            if (!quiz) { showToast('Quiz not found', 'error'); return; }
-            editingQuizId = id;
-            document.getElementById('quizModalTitle').textContent = 'Edit Quiz';
-            document.getElementById('quizTitle').value = quiz.title;
-            document.getElementById('quizModal').classList.remove('hidden');
-        };
 
         window.deleteQuiz = async (id) => {
             if (!confirm('Are you sure? If the quiz already has attempts, the action will be rejected (409).')) return;
@@ -962,13 +1286,317 @@
                 showToast(error.message || 'Failed to delete question', 'error');
             }
         };
+        
+        // ═══════════════════════ Dictation ═══════════════════════
+
+        // Dữ liệu do Admin/server nhập đi qua textContent, không qua innerHTML (chống XSS)
+        
+        function renderDictationSkeleton(count = 3) {
+            const rows = Array.from({ length: count }, () => {
+                const row = el('div', 'flex justify-between items-center p-4');
+                row.append(el('div', 'skeleton h-5 w-1/3'), el('div', 'skeleton h-8 w-32'));
+                return row;
+            });
+            document.getElementById('dictationList').replaceChildren(...rows);
+        }
+
+        function renderDictationMessage(message) {
+            document.getElementById('dictationList').replaceChildren(
+                el('div', 'p-stack-lg text-center text-on-surface-variant', message)
+            );
+        }
+
+        function buildDictationRow(lesson) {
+            const row = el('div', 'flex flex-col md:flex-row md:items-center justify-between gap-3 p-4');
+
+            const info = el('div', 'flex flex-col gap-2 items-start min-w-0');
+            info.append(
+                el('div', 'font-body-md font-semibold text-on-surface break-words', lesson.title),
+                buildLevelBadge(lesson.level)
+            );
+
+            // Trạng thái audio: có icon + chữ + viền riêng, không chỉ dựa vào màu
+            const audioCol = el('div', 'flex items-center md:w-72');
+            if (lesson.mediaUrl) {
+                const player = el('audio', 'w-full h-10');
+                player.controls = true;
+                player.preload = 'none';   // không tải audio của cả danh sách ngay khi mở tab
+                player.src = audioSrc(lesson.mediaUrl);
+                audioCol.append(player);
+            } else {
+                const chip = el('span', 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-dashed border-tertiary bg-tertiary-fixed text-on-tertiary-fixed font-label-sm font-bold');
+                const icon = el('span', 'material-symbols-outlined', 'warning');
+                icon.style.fontSize = '18px';
+                chip.append(icon, document.createTextNode('No audio, hidden from learners'));
+                audioCol.append(chip);
+            }
+
+            const actions = el('div', 'flex gap-1 justify-end');
+            const editBtn = el('button', 'text-primary hover:text-primary-container p-2 rounded-xl transition-colors');
+            editBtn.type = 'button';
+            editBtn.title = 'Edit lesson';
+            editBtn.setAttribute('aria-label', 'Edit lesson');
+            editBtn.append(el('span', 'material-symbols-outlined text-lg', 'edit'));
+            editBtn.addEventListener('click', () => editDictationLesson(lesson.id));
+
+            const deleteBtn = el('button', 'text-error hover:opacity-70 p-2 rounded-xl transition-colors');
+            deleteBtn.type = 'button';
+            deleteBtn.title = 'Delete lesson';
+            deleteBtn.setAttribute('aria-label', 'Delete lesson');
+            deleteBtn.append(el('span', 'material-symbols-outlined text-lg', 'delete'));
+            deleteBtn.addEventListener('click', () => deleteDictationLesson(lesson));
+
+            actions.append(editBtn, deleteBtn);
+            row.append(info, audioCol, actions);
+            return row;
+        }
+
+        function renderDictationList() {
+            const { keyword, level, toggle } = dictationFilter.getState();
+            const shown = dictationLessonsCache.filter(l =>
+                matchesKeyword(keyword, l.title) &&
+                (!level || l.level === level) &&
+                (!toggle || !l.mediaUrl));
+            dictationFilter.setCount(shown.length, dictationLessonsCache.length);
+            if (dictationLessonsCache.length === 0) { renderDictationMessage('No dictation lessons in this topic yet'); return; }
+            if (shown.length === 0) {
+                // Chỉ bật "No audio only" mà không có gì: nghĩa là bài nào cũng đã có audio
+                renderDictationMessage(toggle && !keyword && !level
+                    ? 'Every lesson in this topic has audio.'
+                    : 'No lessons match your filters.');
+                return;
+            }
+            byId('dictationList').replaceChildren(...shown.map(buildDictationRow));
+        }
+
+        async function loadDictationLessons() {
+            const requestId = ++dictationRequestId;   // bỏ kết quả cũ nếu đổi Topic liên tiếp
+            if (!currentDictationTopicId) {
+                dictationLessonsCache = [];
+                dictationFilter.setVisible(false);
+                renderDictationMessage('Search and pick a topic above to view its dictation lessons');
+                return;
+            }
+            dictationFilter.setVisible(true);
+            renderDictationSkeleton();
+            try {
+                const lessons = await api.adminGetDictationLessons(currentDictationTopicId);
+                if (requestId !== dictationRequestId) return;
+                dictationLessonsCache = lessons;
+                renderDictationList();
+            } catch (error) {
+                if (requestId !== dictationRequestId) return;
+                console.error('[loadDictationLessons]', error);
+                dictationLessonsCache = [];
+                dictationFilter.setCount(0, 0);
+                renderDictationMessage('Could not load the lessons. Try again.');
+                showToast(error.message || 'Failed to load dictation lessons', 'error');
+            }
+        }
+        // ── Modal ──
+
+        function updateTranscriptCounter() {
+            const length = document.getElementById('dictationTranscript').value.length;
+            document.getElementById('dictationTranscriptCount').textContent = `${length} / 5000`;
+        }
+        document.getElementById('dictationTranscript').addEventListener('input', updateTranscriptCounter);
+
+        function closeDictationModal() {
+            document.getElementById('dictationAudioPreview').pause();   // đóng modal thì dừng nghe thử
+            document.getElementById('dictationModal').classList.add('hidden');
+        }
+        document.getElementById('closeDictationModal').addEventListener('click', closeDictationModal);
+        document.getElementById('cancelDictationBtn').addEventListener('click', closeDictationModal);
+
+        function updateDictationAudioSection(mediaUrl) {
+            const preview = document.getElementById('dictationAudioPreview');
+            const status = document.getElementById('dictationAudioStatus');
+            document.getElementById('dictationAudioSection').classList.remove('hidden');
+            document.getElementById('dictationAudioFile').value = '';
+            if (mediaUrl) {
+                preview.src = audioSrc(mediaUrl);
+                preview.classList.remove('hidden');
+                status.textContent = 'Audio ready. Uploading a new file replaces the current one.';
+            } else {
+                preview.pause();
+                preview.removeAttribute('src');
+                preview.load();
+                preview.classList.add('hidden');
+                status.textContent = 'No audio yet. Learners cannot see this lesson until you upload one.';
+            }
+        }
+
+        document.getElementById('addDictationBtn').addEventListener('click', () => {
+            if (!currentDictationTopicId) { showToast('Select a topic first', 'error'); workingPicker.focus(); return; }
+            editingDictationId = null;
+            document.getElementById('dictationModalTitle').textContent = 'Add Dictation Lesson';
+            document.getElementById('dictationForm').reset();
+            updateTranscriptCounter();   // reset() không kích hoạt sự kiện input
+            document.getElementById('dictationAudioSection').classList.add('hidden');
+            document.getElementById('dictationModal').classList.remove('hidden');
+        });
+
+        function editDictationLesson(id) {
+            // Danh sách Admin đã có đủ transcript nên không cần gọi thêm API
+            const lesson = dictationLessonsCache.find(l => l.id === id);
+            if (!lesson) { showToast('Lesson not found', 'error'); return; }
+            editingDictationId = id;
+            document.getElementById('dictationModalTitle').textContent = 'Edit Dictation Lesson';
+            document.getElementById('dictationTitle').value = lesson.title;
+            document.getElementById('dictationTranscript').value = lesson.transcript;
+            document.getElementById('dictationLevel').value = lesson.level;
+            updateTranscriptCounter();
+            updateDictationAudioSection(lesson.mediaUrl);
+            document.getElementById('dictationModal').classList.remove('hidden');
+        }
+
+        document.getElementById('dictationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('saveDictationBtn');
+            const data = {
+                title: document.getElementById('dictationTitle').value.trim(),
+                transcript: document.getElementById('dictationTranscript').value.trim(),
+                level: document.getElementById('dictationLevel').value
+            };
+
+            saveBtn.disabled = true;   // chống bấm đúp tạo trùng
+            try {
+                if (editingDictationId) {
+                    await api.adminUpdateDictationLesson(editingDictationId, data);
+                    showToast('Lesson updated!', 'success');
+                    closeDictationModal();
+                } else {
+                    const created = await api.adminCreateDictationLesson(currentDictationTopicId, data);
+                    showToast('Lesson created! Upload the audio below so learners can see it.', 'success');
+                    editingDictationId = created.id;   
+                    dictationFilter.reset();
+                    document.getElementById('dictationModalTitle').textContent = 'Edit Dictation Lesson';
+                    updateDictationAudioSection(null);
+                }
+                loadDictationLessons();
+            } catch (error) {
+                showToast(error.message || 'Failed to save lesson', 'error');
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('uploadDictationAudioBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('dictationAudioFile');
+            const file = fileInput.files[0];
+            if (!file) { showToast('Select an audio file first', 'error'); return; }
+            if (!editingDictationId) return;
+            if (file.size > 10 * 1024 * 1024) { showToast('Audio must be 10 MB or smaller', 'error'); return; }
+
+            const uploadBtn = document.getElementById('uploadDictationAudioBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading…';
+            try {
+                const updated = await api.adminUploadDictationAudio(editingDictationId, file);
+                updateDictationAudioSection(updated.mediaUrl);
+                showToast('Audio uploaded!', 'success');
+                loadDictationLessons();
+            } catch (error) {
+                showToast(error.message || 'Failed to upload audio', 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+            }
+        });
+
+        async function deleteDictationLesson(lesson) {
+            if (!confirm(`Delete "${lesson.title}"? If learners have already submitted results, the action will be rejected (409).`)) return;
+            try {
+                await api.adminDeleteDictationLesson(lesson.id);
+                showToast('Lesson deleted!', 'success');
+                loadDictationLessons();
+            } catch (error) {
+                showToast(error.message || 'Failed to delete lesson', 'error');
+            }
+        }
+        
+        // ═══════════════════════ Working topic (dùng chung cho Flashcards / Quizzes / Dictation) ═══════════════════════
+
+        const WORKING_TOPIC_KEY = 'linguistai_admin_topic';
+        const ADMIN_TABS = ['topics', 'flashcards', 'quizzes', 'dictation'];
+
+        // Giữ URL khớp với tab/Topic đang xem: tải lại hoặc gửi link vẫn quay về đúng chỗ
+        function syncUrl() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', activeTab);
+            if (workingTopic) url.searchParams.set('topicId', String(workingTopic.id));
+            else url.searchParams.delete('topicId');
+            history.replaceState(null, '', url);
+        }
+
+        function applyWorkingTopic(topic) {
+            workingTopic = topic;
+            const id = topic ? String(topic.id) : null;
+            currentFlashcardTopicId = id;
+            currentQuizTopicId = id;
+            currentDictationTopicId = id;
+            try {
+                if (topic) sessionStorage.setItem(WORKING_TOPIC_KEY, JSON.stringify(topic));
+                else sessionStorage.removeItem(WORKING_TOPIC_KEY);
+            } catch { /* sessionStorage bị chặn: bỏ qua */ }
+            syncUrl();
+        }
+
+        function reloadActiveTab() {
+            if (activeTab === 'flashcards') loadFlashcards();
+            else if (activeTab === 'quizzes') loadQuizzes();
+            else if (activeTab === 'dictation') loadDictationLessons();
+        }
+
+        const workingPicker = createTopicPicker({
+            container: byId('topicPickerContainer'),
+            inputId: 'topicPickerInput',
+            ariaLabel: 'Working topic',
+            placeholder: 'Search a topic by name...',
+            onChange: (topic) => {
+                applyWorkingTopic(topic);
+                flashcardFilter.reset(); quizFilter.reset(); dictationFilter.reset();   // Topic mới thì bộ lọc cũ không còn ý nghĩa
+                reloadActiveTab();
+            }
+        });
+
+        function readStoredTopicId() {
+            try {
+                const raw = sessionStorage.getItem(WORKING_TOPIC_KEY);
+                const topic = raw ? JSON.parse(raw) : null;
+                return topic && Number.isInteger(topic.id) ? topic.id : null;
+            } catch {
+                return null;
+            }
+        }
+
+        // Topic đang làm việc bị sửa/xoá ở tab Topics thì cập nhật hoặc bỏ lựa chọn
+        function syncWorkingTopicAfterChange(id, updated) {
+            if (!workingTopic || workingTopic.id !== id) return;
+            workingPicker.setValue(updated);
+            applyWorkingTopic(updated);
+        }
 
         // ═══════════════════════ Init ═══════════════════════
 
+        async function initAdminPage() {
+            const params = new URLSearchParams(window.location.search);
+            const requestedTab = params.get('tab');
+            const initialTab = ADMIN_TABS.includes(requestedTab) ? requestedTab : 'topics';
+
+            // Ưu tiên topicId trên URL, sau đó là lựa chọn lưu trong sessionStorage
+            const urlTopicId = params.get('topicId');
+            const candidateId = (urlTopicId && /^\d+$/.test(urlTopicId)) ? Number(urlTopicId) : readStoredTopicId();
+            const topic = candidateId ? await workingPicker.setValueById(candidateId) : null;   // null nếu Topic không còn tồn tại
+
+            applyWorkingTopic(topic);
+            switchTab(initialTab);
+        }
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadTopics);
+            document.addEventListener('DOMContentLoaded', initAdminPage);
         } else {
-            loadTopics();
+            initAdminPage();
         }
     </script>
 </body>
