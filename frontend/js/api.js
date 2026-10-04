@@ -155,6 +155,24 @@ export async function deleteVocabulary(id) {
   return request(`/api/vocabulary/${id}`, { method: 'DELETE' });
 }
 
+// ─── Dictation (M12) ─────────────────────────────────────────────────────────
+
+export async function getDictationLessons(topicId) {
+  return request(`/api/topics/${topicId}/dictation`);
+}
+
+export async function submitDictation(lessonId, userInput) {
+  return request(`/api/dictation/${lessonId}/submit`, { method: 'POST', body: { userInput } });
+}
+
+export async function getDictationResults(lessonId, page = 0, size = 20) {
+  return request(`/api/dictation/${lessonId}/results`, { params: { page, size } });
+}
+
+export async function getDictationCatalog({ keyword, topicId, level, progress, sort, page = 0, size = 10 } = {}) {
+  return request('/api/dictation/lessons', { params: { keyword, topicId, level, progress, sort, page, size } });
+}
+
 // ─── Chat / Conversations (REST — WebSocket streaming nằm ở chat.js riêng) ────
 
 export async function getConversations(page = 0, size = 20) {
@@ -203,10 +221,9 @@ export async function getMyRecentQuizAttempts(page = 0, size = 5) {
 }
 
 // ─── Admin — Topics ───────────────────────────────────────────────────────────
-// LƯU Ý: Backend KHÔNG có endpoint list riêng cho Admin — dùng chung GET /api/topics.
 
-export async function adminGetTopics() {
-  return request('/api/topics', { params: { page: 0, size: 100 } });
+export async function adminGetTopics({ keyword, level, sort, page = 0, size = 10 } = {}) {
+  return getTopics({ keyword, level, sort, page, size });
 }
 
 // LƯU Ý: TopicCreateRequest KHÔNG có field imageUrl — ảnh phải upload riêng
@@ -280,3 +297,28 @@ export async function adminDeleteQuestion(id) {
   return request(`/api/admin/questions/${id}`, { method: 'DELETE' });
 }
 
+// ─── Admin — Dictation (M12) ───────────────────────────────────────────────────
+// LƯU Ý: DictationLessonRequest KHÔNG có mediaUrl — audio phải upload riêng
+// qua adminUploadDictationAudio() SAU KHI tạo lesson (cùng cơ chế với ảnh Topic).
+
+export async function adminGetDictationLessons(topicId) {
+  return request(`/api/admin/topics/${topicId}/dictation`);
+}
+
+export async function adminCreateDictationLesson(topicId, { title, transcript, level }) {
+  return request(`/api/admin/topics/${topicId}/dictation`, { method: 'POST', body: { title, transcript, level } });
+}
+
+export async function adminUpdateDictationLesson(id, { title, transcript, level }) {
+  return request(`/api/admin/dictation/${id}`, { method: 'PUT', body: { title, transcript, level } });
+}
+
+export async function adminDeleteDictationLesson(id) {
+  return request(`/api/admin/dictation/${id}`, { method: 'DELETE' });
+}
+
+export async function adminUploadDictationAudio(id, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request(`/api/admin/dictation/${id}/audio`, { method: 'POST', body: formData, isMultipart: true });
+}
