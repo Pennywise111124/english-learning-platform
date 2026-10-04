@@ -1,7 +1,7 @@
 # TÓM TẮT TOÀN BỘ QUÁ TRÌNH — Project "Nền tảng học tiếng Anh tích hợp AI"
 *(Dùng để tiếp tục ở cuộc trò chuyện mới)*
 
-**Ngày tóm tắt:** 29/09/2026 (cập nhật sau M10 + M11 — Search/Filter/Pagination cho Topic + Vocabulary/SRS hoàn thành, sẵn sàng M12)
+**Ngày tóm tắt:** 03/10/2026 (cập nhật sau M12 — Dictation hoàn thành; toàn bộ M1–M12 xong, MVP + v1.1 đầy đủ)
 
 ---
 
@@ -19,12 +19,13 @@
   - **Cập nhật 01/09/2026:** ở M1 đã tự phát hiện + tự sửa đúng 1 lỗi cùng dạng (nhân nhầm đơn vị `refreshTokenExpirationMs`) qua build error, không cần người review chỉ ra trước.
   - **Cập nhật 02/09/2026:** ở M2 tự phát hiện đúng lỗ hổng logic "UNIQUE check tự chặn nhầm chính bản ghi đang update" trước khi được gợi ý đáp án, chỉ cần gợi ý hướng.
   - **Cập nhật 03/09/2026:** ở M3 tự phát hiện + tự sửa 1 lỗ hổng validate (`answer != null &&` khiến null lọt qua âm thầm) trong lúc tự refactor gộp vòng lặp, không cần được chỉ ra.
+  - **Cập nhật 03/10/2026:** ở M12 đọc đúng stack trace trong console để xác nhận nguyên nhân (`truncate()` ném `TypeError` vì `Topic.description = null` làm cả trang Admin báo "Failed to load topics"), và tự sửa lỗi stub Mockito lồng nhau (`UnfinishedStubbingException`) bằng cách tạo đối tượng mock ra biến riêng trước khi stub. Chủ động nêu ra 3 vấn đề trải nghiệm không có trong tài liệu: khó tìm bài Dictation khi số Topic tăng (dẫn tới danh mục có tìm kiếm/lọc), thiếu đường quay lại Topic từ trang Dictation, và khách không thấy được các chức năng của ứng dụng (dẫn tới sidebar cho khách + chuyển tới đúng nơi sau khi đăng nhập). Điểm cần lưu ý (cùng dạng "bỏ sót 1 bước trong chuỗi logic nhiều bước"): guard `requestId` ở `dictation.html` lần đầu thiếu dòng khai báo `const requestId = ++counter` và thiếu `return` trong nhánh `catch`, làm skeleton quay mãi — lỗi chỉ lộ khi chạy thật, nên mở lại trang ngay sau mỗi lần sửa.
 
 ---
 
-## 2. Tài liệu Requirements — hiện tại: **v1.7**
+## 2. Tài liệu Requirements — hiện tại: **v1.8**
 
-File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (bump từ v1.6 lên v1.7 ở đợt review 29/09/2026 sau M10+M11, xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
+File chính: `Requirements.md` (phiên bản 1.8; tên cũ `Project1_Requirements_ChatbotHocTiengAnh_v1.x.md`) (bump từ v1.7 lên v1.8 ở đợt review 03/10/2026 sau M12; trước đó bump từ v1.6 lên v1.7 ở đợt review 29/09/2026 sau M10+M11, xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
 - Mục 2.3 và mục 4: toàn bộ `LocalDateTime` → `Instant` cho timestamp (quyết định phát sinh khi code M1).
 - Mục 7 (Roadmap): M1, M2 đã đánh dấu hoàn thành.
 - Mục 8: 2 điểm mở đã chốt — Database (PostgreSQL), Refresh Token (có).
@@ -58,7 +59,9 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (bump từ v1.6 
 
 **Đã đồng bộ đầy đủ ở đợt review 29/09/2026 (sau M10+M11):** bump lên **v1.7**. FR-3.5: cập nhật cache key thật cho M10 (`topics::{level|ALL}:{sort}:{size}`, chỉ cache khi `page=0` và không có `keyword`). FR-9: chốt 4 điểm còn mở của FR-9 (bộ giá trị `sort`, định nghĩa "lượt học" = đếm `UserProgress` riêng biệt, quyết định không thêm index ở M10, giới hạn `keyword` 50 ký tự có escape). FR-8: chốt thuật toán SRS (thang 5 bậc 1/3/7/14/30 ngày), cách hiện thực FR-8.5 (sort theo `difficulty`), rule lưu trùng trả 409, retrofit rule "không cascade" cho `UserVocabulary`. Thêm cột `Topic.createdAt` (migration V8) và entity `UserVocabulary` đầy đủ (migration V9) vào mục 4. Cập nhật mục 5 (API Endpoints): `GET /api/topics` thêm đủ tham số, mục Vocabulary/SRS thêm 3 endpoint phát sinh ngoài phạm vi gốc (`GET /api/vocabulary`, `GET /api/vocabulary/topics/{topicId}/saved-ids`, `DELETE /api/vocabulary/{id}`). Mục 7 (Roadmap): M10, M11 đánh dấu hoàn thành. Mục 10.9 (Backlog): gỡ dòng "Search/Level/Sort chưa có tác dụng" (đã làm xong), thêm 1 giới hạn đã biết mới của `vocabulary.html`. Mục 1.4: thêm 7 bullet lưu ý kỹ thuật mới từ M10/M11 (cache key theo chữ ký method, sort Enum-as-String sai thứ tự, tie-break bắt buộc trong ORDER BY phân trang, Specification dùng chung cho count query, thiếu `@Mock` khi đổi constructor không lỗi biên dịch mà lỗi lúc chạy, `UnnecessaryStubbingException` khi code throw sớm hơn dòng stub, `GlobalExceptionHandler` thiếu 2 handler cho lỗi kiểu dữ liệu, retrofit rule cascade khi thêm entity cá nhân mới tham chiếu FK).
 
-**Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= 70`, MIME ảnh upload = JPEG/PNG only (5MB max), `Topic` sort mặc định = mới nhất, "lượt học" (popular) = số người học riêng biệt qua `UserProgress`, SRS = thang cố định 5 bậc 1/3/7/14/30 ngày (không SM-2).
+**Đã đồng bộ đầy đủ ở đợt review 03/10/2026 (sau M12):** bump lên **v1.8**. FR-7 viết lại hoàn toàn theo thực tế (upload audio thay URL, thuật toán so sánh + công thức accuracy, không lộ transcript, ownership + quy tắc xoá, mã HTTP) và thêm **FR-7.8** (danh mục bài Dictation kèm số liệu cá nhân). FR-9: danh mục Dictation thuộc nhóm "Search + Filter + Sort + Pagination đầy đủ". Mục 2.2: ownership của `DictationResult` mở rộng cho số liệu cá nhân trong danh mục. Mục 4: `DictationLesson`/`DictationResult` đầy đủ (migration V10, cascade/không cascade, index). Mục 5: bảng Dictation 9 endpoint (6 gốc + 3 bổ sung). Mục 7: M12 hoàn thành. Mục 8: thêm 3 dòng đã chốt (nguồn audio, thuật toán, quyền + cache). Mục 10: 10.4 (activePage mới), 10.5 (sidebar cho khách), 10.6 (`redirectTo`), 10.7 (`audioSrc`, `ui.js`, `topicPicker.js`), 10.9 (backlog mới). Mục 1.4: thêm 6 bullet lưu ý kỹ thuật từ M12 (Sort ghi đè `orderBy` của Specification, `NULL` lên đầu khi `DESC`, cascade DB không xoá file, 3 handler còn thiếu trong `GlobalExceptionHandler`, 2 constructor + stub Mockito lồng nhau, `catch` che mất nguyên nhân thật).
+
+**Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= 70`, MIME ảnh upload = JPEG/PNG only (5MB max), `Topic` sort mặc định = mới nhất, "lượt học" (popular) = số người học riêng biệt qua `UserProgress`, SRS = thang cố định 5 bậc 1/3/7/14/30 ngày (không SM-2), Dictation = audio **upload** (MP3/WAV/OGG/M4A, 10MB, magic bytes) thay vì URL external, so sánh bằng LCS mức từ với `accuracy = round1(100 × đúng / max(n_transcript, n_user))` và không bao giờ lộ transcript trước khi nộp.
 
 ---
 
@@ -81,16 +84,17 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (bump từ v1.6 
 ## 4. Tech stack đã chốt
 
 - **Backend:** Java 21, Spring Boot 4.1.1, Maven, package `com.example.englishlearningplatform`
-- **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V9** (V8: thêm `Topic.createdAt` cho sort=newest — M10; V9: bảng `user_vocabulary` — M11)
+- **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V10** (V8: thêm `Topic.createdAt` cho sort=newest — M10; V9: bảng `user_vocabulary` — M11; V10: bảng `dictation_lessons` (FK `topic_id` ON DELETE CASCADE) + `dictation_results` (không cascade) — M12)
 - **Security:** Spring Security + JWT (Access + Refresh), BCrypt, `@Enumerated(EnumType.STRING)`, role-based (`hasRole("ADMIN")` cho `/api/admin/**`)
 - **Timestamp:** `Instant` (Entity) ↔ `TIMESTAMPTZ` (PostgreSQL) — xuyên suốt mọi entity
 - **Frontend:** HTML/JS thuần + Tailwind CSS qua CDN, `js/api.js` gọi API thật (không còn mock từ M9) — chi tiết đầy đủ xem mục 5
 - **AI Provider:** xKiro, model `qwen/qwen3.6-plus:free`, context N=10 message, response format JSON {reply, correction, explanation}
 - **Cache:** Redis qua Spring Cache abstraction (`@Cacheable`/`RedisCacheManager`), evict bằng `@TransactionalEventListener(phase = AFTER_COMMIT)` + `CacheManager` thủ công (không dùng `@CacheEvict` trực tiếp trên method `@Transactional`, tránh race condition evict-trước-commit) — chốt tại M5
 - **File upload:** Local filesystem qua `app.upload.dir` (ngoài classpath), validate MIME header + nội dung ảnh thật qua `javax.imageio.ImageIO`, filename `UUID` theo format ảnh thật đọc được (không theo Content-Type/tên file client), serve qua `/uploads/**` (`WebMvcConfig` + `permitAll()`), dọn file cũ khi update/xoá qua `FileDeletionEvent`/`FileDeletionListener` — tái dùng đúng pattern `AFTER_COMMIT` đã chốt ở M5 cho cache — chốt tại M7
+- **Audio upload (Dictation, M12):** dùng chung `FileStorageService`, thêm `storeAudio(file, "dictation")`. Định dạng nhận dạng bằng **magic bytes** của 12 byte đầu (MP3: `ID3` hoặc frame sync `0xFF`+`(b1 & 0xE0)==0xE0`; WAV: `RIFF`…`WAVE`; OGG: `OggS`; M4A: `ftyp` ở byte 4-7), không tin `Content-Type`/đuôi file; đuôi file lưu lấy từ nội dung nhận dạng được. Giới hạn riêng `app.upload.audio-max-file-size-mb` = 10, `spring.servlet.multipart` nâng lên 10MB (ảnh vẫn 5MB ở tầng Service). Constructor `FileStorageServiceImpl` có 2 phiên bản (3 tham số cho test cũ, 4 tham số có `@Autowired`). Dọn file qua `FileDeletionEvent` như ảnh — chốt tại M12
 - **CORS:** cấu hình tường minh qua `CorsConfigurationSource` bean (không có mặc định) — `setAllowedOriginPatterns` (không phải `setAllowedOrigins`, bắt buộc khi kết hợp `allowCredentials(true)`), preflight `OPTIONS` permitAll riêng — chốt tại M9
 - **API Documentation:** springdoc-openapi 3.1.1, Swagger UI tại `/swagger-ui.html` — thêm tại M9, dùng làm nguồn đối chiếu contract thật khi có sai lệch với Requirements
-- **Testing:** JUnit 5 + Mockito, tổng **124 test case** tính tới hết M11 (110 từ M8 + 14 mới ở M10/M11: `TopicSortTest` phần logic parse thuần + các test conflict/ownership mới ở `TopicServiceTest`/`FlashcardServiceTest`/`VocabularyServiceTest`) — không có test riêng cho `TopicSpecifications` (logic query, được phủ qua bộ Postman thay vì Mockito) và không có test cho `getTopics()`/`getAllSaved()` (method chỉ dựng Specification/Pageable rồi uỷ quyền, không có nhánh rẽ, theo đúng quy tắc coverage đã chốt ở M8)
+- **Testing:** JUnit 5 + Mockito, tổng **198 test case** tính tới hết M12 (số lấy từ log `mvnw test` ngày 02/10/2026; 14 class: `AuthServiceTest` 10, `ChatServiceImplTest` 21, `DictationComparatorTest` 19, `DictationServiceTest` 32, `FileStorageServiceImplTest` 31, `FlashcardServiceTest` 13, `QuizAttemptServiceTest` 19, `TopicServiceTest` 21, `UserProgressServiceTest` 3, `VocabularyServiceTest` 12, `TopicSortTest` 4, `JwtUtilTest` 7, `TopicCacheEvictionListenerTest` 4, `FlashcardCacheEvictionListenerTest` 2). Không có test riêng cho các `Specification` (`TopicSpecifications`, `DictationLessonSpecifications` — logic query, được phủ qua bộ Postman thay vì Mockito) và không có test cho `getTopics()`/`getAllSaved()` (chỉ dựng Specification/Pageable rồi uỷ quyền, không có nhánh rẽ). Riêng `getCatalog()` của Dictation có test vì có nhánh gộp thống kê (trang rỗng không gọi truy vấn thống kê, `Pageable` không kèm Sort).
 
 ---
 
@@ -101,9 +105,9 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (bump từ v1.6 
 - **Đổi hẳn** navbar ngang → **sidebar trái thu gọn được + topbar riêng** (`navbar.js` viết lại hoàn toàn, xem chi tiết Requirements mục 10.5).
 - Thêm mới: `topic-detail.html` vẫn giữ tên cũ, không đổi.
 
-**10 trang hiện tại:** `index.html`, `chat.html`, `topics.html`, `topic-detail.html`, `quiz.html`, `progress.html`, `profile.html`, `admin.html` (8 trang chính) + `test-websocket.html` (công cụ test riêng, không tính vào bộ chính thức).
+**Các trang hiện tại:** 10 trang chính — `index.html`, `chat.html`, `topics.html`, `topic-detail.html`, `quiz.html`, `progress.html`, `profile.html`, `admin.html`, `vocabulary.html` (M11), `dictation.html` (M12) — cộng `test-websocket.html` (công cụ test riêng, không tính vào bộ chính thức).
 
-**Module JS dùng chung (mới, không có ở giai đoạn mock):** `config.js`, `toast.js`, `chat.js`, `footer.js`, `theme.js`, `authModal.js` — vai trò từng file xem Requirements mục 10.7.
+**Module JS dùng chung (mới, không có ở giai đoạn mock):** `config.js`, `toast.js`, `chat.js`, `footer.js`, `theme.js`, `authModal.js`, `ui.js` (M12), `topicPicker.js` (M12) — vai trò từng file xem Requirements mục 10.7.
 
 **Redesign UI hoàn chỉnh (Duolingo-inspired):** đổi bảng màu, thêm component "nút 3D" (`btn-3d` + `border-*-shadow`), dark mode thật (CSS custom property, không phải chỉ khai báo `darkMode: "class"` suông như dự kiến ban đầu), skeleton loading toàn site, empty/error state chuẩn hoá. Chi tiết đầy đủ đã chuyển hẳn vào Requirements mục 10 (không lặp lại ở đây, tránh 2 nguồn dễ lệch nhau) — **khi cần chi tiết design system, luôn tham chiếu Requirements, không phải file này**.
 
@@ -111,11 +115,13 @@ File chính: `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (bump từ v1.6 
 
 **Cập nhật M11:** trang mới `vocabulary.html` (yêu cầu đăng nhập, thêm mục "My Words" vào sidebar `navbar.js`) — gồm 2 tab: "Due Today" (ôn từ đến hạn, lật thẻ, Next/Previous duyệt xem không cần đánh giá, Remembered/Not yet gọi API rồi loại khỏi hàng đợi tại chỗ) và "All Words" (xem + xoá toàn bộ sổ từ đã lưu, phân trang, badge trạng thái NEW/LEARNING/KNOWN theo màu). Nút Save mới thêm vào `topic-detail.html` (trên mặt trước flashcard) — hiện đúng trạng thái đã lưu/chưa lưu ngay khi tải trang (gọi song song 1 API riêng lấy set `flashcardId` đã lưu trong Topic đang xem), khách chưa đăng nhập bấm Save sẽ mở modal Login thay vì gọi API.
 
-`FE_Handoff_Brief.md` — **CẬP NHẬT 29/09/2026:** đã được "hồi sinh" lại làm tài liệu tra cứu nhanh (khác hẳn vai trò brief-build-mock ban đầu ở M1-M8), đồng bộ đầy đủ endpoint + shape dữ liệu mới của M10 (`GET /api/topics` đủ tham số) và M11 (khối Vocabulary/SRS, gồm cả 3 endpoint bổ sung ngoài phạm vi gốc). Từ giờ nên gửi kèm file này khi cần tra nhanh contract API mà không muốn đọc lại toàn bộ Requirements — Swagger UI (`/swagger-ui.html`) vẫn là nguồn xác nhận cao nhất khi có sai lệch.
+**Cập nhật M12:** trang mới `dictation.html` (yêu cầu đăng nhập, mục "Dictation" trong sidebar) gồm 2 màn: **danh mục** (ô tìm kiếm, lọc Topic bằng `topicPicker`, lọc Level/tiến độ, sắp xếp, phân trang; mỗi thẻ hiện Topic, Level, "Best x%", số lần làm; bộ lọc lưu trên URL nên `?topicId=` mở trực tiếp được, có liên kết "Back to <Topic>" khi đang lọc theo Topic) và **luyện tập** (trình phát audio, ô gõ, kết quả từng từ `CORRECT/WRONG/MISSING/EXTRA` có chữ + gạch + viền riêng chứ không chỉ dựa vào màu, "New personal best!", lịch sử các lần làm có phân trang). `admin.html` thêm tab Dictation (tạo/sửa/xoá bài, upload + nghe thử audio, bài chưa có audio có nhãn cảnh báo) và được làm lại ở 3 điểm: tab Topics có tìm kiếm/lọc Level/sắp xếp/phân trang 10 Topic mỗi trang (mặc định Newest first, khớp `topics.html`); **một ô "Working topic" dùng chung** (`topicPicker`) thay 3 dropdown cũ, nhớ lựa chọn qua `sessionStorage` + URL (`?tab=&topicId=`); mỗi tab Flashcards/Quizzes/Dictation có thanh lọc trong trình duyệt. `navbar.js`: **khách vẫn thấy sidebar** (mục cần tài khoản có ổ khoá và mở modal đăng nhập), `authModal.js` nhận `redirectTo` nên đăng nhập xong khách được đưa tới đúng nơi vừa bấm. `topic-detail.html`: thêm thẻ Dictation, thẻ Quiz/Dictation/nút Save của khách mở modal đăng nhập thay vì bị đẩy về `index.html`, và sửa lỗi dựng tiêu đề Topic bằng `innerHTML`. Các dropdown bộ lọc là component tự vẽ (`createSelect` trong `ui.js`, có ARIA + bàn phím).
+
+`FE_Handoff_Brief.md` — **CẬP NHẬT 03/10/2026 (sau M12; bản gốc 29/09/2026):** đã được "hồi sinh" lại làm tài liệu tra cứu nhanh (khác hẳn vai trò brief-build-mock ban đầu ở M1-M8), đồng bộ đầy đủ endpoint + shape dữ liệu mới của M12 (khối Dictation, gồm các endpoint bổ sung và các component dùng chung `ui.js`/`topicPicker.js`), M10 (`GET /api/topics` đủ tham số) và M11 (khối Vocabulary/SRS, gồm cả 3 endpoint bổ sung ngoài phạm vi gốc). Từ giờ nên gửi kèm file này khi cần tra nhanh contract API mà không muốn đọc lại toàn bộ Requirements — Swagger UI (`/swagger-ui.html`) vẫn là nguồn xác nhận cao nhất khi có sai lệch.
 
 ---
 
-## 6. Tiến độ Backend — cấu trúc project hiện tại (sau M11, 29/09/2026)
+## 6. Tiến độ Backend — cấu trúc project hiện tại (sau M12, 03/10/2026)
 
 ```
 src/main/java/com/example/englishlearningplatform/
@@ -123,16 +129,17 @@ src/main/java/com/example/englishlearningplatform/
 ├── ai/
 │ ├── {AiChatMessage, AiChatResult, AiClient, AiClientImpl, AiProviderException, AiStreamEvent}
 │ └── dto/{XkiroChatRequest, XkiroChatResponse, XkiroChatStreamChunk}
-├── config/{AiProperties, AiWebClientConfig, SecurityConfig, RedisConfig, WebSocketConfig, WebMvcConfig, TimeConfig} — class cuối mới thêm ở M11 (bean Clock, inject vào VocabularyService để unit test SRS với thời gian cố định)
+├── config/{AiProperties, AiWebClientConfig, SecurityConfig, RedisConfig, WebSocketConfig, WebMvcConfig, TimeConfig} — TimeConfig mới thêm ở M11 (bean Clock, inject vào VocabularyService để unit test SRS với thời gian cố định); M12: DictationService cũng inject Clock
 ├── controller/
 │ ├── AuthController, ConversationController, ChatWebSocketController, ProgressController, UserController
-│ ├── TopicController, QuizController, VocabularyController — class cuối mới thêm ở M11
-│ └── Admin*: AdminTopicController, AdminFlashcardController, AdminQuizController, AdminQuizQuestionController
+│ ├── TopicController, QuizController, VocabularyController (M11), DictationController (M12 — GET /api/topics/{id}/dictation, GET /api/dictation/lessons, submit, results)
+│ └── Admin*: AdminTopicController, AdminFlashcardController, AdminQuizController, AdminQuizQuestionController, AdminDictationController (M12)
 │   (UserController mới thêm ở M7 — POST /api/users/me/avatar)
 ├── dto/
 │ ├── auth/{RegisterRequest, LoginRequest, AuthResponse, UserResponse}
 │ ├── chat/{ConversationDetailResponse, ConversationSummaryResponse, MessageResponse, SendMessageRequest, ChatStreamEvent}
 │ ├── common/PageResponse.java
+│ ├── dictation/{DictationLessonRequest, DictationSubmitRequest, DictationLessonResponse, AdminDictationLessonResponse, DictationWordResult, WordStatus, DictationSubmitResponse, DictationResultResponse, DictationCatalogItem, DictationSort, DictationProgress} — package mới hoàn toàn ở M12 (DTO response dùng `record`)
 │ ├── progress/UserProgressResponse.java
 │ ├── quiz/{QuizRequest, QuizSummaryResponse, QuizQuestionRequest, QuizQuestionPublicResponse, QuizDetailResponse, SubmitAnswerItem, SubmitQuizRequest, QuizResultResponse, QuizAttemptResponse}
 │ ├── topic/{TopicCreateRequest, TopicUpdateRequest, TopicResponse, TopicSort, FlashcardCreateRequest, FlashcardUpdateRequest, FlashcardResponse} — TopicSort mới thêm ở M10
@@ -142,51 +149,56 @@ src/main/java/com/example/englishlearningplatform/
 │ ├── {Topic, Flashcard, Level} — Topic thêm field createdAt ở M10
 │ ├── {Quiz, QuizQuestion, QuizAttempt, UserProgress, ProgressStatus}
 │ ├── {UserVocabulary, VocabularyStatus} — mới hoàn toàn ở M11
+│ ├── {DictationLesson, DictationResult} — mới hoàn toàn ở M12
 │ └── {Conversation, Message, Sender}
 ├── event/
 │ ├── {TopicChangedEvent, TopicCacheEvictionListener} — M5
 │ ├── {FlashcardChangedEvent, FlashcardCacheEvictionListener} — M5
-│ └── {FileDeletionEvent, FileDeletionListener} — mới thêm ở M7 (dọn file ảnh cũ, cùng pattern AFTER_COMMIT với cache eviction)
-├── exception/{GlobalExceptionHandler, ErrorResponse, ResourceNotFoundException, ResourceConflictException, InvalidFileException} — M11: GlobalExceptionHandler thêm 2 handler mới (HttpMessageNotReadableException, MethodArgumentTypeMismatchException), vá lỗ hổng cũ từ M1-M7 (2 loại lỗi này trước đó rơi vào 500 thay vì 400), chỉ lộ ra khi M11 có field kiểu Boolean trong request body
+│ └── {FileDeletionEvent, FileDeletionListener} — mới thêm ở M7 (dọn file ảnh cũ, cùng pattern AFTER_COMMIT với cache eviction); M12: còn dọn file audio Dictation (kể cả khi xoá cả Topic — TopicService.deleteTopic() publish 1 event cho mỗi audio)
+├── exception/{GlobalExceptionHandler, ErrorResponse, ResourceNotFoundException, ResourceConflictException, InvalidFileException} — M11: thêm 2 handler (HttpMessageNotReadableException, MethodArgumentTypeMismatchException), vá lỗ hổng cũ từ M1-M7 (2 loại lỗi này trước đó rơi vào 500 thay vì 400); M12: thêm 3 handler cùng loại lỗ hổng (HttpRequestMethodNotSupportedException → 405, HttpMediaTypeNotSupportedException → 415, MultipartException → 400)
 ├── repository/
 │ ├── {UserRepository, RefreshTokenRepository}
 │ ├── {TopicRepository, TopicSpecifications, FlashcardRepository} — TopicSpecifications mới ở M10 (JpaSpecificationExecutor, gộp filter+sort search Topic)
 │ ├── {QuizRepository, QuizQuestionRepository, QuizAttemptRepository, UserProgressRepository}
 │ ├── UserVocabularyRepository — mới ở M11
+│ ├── {DictationLessonRepository, DictationResultRepository, DictationLessonSpecifications, DictationLessonStats} — mới ở M12 (Specification cho danh mục; DictationLessonStats là projection của truy vấn thống kê GROUP BY)
 │ └── {ConversationRepository, MessageRepository}
 ├── security/{JwtUtil, JwtAuthenticationFilter, CustomUserDetailsService, StompAuthChannelInterceptor, StompErrorHandler} — 2 class cuối mới thêm ở M6
 ├── service/
 │ ├── AuthService, ChatService, ChatServiceImpl
-│ ├── {TopicService, FlashcardService} — cả 2 retrofit thêm check UserVocabularyRepository ở M11 (chặn xoá khi đã có User lưu từ)
+│ ├── {TopicService, FlashcardService} — cả 2 retrofit thêm check UserVocabularyRepository ở M11 (chặn xoá khi đã có User lưu từ); M12: TopicService retrofit thêm check DictationResult + dọn file audio
 │ ├── {QuizService, QuizAttemptService, UserProgressService}
 │ ├── VocabularyService — mới hoàn toàn ở M11
-│ └── {FileStorageService, FileStorageServiceImpl, UserService} — mới thêm ở M7
+│ ├── {DictationService, DictationComparator} — mới hoàn toàn ở M12 (DictationComparator là class static pure function: tokenize + LCS mức từ, không phụ thuộc Spring)
+│ └── {FileStorageService, FileStorageServiceImpl, UserService} — mới thêm ở M7; M12: `FileStorageService` thêm `storeAudio`; `FileStorageServiceImpl` thêm `detectAudioExtension` (static, nhận dạng bằng magic bytes)
 └── util/PaginationUtils.java
 
 src/main/resources/
-├── application.yml — thêm mục `app.upload.*` + `spring.servlet.multipart.*` ở M7
-└── db/migration/ (V1 → V9 — V8 thêm cột Topic.createdAt ở M10, V9 tạo bảng user_vocabulary ở M11)
+├── application.yml — thêm mục `app.upload.*` + `spring.servlet.multipart.*` ở M7; M12: thêm `app.upload.audio-max-file-size-mb` (10), nâng multipart lên 10MB
+└── db/migration/ (V1 → V10 — V8 thêm cột Topic.createdAt ở M10, V9 tạo bảng user_vocabulary ở M11, V10 tạo dictation_lessons + dictation_results ở M12)
 
 frontend/ — trạng thái thật đã đổi hoàn toàn ở M9, xem mục 5 (không mô tả lại ở đây để tránh 2 nguồn lệch nhau)
 ```
 
-src/test/java/com/example/englishlearningplatform/ — dựng nền ở M8, mở rộng ở M10/M11
+src/test/java/com/example/englishlearningplatform/ — dựng nền ở M8, mở rộng ở M10/M11/M12
 ├── service/
 │ ├── QuizAttemptServiceTest.java (19 test)
 │ ├── UserProgressServiceTest.java (3 test)
 │ ├── AuthServiceTest.java (10 test)
-│ ├── TopicServiceTest.java (thêm test conflict "đã có flashcard được lưu" ở M11)
-│ ├── FlashcardServiceTest.java (thêm test conflict "đã được User lưu" ở M11)
-│ ├── VocabularyServiceTest.java — mới hoàn toàn ở M11 (applyReview từng bậc SRS, saveWord, review ownership, getAllSaved, deleteSavedWord)
-│ ├── FileStorageServiceImplTest.java (14 test)
-│ └── ChatServiceImplTest.java (21 test)
-├── dto/topic/TopicSortTest.java — mới ở M10 (parse null/blank/hoa-thường/giá trị lạ)
+│ ├── TopicServiceTest.java (21 test — M11 thêm test conflict "đã có flashcard được lưu"; M12 thêm 2 test: conflict "đã có DictationResult" và "đọc URL audio trước khi xoá + publish FileDeletionEvent cho từng file")
+│ ├── FlashcardServiceTest.java (13 test — M11 thêm test conflict "đã được User lưu")
+│ ├── VocabularyServiceTest.java (12 test — mới hoàn toàn ở M11: applyReview từng bậc SRS, saveWord, review ownership, getAllSaved, deleteSavedWord)
+│ ├── FileStorageServiceImplTest.java (31 test — M12 thêm 17: detectAudioExtension từng định dạng, JPEG/văn bản/RIFF-không-phải-WAVE/null không bị nhận nhầm, storeAudio happy path/quá dung lượng/giả audio/ảnh giả audio/đuôi lấy từ nội dung/thư mục bị chặn)
+│ ├── ChatServiceImplTest.java (21 test)
+│ ├── DictationComparatorTest.java — mới ở M12 (19 test: tokenize, mỗi nhãn CORRECT/WRONG/MISSING/EXTRA, khoảng không cân, quy ước khi hoà, làm tròn, giới hạn 1000 từ)
+│ └── DictationServiceTest.java — mới ở M12 (32 test: phía User + Admin + danh mục; ownership, 409, thứ tự storeAudio/FileDeletionEvent, `Pageable` không kèm Sort)
+├── dto/topic/TopicSortTest.java (4 test) — mới ở M10 (parse null/blank/hoa-thường/giá trị lạ)
 ├── security/JwtUtilTest.java (7 test)
 └── event/
   ├── TopicCacheEvictionListenerTest.java (4 test)
   └── FlashcardCacheEvictionListenerTest.java (2 test)
 
-Tổng cộng tới hết M11: 124 test case, toàn bộ PASSED.
+Tổng cộng tới hết M12: 198 test case, toàn bộ PASSED.
 
 ### M9 — Hoàn thiện Admin, Polish UI, Nối Backend thật, Test tổng thể: **HOÀN THÀNH 23/09/2026**
 
@@ -242,6 +254,29 @@ Khối lượng lớn nhất từ trước tới giờ, gồm cả Backend lẫn
 - FE `vocabulary.html`: quên hẳn đoạn gắn `addEventListener('click', ...)` để lật thẻ khi tạo trang mới dựa theo `topic-detail.html` — lỗi "thiếu code" chứ không phải bug logic, class CSS `flipped` không bao giờ được toggle nên không lật được; kiểm tra qua DevTools Elements panel (class có đổi khi bấm hay không) là cách nhanh nhất phân biệt lỗi JS (thiếu listener) với lỗi CSS (style bị đè).
 - FE `vocabulary.html`: mất nút phân trang dù `totalPages > 1` — nguyên nhân là 1 vòng lặp dọn dẹp UI khi chuyển tab (`switchTab`) thêm nhầm class `hidden` vào chính `#allWordsPagination` (div chứa nút), trong khi hàm render nút chỉ đổ `innerHTML` chứ không tự gỡ `hidden` khỏi div cha — nút được tạo ra thật nhưng vô hình vì cha đang `display: none`.
 - FE `vocabulary.html`: sau khi thêm tính năng xoá từ ở tab "All Words", tab "Due Today" có thể vẫn hiện 1 card đã bị xoá dưới DB (2 tab giữ state riêng trong bộ nhớ trình duyệt, không tự đồng bộ) — vá bằng cách chủ động loại phần tử khỏi mảng `queue` trong bộ nhớ ngay khi xoá thành công, nếu id trùng khớp; đây là giới hạn đã biết của cách quản lý state hiện tại (không phải single source of truth thật sự), ghi vào Requirements mục 10.9.
+
+### M12 — Dictation: **HOÀN THÀNH 03/10/2026**, có 3 endpoint + nhiều việc bổ sung ngoài phạm vi Requirements gốc
+
+9 endpoint (6 gốc theo FR-7 + 3 bổ sung: `GET /api/admin/topics/{id}/dictation`, `POST /api/admin/dictation/{id}/audio`, `GET /api/dictation/lessons`). Migration V10 (`dictation_lessons` cascade theo Topic, `dictation_results` không cascade, index `(user_id, lesson_id, created_at DESC)` và `lesson_id`). `DictationComparator` (static pure function, không Spring): chuẩn hoá + LCS mức từ → nhãn `CORRECT/WRONG/MISSING/EXTRA` + accuracy. `FileStorageService.storeAudio` (magic bytes, 10MB riêng). Retrofit `TopicService.deleteTopic()` (409 khi có kết quả, dọn file audio). `GlobalExceptionHandler` thêm 405/415/400-multipart. Danh mục bài dùng `Specification` + một truy vấn thống kê `GROUP BY` (log SQL xác nhận không N+1: 1 `select` bài đã `join` Topic + 1 truy vấn thống kê; câu `count` chỉ chạy khi trang đầy). Bộ Postman đều PASSED: 7 nhóm A–G (tạo/đọc, upload audio, làm bài, cô lập 2 user, sửa + validate, quy tắc xoá + dọn file trên đĩa, phân quyền) và 20 case danh mục P1–P20 (riêng B1 với file WAV tự sinh bị từ chối — do script tạo file sai header, backend từ chối đúng). Xác nhận cả trên đĩa: `uploads/dictation` chỉ còn đúng file của Lesson hiện tại sau khi thay audio, xoá Lesson, xoá Topic.
+
+**Quyết định chốt tại M12:** (chi tiết đầy đủ ở Requirements FR-7 và mục 8)
+- Audio **upload file** thay vì URL external; `mediaUrl` nullable, User chỉ thấy bài đã có audio; response phía User **không bao giờ có transcript** trước khi nộp.
+- `accuracy = round1(100 × đúng / max(n_transcript, n_user))`; giới hạn 1000 từ mỗi bên (bảng LCS O(n×m)); `userInput` lưu nguyên văn.
+- `GET /api/topics/{id}/dictation` cần JWT (không `permitAll` như các `GET /api/topics/*`), không cache.
+- Danh mục: `progress` (`NEW`/`PRACTICED`) và số liệu `attempts/bestAccuracy/lastAttemptAt` tính theo **người dùng hiện tại**; `sort=recent` = bài vừa luyện lên đầu, bài chưa làm xuống cuối.
+- Create/update/upload của Admin trả 200 (giống nhóm Admin hiện có), `submit` 201.
+
+**Bẫy/bug đáng nhớ cho các milestone sau:** (3 bẫy đầu cũng đã ghi ở Requirements mục 1.4)
+- **`Specification` + `Pageable` có `Sort` → Sort ghi đè `orderBy` của Specification.** Phải dùng `PageRequest.of(page, size)` không kèm Sort (có test `ArgumentCaptor<Pageable>` khoá lại).
+- **PostgreSQL xếp `NULL` lên đầu khi `ORDER BY ... DESC`** → `sort=recent` thêm khoá `CASE WHEN EXISTS(...) THEN 0 ELSE 1 END` đứng trước, nếu không bài chưa làm nằm trên cùng.
+- **DB cascade chỉ xoá record, không xoá file** → `deleteTopic()` phải đọc danh sách `mediaUrl` TRƯỚC khi xoá (sau khi xoá thì Lesson đã biến mất theo cascade, danh sách rỗng) rồi publish `FileDeletionEvent` cho từng file; `uploadAudio` phải tìm Lesson trước khi gọi `storeAudio` (nếu không, Lesson không tồn tại vẫn sinh file mồ côi).
+- Mockito: `when(...).thenReturn(stats(...))` mà `stats()` bên trong lại gọi `when()` → `UnfinishedStubbingException` (stub lồng nhau). Tạo đối tượng mock ra biến riêng trước, rồi mới stub.
+- `@InjectMocks` + thêm 2 dependency vào `TopicService` → phải thêm `@Mock` tương ứng ở `TopicServiceTest`, nếu không Mockito lặng lẽ truyền `null` (cùng bẫy đã gặp ở M11).
+- Constructor `FileStorageServiceImpl` có 2 phiên bản (3 và 4 tham số): phải gắn `@Autowired` vào bản 4 tham số (thiếu thì Spring báo "No default constructor found"); giữ bản 3 tham số để `FileStorageServiceImplTest` cũ không phải sửa.
+- Script PowerShell tự sinh file WAV thử nghiệm sai (mảng byte do scriptblock trả về bị "trải" nên các chuỗi ASCII `RIFF`/`WAVE`/`fmt `/`data` không vào file) → backend từ chối file là ĐÚNG; kiểm tra file bằng `Format-Hex -Path ... -Count 12` trước khi nghi ngờ backend.
+- Số test: so từng class (`Tests run:` mỗi class trong log) thay vì cộng nhẩm — một lần cộng nhẩm sai làm mất công đi tìm 2 test "bị thiếu" không có thật.
+
+**Frontend (xem mục 5):** `dictation.html`, tab Dictation + Working topic + tìm kiếm/lọc/phân trang ở `admin.html`, `ui.js`, `topicPicker.js`, sidebar cho khách, `redirectTo`. Lỗi đáng nhớ: `truncate()` ném `TypeError` khi `Topic.description` là `null` (cột cho phép NULL) làm cả trang Admin báo "Failed to load topics", và `catch` chỉ hiện câu cố định nên không biết nguyên nhân — nay `catch` luôn `console.error` + hiện `error.message`; guard `requestId` lần đầu quên khai báo `const requestId = ++counter` và thiếu `return` trong nhánh `catch`.
 
 ### M1 — Auth + JWT: **HOÀN THÀNH 01/09/2026**
 
@@ -344,15 +379,19 @@ JUnit 5 + Mockito, Unit test thuần (mock toàn bộ Repository/dependency), kh
 
 ---
 
-## 7. Trạng thái hiện tại — M1-M11 hoàn thành, sẵn sàng M12
+## 7. Trạng thái hiện tại — M1–M12 hoàn thành
 
-Không còn việc nào nợ lại từ các milestone trước. Backend + Frontend đã nối thật, redesign UI hoàn chỉnh, QA tổng thể xong, cả M10 (Search/Filter/Pagination) lẫn M11 (Vocabulary/SRS, cộng 4 việc bổ sung ngoài phạm vi gốc) đều hoàn thành.
+Toàn bộ lộ trình trong Requirements (MVP M1–M9 + v1.1 M10–M12) đã xong. Backend + Frontend nối thật, redesign UI hoàn chỉnh, 198 test PASSED.
 
 **Việc còn treo, cố ý để dành sau (không phải nợ/sai sót):**
-- Accessibility nâng cao (skip link, `focus-visible`, `aria-hidden`...) mới áp dụng đầy đủ cho `index.html` qua Impeccable — các trang còn lại (kể cả trang mới `vocabulary.html`) chưa rà theo cùng chuẩn
-- Giới hạn đã biết ở `vocabulary.html`: state 2 tab ("Due Today"/"All Words") giữ riêng trong bộ nhớ trình duyệt, chỉ đồng bộ thủ công cho đúng 1 trường hợp đã phát hiện (xoá từ đang nằm trong hàng đợi Due), không phải cơ chế đồng bộ tổng quát
+- **Rủi ro hỏng dữ liệu, nên xử lý sớm nhất:** modal "Manage Questions" của `admin.html` (từ M3) dựng bằng `innerHTML` và nhét giá trị đáp án vào `value="..."` — đáp án chứa dấu `"` bị cắt khi mở lại để sửa, bấm Save sẽ ghi đè bản đã cắt. `vocabulary.html` cũng còn dựng bằng `innerHTML`. Chi tiết ở Requirements mục 10.9.
+- `403` của `/api/admin/**` chưa có body `message` (thiếu `accessDeniedHandler` trong `SecurityConfig`) — FE chỉ hiện `HTTP 403`.
+- Dictation: `<audio>` không gửi được header `ngrok-skip-browser-warning` (chưa kiểm chứng riêng với trình duyệt ẩn danh/phiên mới qua ngrok); `.m4a` chưa kiểm chứng trên Safari; file mồ côi hiếm gặp nếu transaction rollback sau khi `storeAudio` ghi file.
+- Accessibility nâng cao mới áp dụng đầy đủ cho `index.html` qua Impeccable (các component mới `createSelect`/`topicPicker` đã có ARIA + bàn phím) — các trang còn lại (kể cả `vocabulary.html`, `dictation.html`) chưa rà theo cùng chuẩn.
+- Giới hạn đã biết ở `vocabulary.html`: state 2 tab ("Due Today"/"All Words") giữ riêng trong bộ nhớ trình duyệt, chỉ đồng bộ thủ công cho đúng 1 trường hợp đã phát hiện (xoá từ đang nằm trong hàng đợi Due), không phải cơ chế đồng bộ tổng quát.
+- Dictation: dấu câu bị xoá chứ không thành khoảng trắng (`hello,world` → `helloworld`); số viết bằng chữ số khác số viết bằng chữ (`5` ≠ `five`).
 
-**M12 (Dictation, FR-7):** chưa bắt đầu, đây sẽ là việc tiếp theo.
+**Việc tiếp theo:** chọn từ backlog trên hoặc mục 9 của Requirements (định hướng mở rộng dài hạn v2+: Gamification, Notification, Exam, Shadowing, Voice Chat...). Chưa có milestone nào được lên kế hoạch.
 
 ---
 
@@ -360,11 +399,11 @@ Không còn việc nào nợ lại từ các milestone trước. Backend + Front
 
 **Bắt buộc:**
 1. File tóm tắt này (`Session_Summary.md`)
-2. `Project1_Requirements_ChatbotHocTiengAnh_v1.7.md` (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
+2. `Requirements.md` (v1.8) (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
 
-**Tuỳ chọn, nên gửi nếu cần tra nhanh API:** `FE_Handoff_Brief.md` (đã cập nhật lại tới hết M11, xem mục 5) — vẫn không bắt buộc như 2 file trên, dùng khi muốn tra contract nhanh mà không đọc lại toàn bộ Requirements; Swagger UI (`/swagger-ui.html`) là nguồn xác nhận cao nhất khi có sai lệch.
+**Tuỳ chọn, nên gửi nếu cần tra nhanh API:** `FE_Handoff_Brief.md` (đã cập nhật lại tới hết M12, xem mục 5) — vẫn không bắt buộc như 2 file trên, dùng khi muốn tra contract nhanh mà không đọc lại toàn bộ Requirements; Swagger UI (`/swagger-ui.html`) là nguồn xác nhận cao nhất khi có sai lệch.
 
 **Nếu đang code dở:** file `.java`/`.html`/`.js` đang dở + file nó phụ thuộc trực tiếp.
 
 **Câu mở đầu gợi ý cho cuộc trò chuyện mới:**
-> "Đây là tóm tắt project mình đang làm (đính kèm), M1-M11 đã xong (MVP đầy đủ + Search/Filter/Pagination cho Topic + Vocabulary/SRS), giờ bắt đầu M12 (Dictation), tiếp tục giúp mình nhé."
+> "Đây là tóm tắt project mình đang làm (đính kèm), M1–M12 đã xong (MVP đầy đủ + toàn bộ v1.1: Search/Filter/Pagination cho Topic, Vocabulary/SRS, Dictation). Giờ mình muốn làm [việc tiếp theo — một mục trong backlog ở mục 7, hoặc một hạng mục ở mục 9 của Requirements]. Mình sẽ gửi từng tài liệu một, bạn đọc kỹ rồi xác nhận đã hiểu giúp mình nhé."

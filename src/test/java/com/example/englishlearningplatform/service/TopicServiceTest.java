@@ -9,6 +9,8 @@ import com.example.englishlearningplatform.event.FileDeletionEvent;
 import com.example.englishlearningplatform.event.TopicChangedEvent;
 import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
+import com.example.englishlearningplatform.repository.DictationLessonRepository;
+import com.example.englishlearningplatform.repository.DictationResultRepository;
 import com.example.englishlearningplatform.repository.QuizAttemptRepository;
 import com.example.englishlearningplatform.repository.TopicRepository;
 import com.example.englishlearningplatform.repository.UserProgressRepository;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,6 +28,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,6 +50,10 @@ class TopicServiceTest {
     private FileStorageService fileStorageService;
     @Mock
     private UserVocabularyRepository userVocabularyRepository;
+    @Mock
+    private DictationLessonRepository dictationLessonRepository;
+    @Mock
+    private DictationResultRepository dictationResultRepository;
 
     @InjectMocks
     private TopicService topicService;
@@ -295,6 +303,50 @@ class TopicServiceTest {
         assertThrows(ResourceConflictException.class, () -> topicService.deleteTopic(TOPIC_ID));
 
         verify(topicRepository, never()).delete(any(Topic.class));
+    }
+
+    @Test
+    void deleteTopic_whenDictationResultExists_shouldThrowResourceConflictException() {
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+        when(userProgressRepository.existsByTopic_Id(TOPIC_ID)).thenReturn(false);
+        when(quizAttemptRepository.existsByQuiz_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(userVocabularyRepository.existsByFlashcard_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(dictationResultRepository.existsByLesson_Topic_Id(TOPIC_ID)).thenReturn(true);
+
+        assertThrows(ResourceConflictException.class, () -> topicService.deleteTopic(TOPIC_ID));
+
+        verify(topicRepository, never()).delete(any(Topic.class));
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void deleteTopic_whenLessonsHaveAudio_shouldReadUrlsBeforeDeleteAndPublishEventForEachAudio() {
+        testTopic.setImageUrl(null);
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+        when(userProgressRepository.existsByTopic_Id(TOPIC_ID)).thenReturn(false);
+        when(quizAttemptRepository.existsByQuiz_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(userVocabularyRepository.existsByFlashcard_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(dictationResultRepository.existsByLesson_Topic_Id(TOPIC_ID)).thenReturn(false);
+        when(dictationLessonRepository.findMediaUrlsByTopicId(TOPIC_ID))
+                .thenReturn(List.of("/uploads/dictation/a.mp3", "/uploads/dictation/b.mp3"));
+
+        topicService.deleteTopic(TOPIC_ID);
+
+        // Khoá quy tắc "đọc URL trước khi xoá"
+        InOrder inOrder = inOrder(dictationLessonRepository, topicRepository);
+        inOrder.verify(dictationLessonRepository).findMediaUrlsByTopicId(TOPIC_ID);
+        inOrder.verify(topicRepository).delete(testTopic);
+
+        // 1 TopicChangedEvent + 2 FileDeletionEvent
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(3)).publishEvent(eventCaptor.capture());
+
+        List<String> deletedUrls = eventCaptor.getAllValues().stream()
+                .filter(FileDeletionEvent.class::isInstance)
+                .map(FileDeletionEvent.class::cast)
+                .map(FileDeletionEvent::getFileUrl)
+                .toList();
+        assertEquals(List.of("/uploads/dictation/a.mp3", "/uploads/dictation/b.mp3"), deletedUrls);
     }
 
     // ------------------------------------------------------------------

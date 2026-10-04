@@ -1,5 +1,7 @@
 package com.example.englishlearningplatform.service;
 
+import java.util.List;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,6 +23,8 @@ import com.example.englishlearningplatform.event.TopicChangedEvent;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
 import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
+import com.example.englishlearningplatform.repository.DictationLessonRepository;
+import com.example.englishlearningplatform.repository.DictationResultRepository;
 import com.example.englishlearningplatform.repository.QuizAttemptRepository;
 import com.example.englishlearningplatform.repository.TopicRepository;
 import com.example.englishlearningplatform.repository.TopicSpecifications;
@@ -36,16 +40,21 @@ public class TopicService {
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
     private final UserVocabularyRepository userVocabularyRepository;
+    private final DictationLessonRepository dictationLessonRepository;
+    private final DictationResultRepository dictationResultRepository;
 
     public TopicService(TopicRepository topicRepository, UserProgressRepository userProgressRepository,
             QuizAttemptRepository quizAttemptRepository, ApplicationEventPublisher eventPublisher,
-            FileStorageService fileStorageService, UserVocabularyRepository userVocabularyRepository) {
+            FileStorageService fileStorageService, UserVocabularyRepository userVocabularyRepository,
+            DictationLessonRepository dictationLessonRepository, DictationResultRepository dictationResultRepository) {
         this.topicRepository = topicRepository;
         this.userProgressRepository = userProgressRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.eventPublisher = eventPublisher;
         this.fileStorageService = fileStorageService;
         this.userVocabularyRepository = userVocabularyRepository;
+        this.dictationLessonRepository = dictationLessonRepository;
+        this.dictationResultRepository = dictationResultRepository;
     }
 
     @Transactional(readOnly = true)
@@ -138,13 +147,26 @@ public class TopicService {
             throw new ResourceConflictException("Cannot delete topic: users have saved its flashcards");
         }
 
+        if (dictationResultRepository.existsByLesson_Topic_Id(id)) {
+            throw new ResourceConflictException(
+                    "Cannot delete topic: users have submitted dictation results for its lessons");
+        }
+
         String oldImageUrl = topic.getImageUrl();
+
+        List<String> lessonAudioUrls = dictationLessonRepository.findMediaUrlsByTopicId(id);
 
         topicRepository.delete(topic);
         eventPublisher.publishEvent(new TopicChangedEvent(id));
 
         if (oldImageUrl != null && !oldImageUrl.isBlank()) {
             eventPublisher.publishEvent(new FileDeletionEvent(oldImageUrl));
+        }
+
+        for (String url : lessonAudioUrls) {
+            if (url != null && !url.isBlank()) {
+                eventPublisher.publishEvent(new FileDeletionEvent(url));
+            }
         }
     }
 

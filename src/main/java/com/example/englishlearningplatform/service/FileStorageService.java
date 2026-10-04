@@ -6,5 +6,7 @@ public interface FileStorageService {
 
     String storeImage(MultipartFile file, String subDirectory);
 
+    String storeAudio(MultipartFile file, String subDirectory);
+
     void deleteFile(String relativeUrl);
 }

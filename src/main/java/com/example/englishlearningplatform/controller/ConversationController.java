@@ -21,8 +21,6 @@ import java.util.List;
 @RequestMapping("/api/conversations")
 public class ConversationController {
 
-    private static final int MAX_PAGE_SIZE = 100;
-
     private final ChatService chatService;
 
     public ConversationController(ChatService chatService) {
