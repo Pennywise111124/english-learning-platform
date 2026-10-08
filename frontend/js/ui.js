@@ -370,3 +370,161 @@ export function createSearchBox({ container, label, placeholder, maxLength = 50,
         focus: () => input.focus()
     };
 }
+
+export const STATUS_FILTER_OPTIONS = [
+    { value: '', label: 'All statuses' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'PUBLISHED', label: 'Published' },
+    { value: 'ARCHIVED', label: 'Archived' }
+];
+
+const STATUS_META = {
+    DRAFT:     { label: 'Draft',     icon: 'edit_note',    hint: 'Hidden from learners',
+                 badge: 'bg-surface-container-high text-on-surface border-dashed border-outline' },
+    PUBLISHED: { label: 'Published', icon: 'check_circle', hint: 'Visible to learners',
+                 badge: 'bg-primary text-on-primary border-primary-shadow' },
+    ARCHIVED:  { label: 'Archived',  icon: 'inventory_2',  hint: 'Hidden, history is kept',
+                 badge: 'bg-tertiary text-on-tertiary border-tertiary' }
+};
+const STATUS_ORDER = ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
+
+function statusMeta(status) {
+    return STATUS_META[status] || { label: status || '?', icon: 'help', hint: '', badge: STATUS_META.DRAFT.badge };
+}
+
+function statusIcon(name, size = 16) {
+    const icon = el('span', 'material-symbols-outlined', name);
+    icon.style.fontSize = `${size}px`;
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+}
+
+const STATUS_PILL = 'inline-flex items-center gap-1.5 w-fit rounded-full border-2 font-label-sm text-label-sm font-bold whitespace-nowrap';
+
+export function buildStatusBadge(status) {
+    const meta = statusMeta(status);
+    const badge = el('span', `${STATUS_PILL} px-2.5 py-0.5 ${meta.badge}`);
+    badge.append(statusIcon(meta.icon), document.createTextNode(meta.label));
+    return badge;
+}
+
+let closeOpenStatusMenu = null;   // chỉ cho một menu mở tại một thời điểm
+
+/**
+ * Dropdown đổi trạng thái trong một dòng danh sách (thay <select> gốc).
+ * onChange(newStatus) phải là hàm async: ném lỗi thì giữ nguyên giá trị cũ và gọi onError(error).
+ * Menu dùng position: fixed gắn vào <body> nên không bị bảng/khung overflow cắt mất.
+ */
+export function buildStatusSelect({ current, label, onChange, onError = () => {} }) {
+    let value = current;
+
+    const trigger = el('button');
+    trigger.type = 'button';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+
+    function paintTrigger() {
+        const meta = statusMeta(value);
+        trigger.className = `${STATUS_PILL} pl-2.5 pr-1.5 py-1 cursor-pointer transition-all hover:brightness-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:opacity-50 disabled:cursor-wait ${meta.badge}`;
+        trigger.setAttribute('aria-label', `${label}: ${meta.label}. Change status`);
+        trigger.replaceChildren(statusIcon(meta.icon), el('span', '', meta.label), statusIcon('expand_more', 18));
+    }
+
+    const menu = el('div', 'fixed z-50 w-60 bg-surface-container-lowest border-2 border-outline-variant rounded-2xl shadow-lg py-1 hidden');
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', label);
+
+    function paintMenu() {
+        menu.replaceChildren(...STATUS_ORDER.map(status => {
+            const meta = statusMeta(status);
+            const selected = status === value;
+            const item = el('button', 'mx-1 my-0.5 w-[calc(100%-0.5rem)] flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors hover:bg-surface-container-high focus:outline-none focus-visible:bg-surface-container-high');
+            item.type = 'button';
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', String(selected));
+
+            const chip = el('span', `flex items-center justify-center w-8 h-8 rounded-full border-2 flex-shrink-0 ${meta.badge}`);
+            chip.append(statusIcon(meta.icon, 18));
+            const text = el('span', 'flex-1 min-w-0 flex flex-col');
+            text.append(
+                el('span', `font-label-md text-label-md text-on-surface ${selected ? 'font-bold' : ''}`, meta.label),
+                el('span', 'font-body-sm text-body-sm text-on-surface-variant', meta.hint)
+            );
+            item.append(chip, text);
+            if (selected) {
+                const check = statusIcon('check', 20);
+                check.classList.add('text-primary');
+                item.append(check);
+            }
+            item.addEventListener('click', () => choose(status));
+            return item;
+        }));
+    }
+
+    function position() {
+        const rect = trigger.getBoundingClientRect();
+        const menuHeight = menu.offsetHeight;
+        const below = rect.bottom + 6;
+        const top = below + menuHeight > window.innerHeight - 8 ? Math.max(8, rect.top - menuHeight - 6) : below;
+        const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8);
+        menu.style.top = `${top}px`;
+        menu.style.left = `${Math.max(8, left)}px`;
+    }
+
+    function onOutsidePointer(e) {
+        if (!menu.contains(e.target) && !trigger.contains(e.target)) close();
+    }
+    function onKey(e) {
+        if (e.key === 'Escape') { e.stopPropagation(); close(); trigger.focus(); }
+    }
+
+    function open() {
+        if (closeOpenStatusMenu) closeOpenStatusMenu();
+        paintMenu();
+        document.body.append(menu);
+        menu.classList.remove('hidden');
+        position();
+        trigger.setAttribute('aria-expanded', 'true');
+        closeOpenStatusMenu = close;
+        document.addEventListener('pointerdown', onOutsidePointer);
+        document.addEventListener('keydown', onKey, true);
+        window.addEventListener('scroll', close, true);   // cuộn thì đóng, tránh menu lơ lửng sai chỗ
+        window.addEventListener('resize', close);
+        menu.querySelector('[aria-selected="true"]')?.focus();
+    }
+
+    function close() {
+        menu.classList.add('hidden');
+        menu.remove();
+        trigger.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('pointerdown', onOutsidePointer);
+        document.removeEventListener('keydown', onKey, true);
+        window.removeEventListener('scroll', close, true);
+        window.removeEventListener('resize', close);
+        if (closeOpenStatusMenu === close) closeOpenStatusMenu = null;
+    }
+
+    async function choose(next) {
+        close();
+        trigger.focus();
+        if (next === value) return;
+        trigger.disabled = true;
+        try {
+            await onChange(next);
+            value = next;
+        } catch (error) {
+            console.error('[statusSelect]', error);
+            onError(error);   // value giữ nguyên nên nhãn vẫn đúng với dữ liệu thật
+        } finally {
+            paintTrigger();
+            trigger.disabled = false;
+        }
+    }
+
+    trigger.addEventListener('click', () => {
+        if (menu.isConnected) close(); else open();
+    });
+
+    paintTrigger();
+    return trigger;
+}

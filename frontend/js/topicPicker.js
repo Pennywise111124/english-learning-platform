@@ -2,8 +2,8 @@
 // Gõ từ khoá -> gọi server (GET /api/topics) lấy tối đa 8 kết quả, nên không bị giới hạn 100 Topic.
 // Bàn phím: ↑ ↓ chọn, Enter xác nhận, Esc đóng. Có ARIA combobox/listbox.
 
-import { getTopics, getTopicDetail } from './api.js';
-import { el, buildLevelBadge } from './ui.js';
+import { getTopics, getTopicDetail, adminGetTopics, adminGetTopic } from './api.js';
+import { el, buildLevelBadge, buildStatusBadge } from './ui.js';
 
 const RESULT_LIMIT = 8;
 const DEBOUNCE_MS = 250;
@@ -18,7 +18,9 @@ let pickerSeq = 0;
  * @param {(topic: {id:number,title:string,level:string}|null) => void} [options.onChange]
  *        chỉ gọi khi NGƯỜI DÙNG chọn/xoá, không gọi khi setValue()/setValueById()
  */
-export function createTopicPicker({ container, inputId, ariaLabel = 'Topic', placeholder = 'Search topics...', onChange = () => {} }) {
+export function createTopicPicker({ container, inputId, ariaLabel = 'Topic', placeholder = 'Search topics...', source = 'public', onChange = () => {} }) {
+    const fetchTopics = source === 'admin' ? adminGetTopics : getTopics;
+    const fetchTopic = source === 'admin' ? adminGetTopic : getTopicDetail;
     const uid = `topic-picker-${++pickerSeq}`;
 
     let selected = null;        // { id, title, level } | null
@@ -116,7 +118,10 @@ export function createTopicPicker({ container, inputId, ariaLabel = 'Topic', pla
         }
         titleWrap.append(el('span', `font-body-md text-body-md text-on-surface break-words min-w-0 ${isSelected ? 'font-bold' : ''}`, topic.title));
 
-        li.append(titleWrap, buildLevelBadge(topic.level));
+        const badges = el('span', 'flex items-center gap-2 flex-shrink-0');
+        if (source === 'admin' && topic.status) badges.append(buildStatusBadge(topic.status));
+        badges.append(buildLevelBadge(topic.level));
+        li.append(titleWrap, badges);
         li.addEventListener('mouseenter', () => setActive(index));
         li.addEventListener('click', () => choose(topic));
         return li;
@@ -188,7 +193,7 @@ export function createTopicPicker({ container, inputId, ariaLabel = 'Topic', pla
         render();
         try {
             // Chưa gõ gì: hiện Topic mới nhất. Có từ khoá: sắp xếp theo tên.
-            const data = await getTopics({ keyword, size: RESULT_LIMIT, sort: keyword ? 'title' : 'newest' });
+            const data = await fetchTopics({ keyword, size: RESULT_LIMIT, sort: keyword ? 'title' : 'newest' });
             if (myId !== requestId) return;   // đã có yêu cầu mới hơn hoặc ô đã đóng
             items = data.content || [];
             totalElements = data.totalElements ?? items.length;
@@ -298,7 +303,7 @@ export function createTopicPicker({ container, inputId, ariaLabel = 'Topic', pla
 
     async function setValueById(id) {
         try {
-            const topic = await getTopicDetail(id);
+            const topic = await fetchTopic(id);
             setValue(topic);
             return selected;
         } catch (error) {

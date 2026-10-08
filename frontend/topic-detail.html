@@ -212,9 +212,19 @@
                     document.getElementById('flashcardsSection').insertAdjacentHTML('beforeend',
                         '<p class="text-center text-on-surface-variant font-body-md py-8">No flashcards available for this topic yet.</p>');
                 }
-            } catch (error) {
-                console.error('Failed to load topic:', error);
-                document.getElementById('topicHeader').innerHTML = '<div class="p-8 text-center text-error">Failed to load topic</div>';
+              } catch (error) {
+                console.error('[loadTopic]', error);
+                const box = el('div', 'p-8 text-center');
+                if (error.status === 404) {
+                    box.append(
+                        el('p', 'font-headline-md text-headline-md text-on-surface mb-2', 'This topic is no longer available'),
+                        el('p', 'font-body-md text-body-md text-on-surface-variant', 'It may have been archived. Your progress and saved words are kept.')
+                    );
+                } else {
+                    box.append(el('p', 'text-error', `Failed to load topic: ${error.message}`));
+                }
+                document.getElementById('topicHeader').replaceChildren(box);
+                document.getElementById('flashcardSkeleton').classList.add('hidden');
             }
         }
 

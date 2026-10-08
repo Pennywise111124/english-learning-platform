@@ -65,10 +65,12 @@ async function request(path, { method = 'GET', body, isMultipart = false, params
     throw new Error('Unauthorized');
   }
 
-  if (!res.ok) {
+    if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { const j = await res.json(); msg = j.message || msg; } catch { /* ignore */ }
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
   }
 
   // DELETE và vài mutation admin trả 200 nhưng không có body
@@ -222,12 +224,33 @@ export async function getMyRecentQuizAttempts(page = 0, size = 5) {
 
 // ─── Admin — Topics ───────────────────────────────────────────────────────────
 
-export async function adminGetTopics({ keyword, level, sort, page = 0, size = 10 } = {}) {
-  return getTopics({ keyword, level, sort, page, size });
+export async function adminGetTopics({ keyword, level, sort, status, page = 0, size = 10 } = {}) {
+  return request('/api/admin/topics', { params: { keyword, level, sort, status, page, size } });
 }
 
-// LƯU Ý: TopicCreateRequest KHÔNG có field imageUrl — ảnh phải upload riêng
-// qua adminUploadTopicImage() SAU KHI tạo topic thành công.
+export async function adminGetTopic(id) {
+  return request(`/api/admin/topics/${id}`);
+}
+
+export async function adminGetFlashcards(topicId) {
+  return request(`/api/admin/topics/${topicId}/flashcards`);
+}
+
+export async function adminGetQuizzes(topicId) {
+  return request(`/api/admin/topics/${topicId}/quizzes`);
+}
+
+// status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'. 409 nếu publish Quiz rỗng / Dictation chưa có audio
+export async function adminChangeTopicStatus(id, status) {
+  return request(`/api/admin/topics/${id}/status`, { method: 'PATCH', body: { status } });
+}
+export async function adminChangeQuizStatus(id, status) {
+  return request(`/api/admin/quizzes/${id}/status`, { method: 'PATCH', body: { status } });
+}
+export async function adminChangeDictationStatus(id, status) {
+  return request(`/api/admin/dictation/${id}/status`, { method: 'PATCH', body: { status } });
+}
+
 export async function adminCreateTopic({ title, description, level }) {
   return request('/api/admin/topics', { method: 'POST', body: { title, description, level } });
 }

@@ -123,6 +123,7 @@
         import { initNavBar } from './js/navbar.js';
         import { initFooter } from './js/footer.js';
         import { showToast } from './js/toast.js';
+        import { el } from './js/ui.js';
 
         checkAuth();
         initNavBar('vocabulary');
@@ -186,8 +187,33 @@
                 }
                 loadAllWords();
             } catch (error) {
+                console.error('[handleDeleteWord]', error);
                 showToast(error.message || 'Failed to remove word', 'error');
             }
+        }
+        
+        function buildWordRow(item) {
+            const row = el('div', 'bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4 flex items-center justify-between gap-4');
+
+            const info = el('div', 'min-w-0');
+            info.append(
+                el('p', 'font-headline-md text-headline-md text-on-surface break-words', item.word),
+                el('p', 'font-body-md text-body-md text-on-surface-variant break-words', item.meaning)
+            );
+
+            const badge = el('span', `px-3 py-1 rounded-full font-label-sm text-label-sm whitespace-nowrap ${statusStyle[item.status] ?? ''}`, item.status);
+
+            const del = el('button', 'text-error hover:bg-error-container rounded-full p-2 transition-colors');
+            del.type = 'button';
+            del.title = 'Remove word';
+            del.setAttribute('aria-label', `Remove ${item.word}`);
+            del.append(el('span', 'material-symbols-outlined', 'delete'));
+            del.addEventListener('click', () => handleDeleteWord(item.id));
+
+            const right = el('div', 'flex items-center gap-2 flex-shrink-0');
+            right.append(badge, del);
+            row.append(info, right);
+            return row;
         }
 
         async function loadAllWords() {
@@ -208,28 +234,12 @@
                 const container = document.getElementById('allWordsContainer');
                 container.classList.remove('hidden');
                 container.classList.add('flex');
-                container.innerHTML = data.content.map(item => `
-                    <div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4 flex items-center justify-between gap-4">
-                        <div>
-                            <p class="font-headline-md text-headline-md text-on-surface">${item.word}</p>
-                            <p class="font-body-md text-body-md text-on-surface-variant">${item.meaning}</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-3 py-1 rounded-full font-label-sm text-label-sm whitespace-nowrap ${statusStyle[item.status]}">${item.status}</span>
-                            <button class="deleteWordBtn text-error hover:bg-error-container rounded-full p-2 transition-colors" data-id="${item.id}" title="Remove word">
-                                <span class="material-symbols-outlined">delete</span>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-
-                container.querySelectorAll('.deleteWordBtn').forEach(btn => {
-                    btn.addEventListener('click', () => handleDeleteWord(btn.dataset.id));
-                });
+                container.replaceChildren(...data.content.map(buildWordRow));
 
                 document.getElementById('allWordsPagination').classList.remove('hidden');
                 renderAllWordsPagination(data);
             } catch (error) {
+                console.error('[loadAllWords]', error);
                 document.getElementById('allWordsSkeleton').classList.add('hidden');
                 showToast(error.message || 'Failed to load your words', 'error');
             }

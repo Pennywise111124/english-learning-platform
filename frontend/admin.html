@@ -109,6 +109,7 @@
                     </div>
                     <div id="topicLevelFilter" class="md:w-52"></div>
                     <div id="topicSortSelect" class="md:w-52"></div>
+                    <div id="topicStatusFilter" class="md:w-52"></div>
                 </div>
 
                 <div class="flex items-center justify-between mb-2 min-h-[1.5rem]">
@@ -124,6 +125,7 @@
                                     <th class="hidden sm:table-cell text-left p-4 font-label-md text-on-surface">ID</th>
                                     <th class="text-left p-4 font-label-md text-on-surface">Title</th>
                                     <th class="text-left p-4 font-label-md text-on-surface">Level</th>
+                                    <th class="text-left p-4 font-label-md text-on-surface">Status</th>
                                     <th class="hidden md:table-cell text-left p-4 font-label-md text-on-surface">Description</th>
                                     <th class="text-right p-4 font-label-md text-on-surface">Actions</th>
                                 </tr>
@@ -421,7 +423,7 @@
                         </div>
                         <textarea id="dictationTranscript" rows="6" required maxlength="5000"
                             class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
-                        <p class="font-body-sm text-on-surface-variant mt-1">Exactly what is said in the audio. Learners never see this until they submit.</p>
+                        <p class="font-body-sm text-on-surface-variant mt-1">Exactly what is said in the audio. Learners never see this until they submit. Write numbers as plain digits without separators (1000, not 1,000) and avoid abbreviations with dots (USA, not U.S.A.): punctuation splits words when answers are checked.</p>
                     </div>
                     <div>
                         <label class="block font-label-md text-on-surface mb-unit" for="dictationLevel">Level</label>
@@ -470,7 +472,7 @@
         import { imageSrc, audioSrc } from './js/config.js';
         import { showToast } from './js/toast.js';
         import { initFooter } from './js/footer.js';
-        import { el, buildLevelBadge, buildPagerButton, buildPageInfo, createFilterBar, createSelect, LEVEL_FILTER_OPTIONS } from './js/ui.js';
+        import { el, buildLevelBadge, buildStatusBadge, buildStatusSelect, STATUS_FILTER_OPTIONS, buildPagerButton, buildPageInfo, createFilterBar, createSelect, LEVEL_FILTER_OPTIONS } from './js/ui.js';
         import { createTopicPicker } from './js/topicPicker.js';
 
         checkAdmin();
@@ -523,6 +525,8 @@
             btn.addEventListener('click', onClick);
             return btn;
         }
+        
+        const statusError = (error) => showToast(error.message || 'Failed to change status', 'error');
 
         // ── Thanh lọc cho 3 tab ──
         const flashcardFilter = createFilterBar({
@@ -610,12 +614,12 @@
         // ═══════════════════════ Topics ═══════════════════════
 
         const TOPIC_PAGE_SIZE = 10;
-        const topicQuery = { keyword: '', level: '', sort: 'newest', page: 0 };
+        const topicQuery = { keyword: '', level: '', sort: 'newest', status: '', page: 0 };
         let topicsRequestId = 0;
         let topicSearchTimer = null;
 
         function hasTopicFilters() {
-            return topicQuery.keyword !== '' || topicQuery.level !== '';
+            return topicQuery.keyword !== '' || topicQuery.level !== '' || topicQuery.status !== '';
         }
 
         function updateTopicFilterUi() {
@@ -636,6 +640,18 @@
 
             const levelCell = el('td', 'p-4');
             levelCell.append(buildLevelBadge(topic.level));
+            
+            const statusCell = el('td', 'p-4');
+            statusCell.append(buildStatusSelect({
+                current: topic.status,
+                label: `Status of ${topic.title}`,
+                onChange: async (status) => {
+                    await api.adminChangeTopicStatus(topic.id, status);
+                    showToast(`Topic is now ${status.toLowerCase()}`, 'success');
+                    loadTopics();
+                },
+                onError: statusError
+            }));
 
             const editBtn = el('button', 'text-primary hover:text-primary-container p-2 rounded-xl transition-colors');
             editBtn.type = 'button';
@@ -658,6 +674,7 @@
                 el('td', 'hidden sm:table-cell p-4 font-body-md', String(topic.id)),
                 titleCell,
                 levelCell,
+                statusCell,
                 el('td', 'hidden md:table-cell p-4 font-body-md text-on-surface-variant', truncate(topic.description, 60)),
                 actionsCell
             );
@@ -666,7 +683,7 @@
 
         function renderTopicsMessageRow(message, retryHandler) {
             const td = el('td', 'p-6 text-center text-on-surface-variant');
-            td.colSpan = 5;
+            td.colSpan = 6;
             td.append(el('p', 'font-body-md', message));
             if (retryHandler) {
                 const retry = el('button', 'mt-2 text-primary font-label-md hover:underline', 'Try again');
@@ -785,12 +802,24 @@
                 loadTopics();
             }
         });
+        const topicStatusSelect = createSelect({
+            container: byId('topicStatusFilter'), label: 'Filter by status', icon: 'flag',
+            options: STATUS_FILTER_OPTIONS, value: '',
+            onChange: (value) => {
+                topicQuery.status = value;
+                topicQuery.page = 0;
+                updateTopicFilterUi();
+                loadTopics();
+            }
+        });
         byId('topicsClearFilters').addEventListener('click', () => {
             clearTimeout(topicSearchTimer);
             byId('topicSearch').value = '';
             topicLevelSelect.setValue('');
+            topicStatusSelect.setValue('');
             topicQuery.keyword = '';
             topicQuery.level = '';
+            topicQuery.status = '';
             topicQuery.page = 0;
             updateTopicFilterUi();
             loadTopics();
@@ -820,7 +849,7 @@
                 if (editingTopicId) {
                     await api.adminUpdateTopic(editingTopicId, data);
                     syncWorkingTopicAfterChange(editingTopicId, { id: editingTopicId, title: data.title, level: data.level });
-                    showToast('Topic updated successfully!', 'success');
+                    showToast('Topic created as Draft. Upload an image if you want, then publish it from the list.', 'success');
                     document.getElementById('topicModal').classList.add('hidden');
                 } else {
                     const created = await api.adminCreateTopic(data);
@@ -840,9 +869,9 @@
             editingTopicId = id;
             document.getElementById('topicModalTitle').textContent = 'Edit Topic';
             try {
-                const topic = await api.getTopicDetail(id);
+                const topic = await api.adminGetTopic(id);
+                document.getElementById('topicDescription').value = topic.description ?? '';
                 document.getElementById('topicTitle').value = topic.title;
-                document.getElementById('topicDescription').value = topic.description;
                 document.getElementById('topicLevel').value = topic.level;
                 document.getElementById('topicImageSection').classList.remove('hidden');
                 const preview = document.getElementById('topicImagePreview');
@@ -933,7 +962,7 @@
             flashcardFilter.setVisible(true);
             renderFlashcardsSkeleton();
             try {
-                const flashcards = await api.getFlashcards(currentFlashcardTopicId);
+                const flashcards = await api.adminGetFlashcards(currentFlashcardTopicId);
                 if (requestId !== flashcardsRequestId) return;
                 flashcardsCache = flashcards;
                 renderFlashcards();
@@ -1045,16 +1074,32 @@
 
         function buildQuizRow(q) {
             const row = el('div', 'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4');
+            const info = el('div', 'min-w-0');
+            info.append(
+                el('div', 'font-body-md font-semibold text-on-surface break-words', q.title),
+                el('div', 'font-body-sm text-on-surface-variant', `${q.questionCount} question${q.questionCount === 1 ? '' : 's'}`)
+            );
+            const statusSelect = buildStatusSelect({
+                current: q.status,
+                label: `Status of ${q.title}`,
+                onChange: async (status) => {
+                    await api.adminChangeQuizStatus(q.id, status);
+                    showToast(`Quiz is now ${status.toLowerCase()}`, 'success');
+                    loadQuizzes();
+                },
+                onError: statusError
+            });
             const manageBtn = el('button', 'px-3 py-1.5 font-label-sm border-2 border-outline-variant rounded-2xl hover:bg-surface-container-low transition-colors', 'Manage Questions');
             manageBtn.type = 'button';
             manageBtn.addEventListener('click', () => window.manageQuestions(q.id));
-            const actions = el('div', 'flex gap-2 items-center justify-end flex-shrink-0');
+            const actions = el('div', 'flex flex-wrap gap-2 items-center justify-end flex-shrink-0');
             actions.append(
+                statusSelect,
                 manageBtn,
                 buildIconButton('edit', 'Edit quiz', 'text-primary hover:text-primary-container', () => window.editQuiz(q.id)),
                 buildIconButton('delete', 'Delete quiz', 'text-error hover:opacity-70', () => window.deleteQuiz(q.id))
             );
-            row.append(el('div', 'font-body-md font-semibold text-on-surface break-words min-w-0', q.title), actions);
+            row.append(info, actions);
             return row;
         }
 
@@ -1080,7 +1125,7 @@
             quizFilter.setVisible(true);
             renderQuizzesSkeleton();
             try {
-                const quizzes = await api.getQuizzesByTopic(currentQuizTopicId);
+                const quizzes = await api.adminGetQuizzes(currentQuizTopicId);
                 if (requestId !== quizzesRequestId) return;
                 quizzesCache = quizzes;
                 renderQuizzes();
@@ -1135,7 +1180,7 @@
         });
 
         window.deleteQuiz = async (id) => {
-            if (!confirm('Are you sure? If the quiz already has attempts, the action will be rejected (409).')) return;
+            if (!confirm('Delete this quiz? If users already attempted it, archive it instead (delete will be rejected with 409).')) return;
             try {
                 await api.adminDeleteQuiz(id);
                 showToast('Quiz deleted!', 'success');
@@ -1155,37 +1200,39 @@
             document.getElementById('questionsModal').classList.remove('hidden');
         };
 
+        function buildQuestionCard(q) {
+            const card = el('div', 'border-2 border-outline-variant rounded-xl p-4');
+
+            const optionList = el('ul', 'mb-2 flex flex-col gap-1');
+            q.options.forEach(opt => {
+                const isCorrect = opt === q.correctAnswer;
+                optionList.append(el('li',
+                    `font-body-sm break-words ${isCorrect ? 'text-secondary font-bold' : 'text-on-surface-variant'}`,
+                    `${isCorrect ? '✓' : '•'} ${opt}`));
+            });
+
+            const actions = el('div', 'flex justify-end gap-2');
+            actions.append(
+                buildIconButton('edit', 'Edit question', 'text-primary hover:text-primary-container', () => window.editQuestion(q.id)),
+                buildIconButton('delete', 'Delete question', 'text-error hover:opacity-70', () => window.deleteQuestion(q.id))
+            );
+
+            card.append(el('div', 'font-body-md font-semibold text-on-surface mb-2 break-words', q.question), optionList, actions);
+            return card;
+        }
+
         async function loadQuestions() {
-            const list = document.getElementById('questionsList');
+            const list = byId('questionsList');
             try {
                 currentQuestionsCache = await api.adminGetQuestionsForQuiz(currentQuestionsQuizId);
                 if (currentQuestionsCache.length === 0) {
-                    list.innerHTML = '<div class="text-center p-stack-md text-on-surface-variant">No questions yet</div>';
+                    list.replaceChildren(el('div', 'text-center p-stack-md text-on-surface-variant', 'No questions yet'));
                     return;
                 }
-                list.innerHTML = currentQuestionsCache.map(q => `
-                    <div class="border-2 border-outline-variant rounded-xl p-4">
-                        <div class="font-body-md font-semibold text-on-surface mb-2">${q.question}</div>
-                        <ul class="mb-2 flex flex-col gap-1">
-                            ${q.options.map(opt => `
-                                <li class="font-body-sm ${opt === q.correctAnswer ? 'text-secondary font-bold' : 'text-on-surface-variant'}">
-                                    ${opt === q.correctAnswer ? '✓' : '•'} ${opt}
-                                </li>
-                            `).join('')}
-                        </ul>
-                        <div class="flex justify-end gap-2">
-                            <button onclick="editQuestion(${q.id})" class="text-primary hover:text-primary-container p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">edit</span>
-                            </button>
-                            <button onclick="deleteQuestion(${q.id})" class="text-error hover:opacity-70 p-2 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-lg">delete</span>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
+                list.replaceChildren(...currentQuestionsCache.map(buildQuestionCard));
             } catch (error) {
                 console.error('[loadQuestions]', error);
-                showToast('Failed to load questions', 'error');
+                showToast(error.message || 'Failed to load questions', 'error');
             }
         }
 
@@ -1194,22 +1241,37 @@
         function addOptionRow(value = '', isCorrect = false) {
             optionRowCount++;
             const rowId = `opt_${optionRowCount}`;
-            const container = document.getElementById('optionsContainer');
-            const row = document.createElement('div');
-            row.className = 'flex items-center gap-2';
+            const container = byId('optionsContainer');
+
+            const row = el('div', 'flex items-center gap-2');
             row.dataset.rowId = rowId;
-            row.innerHTML = `
-                <input type="radio" name="correctOption" value="${rowId}" ${isCorrect ? 'checked' : ''} class="w-4 h-4 accent-primary"/>
-                <input type="text" class="option-text flex-1 bg-surface-container-low border-2 border-outline-variant rounded-2xl px-3 py-2 font-body-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" value="${value}" required/>
-                <button type="button" class="remove-option text-error hover:opacity-70 p-1">
-                    <span class="material-symbols-outlined text-lg">close</span>
-                </button>
-            `;
-            row.querySelector('.remove-option').addEventListener('click', () => {
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'correctOption';
+            radio.value = rowId;
+            radio.checked = isCorrect;
+            radio.className = 'w-4 h-4 accent-primary';
+            radio.setAttribute('aria-label', 'Mark as correct answer');
+
+            const text = document.createElement('input');
+            text.type = 'text';
+            text.required = true;
+            text.value = value;   // gán qua property: dấu " hay < không còn làm vỡ giá trị
+            text.className = 'option-text flex-1 bg-surface-container-low border-2 border-outline-variant rounded-2xl px-3 py-2 font-body-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
+            text.setAttribute('aria-label', 'Option text');
+
+            const remove = el('button', 'remove-option text-error hover:opacity-70 p-1');
+            remove.type = 'button';
+            remove.setAttribute('aria-label', 'Remove option');
+            remove.append(el('span', 'material-symbols-outlined text-lg', 'close'));
+            remove.addEventListener('click', () => {
                 if (container.children.length <= 2) { showToast('At least 2 options are required', 'error'); return; }
                 row.remove();
             });
-            container.appendChild(row);
+
+            row.append(radio, text, remove);
+            container.append(row);
         }
 
         document.getElementById('addOptionBtn').addEventListener('click', () => addOptionRow());
@@ -1217,7 +1279,7 @@
         function resetQuestionForm() {
             document.getElementById('questionId').value = '';
             document.getElementById('questionText').value = '';
-            document.getElementById('optionsContainer').innerHTML = '';
+            document.getElementById('optionsContainer').replaceChildren();
             optionRowCount = 0;
             addOptionRow();
             addOptionRow();
@@ -1235,7 +1297,7 @@
             editingQuestionId = id;
             document.getElementById('questionId').value = id;
             document.getElementById('questionText').value = q.question;
-            document.getElementById('optionsContainer').innerHTML = '';
+            document.getElementById('optionsContainer').replaceChildren();
             optionRowCount = 0;
             q.options.forEach(opt => addOptionRow(opt, opt === q.correctAnswer));
             document.getElementById('questionForm').classList.remove('hidden');
@@ -1327,11 +1389,11 @@
                 const chip = el('span', 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-dashed border-tertiary bg-tertiary-fixed text-on-tertiary-fixed font-label-sm font-bold');
                 const icon = el('span', 'material-symbols-outlined', 'warning');
                 icon.style.fontSize = '18px';
-                chip.append(icon, document.createTextNode('No audio, hidden from learners'));
+                chip.append(icon, document.createTextNode('No audio, cannot be published'));
                 audioCol.append(chip);
             }
 
-            const actions = el('div', 'flex gap-1 justify-end');
+            const actions = el('div', 'flex flex-wrap gap-2 items-center justify-end');
             const editBtn = el('button', 'text-primary hover:text-primary-container p-2 rounded-xl transition-colors');
             editBtn.type = 'button';
             editBtn.title = 'Edit lesson';
@@ -1346,7 +1408,18 @@
             deleteBtn.append(el('span', 'material-symbols-outlined text-lg', 'delete'));
             deleteBtn.addEventListener('click', () => deleteDictationLesson(lesson));
 
-            actions.append(editBtn, deleteBtn);
+            const statusSelect = buildStatusSelect({
+                current: lesson.status,
+                label: `Status of ${lesson.title}`,
+                onChange: async (status) => {
+                    await api.adminChangeDictationStatus(lesson.id, status);
+                    showToast(`Lesson is now ${status.toLowerCase()}`, 'success');
+                    loadDictationLessons();
+                },
+                onError: statusError
+            });
+            
+            actions.append(statusSelect, editBtn, deleteBtn);
             row.append(info, audioCol, actions);
             return row;
         }
@@ -1505,7 +1578,7 @@
         });
 
         async function deleteDictationLesson(lesson) {
-            if (!confirm(`Delete "${lesson.title}"? If learners have already submitted results, the action will be rejected (409).`)) return;
+            if (!confirm('Delete this lesson? If users already attempted it, archive it instead (delete will be rejected with 409).')) return;
             try {
                 await api.adminDeleteDictationLesson(lesson.id);
                 showToast('Lesson deleted!', 'success');
@@ -1549,6 +1622,7 @@
         }
 
         const workingPicker = createTopicPicker({
+            source: 'admin',
             container: byId('topicPickerContainer'),
             inputId: 'topicPickerInput',
             ariaLabel: 'Working topic',

@@ -53,20 +53,9 @@
                         class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl pl-10 pr-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md font-body-md text-on-surface"
                         placeholder="Search topics..." type="text" />
                 </div>
-                <div class="flex gap-stack-sm w-full md:w-auto">
-                    <select id="levelFilter"
-                        class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2.5 text-body-md font-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all flex-1 md:flex-none cursor-pointer">
-                        <option value="">All Levels</option>
-                        <option value="BEGINNER">Beginner</option>
-                        <option value="INTERMEDIATE">Intermediate</option>
-                        <option value="ADVANCED">Advanced</option>
-                    </select>
-                    <select id="sortFilter"
-                        class="bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-2.5 text-body-md font-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all flex-1 md:flex-none cursor-pointer">
-                        <option value="newest">Newest</option>
-                        <option value="popular">Most popular</option>
-                        <option value="title">A-Z</option>
-                    </select>
+                <div class="flex flex-col sm:flex-row gap-stack-sm w-full md:w-auto">
+                    <div id="levelFilter" class="sm:w-48"></div>
+                    <div id="sortFilter" class="sm:w-48"></div>
                 </div>
             </section>
 
@@ -91,6 +80,7 @@
         import { imageSrc } from './js/config.js';
         import { initAuthModal } from './js/authModal.js';
         import { initFooter } from './js/footer.js';
+        import { createSelect, LEVEL_FILTER_OPTIONS } from './js/ui.js';
 
         initNavBar('topics');
         initAuthModal();
@@ -221,16 +211,36 @@
             }, 300);
         });
 
-        document.getElementById('levelFilter').addEventListener('change', (e) => {
-            currentLevel = e.target.value;
-            currentPage = 0;
-            loadTopics();
+        const SORT_OPTIONS = [
+            { value: 'newest', label: 'Newest' },
+            { value: 'popular', label: 'Most popular' },
+            { value: 'title', label: 'A-Z' }
+        ];
+
+        createSelect({
+            container: document.getElementById('levelFilter'),
+            label: 'Filter by level',
+            icon: 'signal_cellular_alt',
+            options: LEVEL_FILTER_OPTIONS,
+            value: '',
+            onChange: (value) => {
+                currentLevel = value;
+                currentPage = 0;
+                loadTopics();
+            }
         });
 
-        document.getElementById('sortFilter').addEventListener('change', (e) => {
-            currentSort = e.target.value;
-            currentPage = 0;
-            loadTopics();
+        createSelect({
+            container: document.getElementById('sortFilter'),
+            label: 'Sort topics',
+            icon: 'sort',
+            options: SORT_OPTIONS,
+            value: 'newest',
+            onChange: (value) => {
+                currentSort = value;
+                currentPage = 0;
+                loadTopics();
+            }
         });
 
         loadTopics();
