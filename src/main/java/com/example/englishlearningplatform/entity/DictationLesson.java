@@ -26,6 +26,10 @@ public class DictationLesson {
     @Column(nullable = false, length = 20)
     private Level level;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ContentStatus status = ContentStatus.DRAFT;
+
     public Long getId() {
         return id;
     }
@@ -72,5 +76,13 @@ public class DictationLesson {
 
     public void setLevel(Level level) {
         this.level = level;
+    }
+
+    public ContentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ContentStatus status) {
+        this.status = status;
     }
 }

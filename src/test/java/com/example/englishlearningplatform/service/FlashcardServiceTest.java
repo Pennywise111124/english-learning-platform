@@ -3,6 +3,7 @@ package com.example.englishlearningplatform.service;
 import com.example.englishlearningplatform.dto.topic.FlashcardCreateRequest;
 import com.example.englishlearningplatform.dto.topic.FlashcardResponse;
 import com.example.englishlearningplatform.dto.topic.FlashcardUpdateRequest;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
@@ -20,9 +21,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,17 +74,18 @@ class FlashcardServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void getFlashcardsByTopic_whenTopicNotFound_shouldThrowResourceNotFoundException() {
-        when(topicRepository.existsById(TOPIC_ID)).thenReturn(false);
+    void getFlashcardsByTopic_whenTopicNotPublished_throwsNotFound() {
+        when(topicRepository.existsByIdAndStatus(TOPIC_ID, ContentStatus.PUBLISHED)).thenReturn(false);
 
         assertThrows(ResourceNotFoundException.class, () -> flashcardService.getFlashcardsByTopic(TOPIC_ID));
 
-        verify(flashcardRepository, never()).findByTopicId(any());
+        verify(topicRepository, never()).existsById(any());
+        verifyNoInteractions(flashcardRepository);
     }
 
     @Test
     void getFlashcardsByTopic_happyPath_shouldReturnMappedList() {
-        when(topicRepository.existsById(TOPIC_ID)).thenReturn(true);
+        when(topicRepository.existsByIdAndStatus(TOPIC_ID, ContentStatus.PUBLISHED)).thenReturn(true);
         when(flashcardRepository.findByTopicId(TOPIC_ID)).thenReturn(List.of(testFlashcard));
 
         List<FlashcardResponse> responses = flashcardService.getFlashcardsByTopic(TOPIC_ID);
@@ -267,5 +271,38 @@ class FlashcardServiceTest {
                 .orElseThrow(() -> new AssertionError("FileDeletionEvent was not published"));
 
         assertEquals("uploads/flashcards/old.jpg", fileEvent.getFileUrl());
+    }
+
+    // ------------------------------------------------------------------
+    // getFlashcardsForAdmin()
+    // ------------------------------------------------------------------
+
+    @Test
+    void getFlashcardsForAdmin_whenTopicNotFound_throws404() {
+        when(topicRepository.existsById(TOPIC_ID)).thenReturn(false);
+
+        assertThrows(ResourceNotFoundException.class, () -> flashcardService.getFlashcardsForAdmin(TOPIC_ID));
+
+        verify(topicRepository, never()).existsByIdAndStatus(any(), any());
+        verifyNoInteractions(flashcardRepository);
+    }
+
+    @Test
+    void getFlashcardsForAdmin_doesNotRequirePublishedTopic() {
+        when(topicRepository.existsById(TOPIC_ID)).thenReturn(true);
+        when(flashcardRepository.findByTopicId(TOPIC_ID)).thenReturn(List.of(testFlashcard));
+
+        List<FlashcardResponse> responses = flashcardService.getFlashcardsForAdmin(TOPIC_ID);
+
+        assertEquals(1, responses.size());
+        assertEquals("Hello", responses.get(0).getWord());
+        verify(topicRepository, never()).existsByIdAndStatus(any(), any());
+    }
+
+    @Test
+    void getFlashcardsForAdmin_isNotCached() throws NoSuchMethodException {
+        Method method = FlashcardService.class.getMethod("getFlashcardsForAdmin", Long.class);
+
+        assertNull(method.getAnnotation(Cacheable.class));
     }
 }

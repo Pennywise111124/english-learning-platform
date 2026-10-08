@@ -107,20 +107,23 @@ class DictationServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void getLessonsByTopic_whenTopicNotFound_shouldThrowResourceNotFoundException() {
-        when(topicRepository.existsById(TOPIC_ID)).thenReturn(false);
+    void getLessonsByTopic_whenTopicNotPublished_throwsNotFound() {
+        when(topicRepository.existsByIdAndStatus(TOPIC_ID, ContentStatus.PUBLISHED)).thenReturn(false);
 
         assertThrows(ResourceNotFoundException.class, () -> dictationService.getLessonsByTopic(TOPIC_ID));
+
+        verify(topicRepository, never()).existsById(any());
         verifyNoInteractions(lessonRepository);
     }
 
     @Test
     void getLessonsByTopic_happyPath_shouldQueryOnlyLessonsWithAudio() {
-        when(topicRepository.existsById(TOPIC_ID)).thenReturn(true);
+        when(topicRepository.existsByIdAndStatus(TOPIC_ID, ContentStatus.PUBLISHED)).thenReturn(true);
 
         DictationLesson lesson1 = createLesson(101L, "/uploads/dictation/audio1.mp3", "Transcript 1");
         DictationLesson lesson2 = createLesson(102L, "/uploads/dictation/audio2.mp3", "Transcript 2");
-        when(lessonRepository.findByTopic_IdAndMediaUrlIsNotNullOrderByIdAsc(TOPIC_ID))
+        when(lessonRepository.findByTopic_IdAndMediaUrlIsNotNullAndStatusOrderByIdAsc(TOPIC_ID,
+                ContentStatus.PUBLISHED))
                 .thenReturn(List.of(lesson1, lesson2));
 
         List<DictationLessonResponse> response = dictationService.getLessonsByTopic(TOPIC_ID);
@@ -134,7 +137,8 @@ class DictationServiceTest {
         assertEquals("Lesson 102", response.get(1).title());
         assertEquals("/uploads/dictation/audio2.mp3", response.get(1).mediaUrl());
 
-        verify(lessonRepository).findByTopic_IdAndMediaUrlIsNotNullOrderByIdAsc(TOPIC_ID);
+        verify(lessonRepository).findByTopic_IdAndMediaUrlIsNotNullAndStatusOrderByIdAsc(TOPIC_ID,
+                ContentStatus.PUBLISHED);
     }
 
     // ------------------------------------------------------------------
@@ -152,13 +156,16 @@ class DictationServiceTest {
     }
 
     @Test
-    void submit_whenLessonNotFound_shouldThrowAndNotSave() {
+    void submit_whenLessonNotPublished_throwsNotFound() {
         when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
-        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.empty());
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("Some input")));
+                () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("I like cats")));
 
+        verify(lessonRepository, never()).findById(any());
         verify(resultRepository, never()).save(any());
     }
 
@@ -166,7 +173,9 @@ class DictationServiceTest {
     void submit_whenLessonHasNoAudio_shouldThrowResourceNotFoundExceptionAndNotSave() {
         when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
         DictationLesson lessonNoAudio = createLesson(LESSON_ID, null, "I like cats");
-        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lessonNoAudio));
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED))
+                .thenReturn(Optional.of(lessonNoAudio));
 
         assertThrows(ResourceNotFoundException.class,
                 () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("I like cats")));
@@ -179,7 +188,9 @@ class DictationServiceTest {
         when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
 
         DictationLesson lesson = createLesson(LESSON_ID, "/uploads/dictation/audio.mp3", "I like cats");
-        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lesson));
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED))
+                .thenReturn(Optional.of(lesson));
 
         when(clock.instant()).thenReturn(FIXED_NOW);
 
@@ -214,7 +225,9 @@ class DictationServiceTest {
     void submit_whenInputHasNoWords_shouldThrowIllegalArgumentExceptionAndNotSave() {
         when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
         DictationLesson lesson = createLesson(LESSON_ID, "/uploads/dictation/audio.mp3", "I like cats");
-        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lesson));
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED))
+                .thenReturn(Optional.of(lesson));
 
         assertThrows(IllegalArgumentException.class,
                 () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("?!...")));
@@ -380,6 +393,7 @@ class DictationServiceTest {
         assertEquals("Valid transcript", savedLesson.getTranscript());
         assertEquals(Level.INTERMEDIATE, savedLesson.getLevel());
         assertNull(savedLesson.getMediaUrl());
+        assertEquals(ContentStatus.DRAFT, savedLesson.getStatus());
 
         assertEquals(LESSON_ID, response.id());
     }
@@ -536,6 +550,65 @@ class DictationServiceTest {
         ArgumentCaptor<FileDeletionEvent> captor = ArgumentCaptor.forClass(FileDeletionEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertEquals("/uploads/dictation/old-audio.mp3", captor.getValue().getFileUrl());
+    }
+
+    // ------------------------------------------------------------------
+    // Admin: changeStatus()
+    // ------------------------------------------------------------------
+
+    @Test
+    void changeStatus_whenNotFound_throws404() {
+        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> dictationService.changeStatus(LESSON_ID, ContentStatus.PUBLISHED));
+
+        verify(lessonRepository, never()).save(any());
+    }
+
+    @Test
+    void changeStatus_publishWithoutAudio_throwsConflict() {
+        DictationLesson lesson = createLesson(LESSON_ID, null, "Transcript");
+        lesson.setStatus(ContentStatus.DRAFT);
+        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lesson));
+
+        assertThrows(ResourceConflictException.class,
+                () -> dictationService.changeStatus(LESSON_ID, ContentStatus.PUBLISHED));
+
+        verify(lessonRepository, never()).save(any());
+        assertEquals(ContentStatus.DRAFT, lesson.getStatus());
+    }
+
+    @Test
+    void changeStatus_publishWithAudio_succeeds() {
+        DictationLesson lesson = createLesson(LESSON_ID, "/uploads/dictation/audio.mp3", "Transcript");
+        lesson.setStatus(ContentStatus.DRAFT);
+        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lesson));
+        when(lessonRepository.save(any(DictationLesson.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        dictationService.changeStatus(LESSON_ID, ContentStatus.PUBLISHED);
+
+        ArgumentCaptor<DictationLesson> captor = ArgumentCaptor.forClass(DictationLesson.class);
+        verify(lessonRepository).save(captor.capture());
+        DictationLesson saved = captor.getValue();
+        assertEquals(ContentStatus.PUBLISHED, saved.getStatus());
+        // Chỉ đổi status: audio và transcript giữ nguyên
+        assertEquals("/uploads/dictation/audio.mp3", saved.getMediaUrl());
+        assertEquals("Transcript", saved.getTranscript());
+    }
+
+    @Test
+    void changeStatus_archiveWithoutAudio_succeeds() {
+        DictationLesson lesson = createLesson(LESSON_ID, null, "Transcript");
+        lesson.setStatus(ContentStatus.DRAFT);
+        when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lesson));
+        when(lessonRepository.save(any(DictationLesson.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        dictationService.changeStatus(LESSON_ID, ContentStatus.ARCHIVED); // quy tắc chỉ áp cho publish
+
+        ArgumentCaptor<DictationLesson> captor = ArgumentCaptor.forClass(DictationLesson.class);
+        verify(lessonRepository).save(captor.capture());
+        assertEquals(ContentStatus.ARCHIVED, captor.getValue().getStatus());
     }
 
     private DictationLessonStats stats(Long lessonId, long attempts, Double best, Instant last) {

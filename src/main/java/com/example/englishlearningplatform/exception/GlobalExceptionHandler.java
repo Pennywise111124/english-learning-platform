@@ -4,26 +4,29 @@ import com.example.englishlearningplatform.ai.AiProviderException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.web.HttpMediaTypeNotSupportedException;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
-import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private final static Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // ═══════════ 1. Lỗi nghiệp vụ của project (lớp cha không biết) ═══════════
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
@@ -49,24 +52,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
-        ErrorResponse error = new ErrorResponse("File exceeds the maximum allowed size",
-                HttpStatus.BAD_REQUEST.value());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
-
-    @ExceptionHandler(MissingServletRequestPartException.class)
-    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
-        ErrorResponse error = new ErrorResponse(
-                "Missing required file upload: " + ex.getRequestPartName(),
-                HttpStatus.BAD_REQUEST.value());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
-
-    // Lỗi gọi AI provider (xKiro) sau khi đã retry hết — FR-2.6: KHÔNG lộ raw
-    // exception/stack trace của WebClient ra client. 503 đúng bản chất hơn 500
-    // vì lỗi nằm ở dependency ngoài, không phải lỗi logic server mình.
     @ExceptionHandler(AiProviderException.class)
     public ResponseEntity<ErrorResponse> handleAiProviderException(AiProviderException ex) {
         log.error("AI provider error: ", ex);
@@ -76,33 +61,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(fieldError -> fieldError.getField() + ":" + fieldError.getDefaultMessage())
-                .collect(Collectors.joining("; "));
-        ErrorResponse error = new ErrorResponse(errorMessage, HttpStatus.BAD_REQUEST.value());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
-
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
-        ErrorResponse error = new ErrorResponse("Resource not found", HttpStatus.NOT_FOUND.value());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
-        log.error("Internal Server Error: ", ex);
-        ErrorResponse error = new ErrorResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
-        ErrorResponse error = new ErrorResponse("Malformed or missing request body", HttpStatus.BAD_REQUEST.value());
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ErrorResponse> handleMultipart(MultipartException ex) {
+        ErrorResponse error = new ErrorResponse("Request must be multipart/form-data with a 'file' part",
+                HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
@@ -113,24 +75,63 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
-        ErrorResponse error = new ErrorResponse("HTTP method not supported for this endpoint",
-                HttpStatus.METHOD_NOT_ALLOWED.value());
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(error);
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+        log.error("Internal Server Error: ", ex);
+        ErrorResponse error = new ErrorResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
-    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
-        ErrorResponse error = new ErrorResponse("Content type not supported",
-                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value());
-        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(error);
+    // ═══════════ 2. Exception chuẩn của Spring MVC: chỉ đổi format ═══════════
+
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
+            HttpStatusCode statusCode, WebRequest request) {
+        boolean serverError = statusCode.is5xxServerError();
+        if (serverError) {
+            log.error("Server error from Spring MVC: ", ex);
+        }
+
+        ResponseEntity<Object> response = super.handleExceptionInternal(ex, body, headers, statusCode, request);
+        if (response != null && response.getBody() instanceof ProblemDetail problem) {
+            String message = serverError
+                    ? "Internal server error"
+                    : (problem.getDetail() != null ? problem.getDetail() : "Request failed");
+            return ResponseEntity.status(response.getStatusCode())
+                    .headers(response.getHeaders())
+                    .body(new ErrorResponse(message, response.getStatusCode().value()));
+        }
+        return response;
     }
 
-    @ExceptionHandler(MultipartException.class)
-    public ResponseEntity<ErrorResponse> handleMultipart(MultipartException ex) {
-        ErrorResponse error = new ErrorResponse("Request must be multipart/form-data with a 'file' part",
-                HttpStatus.BAD_REQUEST.value());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ":" + fe.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        return handleExceptionInternal(ex, new ErrorResponse(message, status.value()), headers, status, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return handleExceptionInternal(ex,
+                new ErrorResponse("Malformed or missing request body", status.value()),
+                headers, status, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        String message = ex.getParameterValidationResults().stream()
+                .flatMap(result -> {
+                    String name = result.getMethodParameter().getParameterName();
+                    String param = name != null ? name : "parameter";
+                    return result.getResolvableErrors().stream()
+                            .map(error -> param + ":" + error.getDefaultMessage());
+                })
+                .collect(Collectors.joining("; "));
+        return handleExceptionInternal(ex, new ErrorResponse(message, status.value()), headers, status, request);
     }
 }

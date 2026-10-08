@@ -49,6 +49,26 @@ class DictationComparatorTest {
         assertEquals(List.of("a", "b", "c"), DictationComparator.tokenize("a   b\n c"));
     }
 
+    @Test
+    void tokenize_punctuationBetweenWordsShouldSplit() {
+        assertEquals(List.of("hello", "world"), DictationComparator.tokenize("hello,world"));
+        assertEquals(List.of("end", "start"), DictationComparator.tokenize("end.Start"));
+        assertEquals(List.of("a", "b"), DictationComparator.tokenize("a/b"));
+    }
+
+    @Test
+    void tokenize_apostropheInsideWordShouldStay() {
+        assertEquals(List.of("don't", "stop"), DictationComparator.tokenize("don't,stop"));
+    }
+
+    // Khoá giới hạn đã chấp nhận: dấu đứng giữa hai chữ số cũng tách từ.
+    @Test
+    void tokenize_knownLimitation_separatorsInsideNumbersAndAbbreviationsSplit() {
+        assertEquals(List.of("1", "000"), DictationComparator.tokenize("1,000"));
+        assertEquals(List.of("3", "5"), DictationComparator.tokenize("3.5"));
+        assertEquals(List.of("u", "s", "a"), DictationComparator.tokenize("U.S.A."));
+    }
+
     // ------------------------------------------------------------------
     // compare()
     // ------------------------------------------------------------------
@@ -176,5 +196,20 @@ class DictationComparatorTest {
         assertEquals(new DictationWordResult("a", WordStatus.MISSING, null), res.words().get(0));
         assertEquals(new DictationWordResult("b", WordStatus.CORRECT, null), res.words().get(1));
         assertEquals(new DictationWordResult("a", WordStatus.EXTRA, null), res.words().get(2));
+    }
+
+    @Test
+    void compare_missingSpaceAfterComma_shouldStillBe100() {
+        ComparisonResult res = DictationComparator.compare("Hello, world", "hello,world");
+        assertEquals(100.0, res.accuracy(), 0.0001);
+    }
+
+    // Giới hạn 1000 từ đếm SAU chuẩn hoá: "a," lặp 1001 lần là 1001 từ.
+    @Test
+    void compare_wordLimitCountsAfterNormalization() {
+        String transcript = "a ".repeat(10);
+        assertThrows(IllegalArgumentException.class,
+                () -> DictationComparator.compare(transcript, "a,".repeat(1001)));
+        assertDoesNotThrow(() -> DictationComparator.compare(transcript, "a,".repeat(1000)));
     }
 }

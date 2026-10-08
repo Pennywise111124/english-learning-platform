@@ -1,8 +1,11 @@
 package com.example.englishlearningplatform.service;
 
+import com.example.englishlearningplatform.dto.common.PageResponse;
 import com.example.englishlearningplatform.dto.topic.TopicCreateRequest;
 import com.example.englishlearningplatform.dto.topic.TopicResponse;
+import com.example.englishlearningplatform.dto.topic.TopicSort;
 import com.example.englishlearningplatform.dto.topic.TopicUpdateRequest;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Level;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
@@ -19,17 +22,31 @@ import com.example.englishlearningplatform.repository.UserVocabularyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -80,15 +97,17 @@ class TopicServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void getTopicById_whenNotFound_shouldThrowResourceNotFoundException() {
-        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.empty());
+    void getTopicById_whenNotPublished_throwsNotFound() {
+        when(topicRepository.findByIdAndStatus(TOPIC_ID, ContentStatus.PUBLISHED)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> topicService.getTopicById(TOPIC_ID));
+
+        verify(topicRepository, never()).findById(any());
     }
 
     @Test
     void getTopicById_happyPath_shouldReturnMappedResponse() {
-        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+        when(topicRepository.findByIdAndStatus(TOPIC_ID, ContentStatus.PUBLISHED)).thenReturn(Optional.of(testTopic));
 
         TopicResponse response = topicService.getTopicById(TOPIC_ID);
 
@@ -132,6 +151,22 @@ class TopicServiceTest {
         ArgumentCaptor<TopicChangedEvent> eventCaptor = ArgumentCaptor.forClass(TopicChangedEvent.class);
         verify(eventPublisher).publishEvent(eventCaptor.capture());
         assertNull(eventCaptor.getValue().getTopicId());
+    }
+
+    @Test
+    void createTopic_newTopicIsDraft() {
+        TopicCreateRequest request = new TopicCreateRequest();
+        request.setTitle("Grammar Basics");
+        request.setLevel(Level.BEGINNER);
+
+        when(topicRepository.existsByTitleAndLevel(request.getTitle(), request.getLevel())).thenReturn(false);
+        when(topicRepository.save(any(Topic.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        topicService.createTopic(request);
+
+        ArgumentCaptor<Topic> captor = ArgumentCaptor.forClass(Topic.class);
+        verify(topicRepository).save(captor.capture());
+        assertEquals(ContentStatus.DRAFT, captor.getValue().getStatus());
     }
 
     @Test
@@ -219,6 +254,128 @@ class TopicServiceTest {
                 .thenThrow(uniqueConstraintViolation("uq_topics_title_level"));
 
         assertThrows(IllegalArgumentException.class, () -> topicService.updateTopic(TOPIC_ID, request));
+    }
+
+    // ------------------------------------------------------------------
+    // changeStatus()
+    // ------------------------------------------------------------------
+
+    static Stream<Arguments> allTransitions() {
+        return Arrays.stream(ContentStatus.values())
+                .flatMap(from -> Arrays.stream(ContentStatus.values()).map(to -> Arguments.of(from, to)));
+    }
+
+    @Test
+    void changeStatus_whenNotFound_throws404() {
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> topicService.changeStatus(TOPIC_ID, ContentStatus.PUBLISHED));
+
+        verify(topicRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void changeStatus_setsStatusSavesAndPublishesEventWithTopicId() {
+        testTopic.setStatus(ContentStatus.DRAFT);
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+        when(topicRepository.save(any(Topic.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        topicService.changeStatus(TOPIC_ID, ContentStatus.PUBLISHED);
+
+        ArgumentCaptor<Topic> savedCaptor = ArgumentCaptor.forClass(Topic.class);
+        verify(topicRepository).save(savedCaptor.capture());
+        Topic saved = savedCaptor.getValue();
+        assertEquals(ContentStatus.PUBLISHED, saved.getStatus());
+        // "Chỉ đặt status": các trường khác giữ nguyên
+        assertEquals("Grammar Basics", saved.getTitle());
+        assertEquals("Basic grammar concepts", saved.getDescription());
+        assertEquals(Level.BEGINNER, saved.getLevel());
+
+        ArgumentCaptor<TopicChangedEvent> eventCaptor = ArgumentCaptor.forClass(TopicChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertEquals(TOPIC_ID, eventCaptor.getValue().getTopicId());
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @MethodSource("allTransitions")
+    void changeStatus_allowsEveryTransition(ContentStatus from, ContentStatus to) {
+        testTopic.setStatus(from);
+        // Phải tra bằng findById (không lọc status), nếu không DRAFT/ARCHIVED sẽ không
+        // bao giờ công bố được
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+        when(topicRepository.save(any(Topic.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertDoesNotThrow(() -> topicService.changeStatus(TOPIC_ID, to));
+
+        assertEquals(to, testTopic.getStatus());
+        verify(topicRepository, never()).findByIdAndStatus(any(), any());
+    }
+
+    // ------------------------------------------------------------------
+    // getTopicsForAdmin() / getTopicForAdmin()
+    // ------------------------------------------------------------------
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void getTopicsForAdmin_mapsPageAndKeepsStatusInResponse() {
+        testTopic.setStatus(ContentStatus.DRAFT);
+        when(topicRepository.findAll(ArgumentMatchers.<Specification<Topic>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(testTopic)));
+
+        PageResponse<TopicResponse> response = topicService.getTopicsForAdmin(
+                null, null, TopicSort.NEWEST, null, PageRequest.of(0, 20));
+
+        assertEquals(1, response.getContent().size());
+        assertEquals(ContentStatus.DRAFT, response.getContent().get(0).getStatus());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void getTopicsForAdmin_stripsSortFromPageable_soSpecificationOrderingIsKept() {
+        when(topicRepository.findAll(ArgumentMatchers.<Specification<Topic>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        topicService.getTopicsForAdmin(null, null, TopicSort.POPULAR, null,
+                PageRequest.of(2, 5, Sort.by("title")));
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(topicRepository).findAll(ArgumentMatchers.<Specification<Topic>>any(), captor.capture());
+        assertTrue(captor.getValue().getSort().isUnsorted());
+        assertEquals(2, captor.getValue().getPageNumber());
+        assertEquals(5, captor.getValue().getPageSize());
+    }
+
+    @Test
+    void getTopicForAdmin_whenNotFound_throws404() {
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> topicService.getTopicForAdmin(TOPIC_ID));
+
+        verify(topicRepository, never()).findByIdAndStatus(any(), any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(ContentStatus.class)
+    void getTopicForAdmin_returnsTopicInAnyStatus(ContentStatus status) {
+        testTopic.setStatus(status);
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(testTopic));
+
+        TopicResponse response = topicService.getTopicForAdmin(TOPIC_ID);
+
+        assertEquals(status, response.getStatus());
+        verify(topicRepository, never()).findByIdAndStatus(any(), any());
+    }
+
+    @Test
+    void adminReads_areNotCached() throws NoSuchMethodException {
+        Method list = TopicService.class.getMethod("getTopicsForAdmin",
+                String.class, Level.class, TopicSort.class, ContentStatus.class, Pageable.class);
+        Method detail = TopicService.class.getMethod("getTopicForAdmin", Long.class);
+
+        assertNull(list.getAnnotation(Cacheable.class));
+        assertNull(detail.getAnnotation(Cacheable.class));
     }
 
     // ------------------------------------------------------------------

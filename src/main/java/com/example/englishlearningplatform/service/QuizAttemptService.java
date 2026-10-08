@@ -47,7 +47,8 @@ public class QuizAttemptService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
-        Quiz quiz = quizRepository.findById(quizId)
+        Quiz quiz = quizRepository
+                .findByIdAndStatusAndTopic_Status(quizId, ContentStatus.PUBLISHED, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found!"));
 
         List<QuizQuestion> realQuestions = quizQuestionRepository.findByQuizId(quizId);
@@ -111,9 +112,9 @@ public class QuizAttemptService {
         Topic topic = quiz.getTopic();
 
         long achievedCount = quizAttemptRepository.countAchievedQuizzesInTopic(
-                user.getId(), topic.getId(), PASS_SCORE_THRESHOLD);
+                user.getId(), topic.getId(), PASS_SCORE_THRESHOLD, ContentStatus.PUBLISHED);
 
-        long totalQuizCount = quizRepository.countByTopicId(topic.getId());
+        long totalQuizCount = quizRepository.countByTopic_IdAndStatus(topic.getId(), ContentStatus.PUBLISHED);
 
         int percent = 0;
         if (totalQuizCount > 0) {

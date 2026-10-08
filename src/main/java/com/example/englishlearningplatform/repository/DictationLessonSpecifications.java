@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import com.example.englishlearningplatform.dto.dictation.DictationProgress;
 import com.example.englishlearningplatform.dto.dictation.DictationSort;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.DictationLesson;
 import com.example.englishlearningplatform.entity.DictationResult;
 import com.example.englishlearningplatform.entity.Level;
@@ -33,7 +34,11 @@ public final class DictationLessonSpecifications {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            Join<DictationLesson, Topic> topic = root.join("topic");
+
             predicates.add(cb.isNotNull(root.get("mediaUrl")));
+            predicates.add(cb.equal(root.get("status"), ContentStatus.PUBLISHED));
+            predicates.add(cb.equal(topic.get("status"), ContentStatus.PUBLISHED));
 
             if (topicId != null) {
                 predicates.add(cb.equal(root.get("topic").get("id"), topicId));
@@ -44,7 +49,6 @@ public final class DictationLessonSpecifications {
             }
 
             if (keyword != null && !keyword.isBlank()) {
-                Join<DictationLesson, Topic> topic = root.join("topic");
                 String pattern = "%" + escapeLike(keyword.toLowerCase(Locale.ROOT)) + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("title")), pattern, '\\'),

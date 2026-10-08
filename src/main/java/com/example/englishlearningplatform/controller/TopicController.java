@@ -15,9 +15,9 @@ import com.example.englishlearningplatform.service.FlashcardService;
 import com.example.englishlearningplatform.service.QuizService;
 import com.example.englishlearningplatform.service.TopicService;
 import com.example.englishlearningplatform.util.PaginationUtils;
+import com.example.englishlearningplatform.util.TopicQueryParser;
 
 import java.util.List;
-import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/topics")
@@ -26,8 +26,6 @@ public class TopicController {
     private final TopicService topicService;
     private final QuizService quizService;
     private final FlashcardService flashcardService;
-
-    private static final int MAX_KEYWORD_LENGTH = 50;
 
     public TopicController(TopicService topicService, QuizService quizService, FlashcardService flashcardService) {
         this.topicService = topicService;
@@ -45,20 +43,8 @@ public class TopicController {
 
         PaginationUtils.validate(page, size);
 
-        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        if (normalizedKeyword != null && normalizedKeyword.length() > MAX_KEYWORD_LENGTH) {
-            throw new IllegalArgumentException("Keyword must not exceed " + MAX_KEYWORD_LENGTH + " characters");
-        }
-
-        Level levelFilter = null;
-        if (level != null && !level.isBlank()) {
-            try {
-                levelFilter = Level.valueOf(level.trim().toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException ex) {
-                throw new IllegalArgumentException(
-                        "Invalid level value. Valid values are: beginner, intermediate, advanced");
-            }
-        }
+        String normalizedKeyword = TopicQueryParser.keyword(keyword);
+        Level levelFilter = TopicQueryParser.level(level);
 
         TopicSort topicSort = TopicSort.from(sort);
 

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.englishlearningplatform.dto.common.PageResponse;
 import com.example.englishlearningplatform.dto.vocabulary.VocabularyResponse;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.entity.UserVocabulary;
@@ -30,7 +31,6 @@ import com.example.englishlearningplatform.repository.UserVocabularyRepository;
 @Service
 public class VocabularyService {
 
-    // Thang khoảng cách theo bậc interval_level 0..4
     private static final int[] INTERVAL_DAYS = { 1, 3, 7, 14, 30 };
 
     private final UserVocabularyRepository vocabularyRepository;
@@ -74,7 +74,7 @@ public class VocabularyService {
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Flashcard flashcard = flashcardRepository.findById(flashcardId)
+        Flashcard flashcard = flashcardRepository.findByIdAndTopic_Status(flashcardId, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("Flashcard not found with id: " + flashcardId));
 
         if (vocabularyRepository.existsByUser_IdAndFlashcard_Id(currentUser.getId(), flashcardId)) {

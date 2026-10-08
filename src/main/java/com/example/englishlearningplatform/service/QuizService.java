@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.englishlearningplatform.dto.quiz.*;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Quiz;
 import com.example.englishlearningplatform.entity.QuizQuestion;
 import com.example.englishlearningplatform.entity.Topic;
@@ -39,17 +40,18 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public List<QuizSummaryResponse> getQuizzesByTopic(Long topicId) {
-        if (!topicRepository.existsById(topicId)) {
+        if (!topicRepository.existsByIdAndStatus(topicId, ContentStatus.PUBLISHED)) {
             throw new ResourceNotFoundException("Topic not found with id: " + topicId);
         }
-        return quizRepository.findByTopicId(topicId).stream()
+        return quizRepository.findByTopic_IdAndStatus(topicId, ContentStatus.PUBLISHED).stream()
                 .map(quiz -> QuizSummaryResponse.from(quiz, quizQuestionRepository.countByQuizId(quiz.getId())))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public QuizDetailResponse getQuizDetail(Long quizId) {
-        Quiz quiz = quizRepository.findById(quizId)
+        Quiz quiz = quizRepository
+                .findByIdAndStatusAndTopic_Status(quizId, ContentStatus.PUBLISHED, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         List<QuizQuestionPublicResponse> questions = quizQuestionRepository.findByQuizId(quizId).stream()
@@ -60,6 +62,17 @@ public class QuizService {
     }
 
     // ══════════════════ ADMIN-FACING ══════════════════
+
+    @Transactional(readOnly = true)
+    public List<QuizSummaryResponse> getQuizzesForAdmin(Long topicId) {
+        if (!topicRepository.existsById(topicId)) {
+            throw new ResourceNotFoundException("Topic not found with id: " + topicId);
+        }
+
+        return quizRepository.findByTopicId(topicId).stream()
+                .map(quiz -> QuizSummaryResponse.from(quiz, quizQuestionRepository.countByQuizId(quiz.getId())))
+                .collect(Collectors.toList());
+    }
 
     @Transactional(readOnly = true)
     public List<AdminQuizQuestionResponse> getQuestionsForAdmin(Long quizId) {
@@ -83,6 +96,7 @@ public class QuizService {
         Quiz quiz = new Quiz();
         quiz.setTopic(topic);
         quiz.setTitle(request.getTitle());
+        quiz.setStatus(ContentStatus.DRAFT);
 
         return QuizSummaryResponse.from(quizRepository.save(quiz), 0);
     }
@@ -108,7 +122,7 @@ public class QuizService {
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         if (quizAttemptRepository.existsByQuiz_Id(quizId)) {
-            throw new ResourceConflictException("Quiz already has attempts from users");
+            throw new ResourceConflictException("Quiz already has attempts from users. Archive it instead.");
         }
 
         quizRepository.delete(quiz);
@@ -145,6 +159,30 @@ public class QuizService {
         QuizQuestion question = quizQuestionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found with id: " + questionId));
 
+        Quiz quiz = question.getQuiz();
+        if (quiz.getStatus() == ContentStatus.PUBLISHED
+                && quizQuestionRepository.countByQuizId(quiz.getId()) <= 1) {
+            throw new ResourceConflictException(
+                    "Cannot delete the last question of a published quiz. Archive or unpublish the quiz first.");
+        }
+
         quizQuestionRepository.delete(question);
+    }
+
+    @Transactional
+    public QuizSummaryResponse changeStatus(Long quizId, ContentStatus status) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
+
+        long questionCount = quizQuestionRepository.countByQuizId(quizId);
+
+        if (status == ContentStatus.PUBLISHED && questionCount == 0) {
+            throw new ResourceConflictException("Cannot publish a quiz without questions");
+        }
+
+        quiz.setStatus(status);
+        Quiz saved = quizRepository.save(quiz);
+
+        return QuizSummaryResponse.from(saved, questionCount);
     }
 }

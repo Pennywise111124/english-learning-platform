@@ -17,13 +17,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableCaching
 public class RedisConfig {
 
-        /**
-         * TODO — quyết định serializer (xem ghi chú Jackson 2 vs Jackson 3 ở trên).
-         * Gợi ý hướng đơn giản nhất để tránh bug default typing: dùng
-         * GenericJackson3JsonRedisSerializer nhưng KHÔNG activate default typing
-         * (constructor mặc định của nó, không gọi thêm activateDefaultTyping).
-         * Tự thử nghiệm set/get trước khi tin tưởng.
-         */
         @Value("${app.cache.topic-list-ttl-minutes:10}")
         private long topicListTtl;
 
@@ -35,21 +28,6 @@ public class RedisConfig {
 
         @Bean
         public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-                // TODO:
-                // 1. Tạo RedisCacheConfiguration.defaultCacheConfig()
-                // .entryTtl(Duration.ofMinutes(...)) // TTL là lưới an toàn dự
-                // // phòng, không thay thế
-                // // invalidate chủ động
-                // .disableCachingNullValues()
-                // .serializeKeysWith(RedisSerializationContext.SerializationPair
-                // .fromSerializer(new StringRedisSerializer()))
-                // .serializeValuesWith(... serializer đã chọn ở trên ...)
-                //
-                // 2. return RedisCacheManager.builder(connectionFactory)
-                // .cacheDefaults(cacheConfig)
-                // // TODO: cân nhắc dùng .withCacheConfiguration("topicsFirstPage", ...)
-                // // riêng nếu muốn TTL khác giữa cache list và cache detail
-                // .build();
                 RedisSerializer<Object> jsonSerializer = RedisSerializer.json();
 
                 RedisCacheConfiguration defaulConfig = RedisCacheConfiguration.defaultCacheConfig()

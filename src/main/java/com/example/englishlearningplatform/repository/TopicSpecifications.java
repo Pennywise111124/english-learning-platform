@@ -7,6 +7,7 @@ import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 
 import com.example.englishlearningplatform.dto.topic.TopicSort;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Level;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.entity.UserProgress;
@@ -21,7 +22,15 @@ public final class TopicSpecifications {
     private TopicSpecifications() {
     }
 
-    public static Specification<Topic> search(String keyword, Level level, TopicSort sort) {
+    public static Specification<Topic> forLearners(String keyword, Level level, TopicSort sort) {
+        return search(keyword, level, sort, ContentStatus.PUBLISHED);
+    }
+
+    public static Specification<Topic> forAdmin(String keyword, Level level, TopicSort sort, ContentStatus status) {
+        return search(keyword, level, sort, status);
+    }
+
+    private static Specification<Topic> search(String keyword, Level level, TopicSort sort, ContentStatus status) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -34,6 +43,10 @@ public final class TopicSpecifications {
                 Predicate titleLike = cb.like(cb.lower(root.get("title")), pattern, '\\');
                 Predicate descriptionLike = cb.like(cb.lower(root.get("description")), pattern, '\\');
                 predicates.add(cb.or(titleLike, descriptionLike));
+            }
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
             }
 
             if (query != null && !Long.class.equals(query.getResultType())

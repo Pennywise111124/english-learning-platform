@@ -28,6 +28,10 @@ public class Topic {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ContentStatus status = ContentStatus.DRAFT;
+
     // ── Getters & Setters ──────────────────────────────────────────────
 
     public Long getId() {
@@ -72,5 +76,13 @@ public class Topic {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public ContentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ContentStatus status) {
+        this.status = status;
     }
 }

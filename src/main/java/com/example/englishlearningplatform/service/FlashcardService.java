@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.englishlearningplatform.dto.topic.FlashcardCreateRequest;
 import com.example.englishlearningplatform.dto.topic.FlashcardResponse;
 import com.example.englishlearningplatform.dto.topic.FlashcardUpdateRequest;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
@@ -45,6 +46,18 @@ public class FlashcardService {
     @Cacheable(cacheNames = "flashcardsByTopic", key = "#topicId")
     public List<FlashcardResponse> getFlashcardsByTopic(Long topicId) {
 
+        if (!topicRepository.existsByIdAndStatus(topicId, ContentStatus.PUBLISHED)) {
+            throw new ResourceNotFoundException("Topic not found with id: " + topicId);
+        }
+
+        return flashcardRepository.findByTopicId(topicId)
+                .stream()
+                .map(FlashcardResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FlashcardResponse> getFlashcardsForAdmin(Long topicId) {
         if (!topicRepository.existsById(topicId)) {
             throw new ResourceNotFoundException("Topic not found with id: " + topicId);
         }
@@ -93,7 +106,8 @@ public class FlashcardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Flashcard not found with id: " + id));
 
         if (userVocabularyRepository.existsByFlashcard_Id(id)) {
-            throw new ResourceConflictException("Cannot delete flashcard: users have saved it");
+            throw new ResourceConflictException(
+                    "Cannot delete flashcard: users have saved it. Archive its topic to hide it instead.");
         }
 
         Long topicId = flashcard.getTopic().getId();

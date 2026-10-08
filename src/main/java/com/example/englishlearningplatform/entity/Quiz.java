@@ -17,6 +17,10 @@ public class Quiz {
     @Column(nullable = false)
     private String title;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ContentStatus status = ContentStatus.DRAFT;
+
     public Long getId() {
         return id;
     }
@@ -39,5 +43,13 @@ public class Quiz {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public ContentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ContentStatus status) {
+        this.status = status;
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.englishlearningplatform.dto.common.StatusChangeRequest;
 import com.example.englishlearningplatform.dto.dictation.AdminDictationLessonResponse;
 import com.example.englishlearningplatform.dto.dictation.DictationLessonRequest;
 import com.example.englishlearningplatform.service.DictationService;
@@ -56,5 +58,11 @@ public class AdminDictationController {
     public ResponseEntity<AdminDictationLessonResponse> uploadAudio(@PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(dictationService.uploadAudio(id, file));
+    }
+
+    @PatchMapping("/dictation/{id}/status")
+    public ResponseEntity<AdminDictationLessonResponse> changeStatus(@PathVariable Long id,
+            @Valid @RequestBody StatusChangeRequest request) {
+        return ResponseEntity.ok(dictationService.changeStatus(id, request.status()));
     }
 }

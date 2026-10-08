@@ -1,5 +1,6 @@
 package com.example.englishlearningplatform.dto.topic;
 
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Level;
 import com.example.englishlearningplatform.entity.Topic;
 
@@ -10,9 +11,8 @@ public class TopicResponse {
     private String description;
     private Level level;
     private String imageUrl;
+    private ContentStatus status;
 
-    // Factory method, theo đúng convention UserResponse.from(user) đã dùng ở
-    // AuthService
     public static TopicResponse from(Topic topic) {
         TopicResponse dto = new TopicResponse();
         dto.id = topic.getId();
@@ -20,6 +20,7 @@ public class TopicResponse {
         dto.description = topic.getDescription();
         dto.level = topic.getLevel();
         dto.imageUrl = topic.getImageUrl();
+        dto.status = topic.getStatus();
         return dto;
     }
 
@@ -41,5 +42,9 @@ public class TopicResponse {
 
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    public ContentStatus getStatus() {
+        return status;
     }
 }

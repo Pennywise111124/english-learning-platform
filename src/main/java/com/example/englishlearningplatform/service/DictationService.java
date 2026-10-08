@@ -26,6 +26,7 @@ import com.example.englishlearningplatform.dto.dictation.DictationResultResponse
 import com.example.englishlearningplatform.dto.dictation.DictationSort;
 import com.example.englishlearningplatform.dto.dictation.DictationSubmitRequest;
 import com.example.englishlearningplatform.dto.dictation.DictationSubmitResponse;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.DictationLesson;
 import com.example.englishlearningplatform.entity.DictationResult;
 import com.example.englishlearningplatform.entity.Level;
@@ -77,11 +78,12 @@ public class DictationService {
 
     @Transactional(readOnly = true)
     public List<DictationLessonResponse> getLessonsByTopic(Long topicId) {
-        if (!topicRepository.existsById(topicId)) {
+        if (!topicRepository.existsByIdAndStatus(topicId, ContentStatus.PUBLISHED)) {
             throw new ResourceNotFoundException("Topic not found with id: " + topicId);
         }
 
-        return lessonRepository.findByTopic_IdAndMediaUrlIsNotNullOrderByIdAsc(topicId)
+        return lessonRepository
+                .findByTopic_IdAndMediaUrlIsNotNullAndStatusOrderByIdAsc(topicId, ContentStatus.PUBLISHED)
                 .stream()
                 .map(DictationLessonResponse::from)
                 .toList();
@@ -91,7 +93,8 @@ public class DictationService {
     public DictationSubmitResponse submit(Long lessonId, DictationSubmitRequest request) {
         User user = getCurrentUser();
 
-        DictationLesson lesson = lessonRepository.findById(lessonId)
+        DictationLesson lesson = lessonRepository
+                .findByIdAndStatusAndTopic_Status(lessonId, ContentStatus.PUBLISHED, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("Dictation lesson not found with id: " + lessonId));
 
         if (lesson.getMediaUrl() == null) {
@@ -172,6 +175,7 @@ public class DictationService {
         lesson.setTranscript(request.transcript());
         lesson.setLevel(request.level());
         lesson.setMediaUrl(null);
+        lesson.setStatus(ContentStatus.DRAFT);
 
         DictationLesson saved = lessonRepository.save(lesson);
         return AdminDictationLessonResponse.from(saved);
@@ -198,7 +202,8 @@ public class DictationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Dictation lesson not found with id: " + id));
 
         if (resultRepository.existsByLesson_Id(id)) {
-            throw new ResourceConflictException("Cannot delete dictation lesson: users have submitted results for it");
+            throw new ResourceConflictException(
+                    "Cannot delete dictation lesson: users have submitted results for it. Archive it instead.");
         }
 
         String oldUrl = lesson.getMediaUrl();
@@ -245,5 +250,20 @@ public class DictationService {
                         .collect(Collectors.toMap(DictationLessonStats::getLessonId, s -> s));
 
         return PageResponse.from(lessonPage.map(l -> DictationCatalogItem.of(l, statsByLesson.get(l.getId()))));
+    }
+
+    @Transactional
+    public AdminDictationLessonResponse changeStatus(Long id, ContentStatus status) {
+        DictationLesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Dictation lesson not found with id: " + id));
+
+        if (status == ContentStatus.PUBLISHED && lesson.getMediaUrl() == null) {
+            throw new ResourceConflictException("Cannot publish a dictation lesson without audio");
+        }
+
+        lesson.setStatus(status);
+        DictationLesson saved = lessonRepository.save(lesson);
+
+        return AdminDictationLessonResponse.from(saved);
     }
 }

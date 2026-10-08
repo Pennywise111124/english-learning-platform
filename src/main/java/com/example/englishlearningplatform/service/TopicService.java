@@ -6,6 +6,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import com.example.englishlearningplatform.dto.topic.TopicCreateRequest;
 import com.example.englishlearningplatform.dto.topic.TopicResponse;
 import com.example.englishlearningplatform.dto.topic.TopicSort;
 import com.example.englishlearningplatform.dto.topic.TopicUpdateRequest;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Level;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.event.TopicChangedEvent;
@@ -60,7 +62,7 @@ public class TopicService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "topics", condition = "#pageable.pageNumber == 0 && #keyword == null", key = "(#level != null ? #level.name() : 'ALL') + ':' + #sort.name() + ':' + #pageable.pageSize")
     public PageResponse<TopicResponse> getTopics(String keyword, Level level, TopicSort sort, Pageable pageable) {
-        Specification<Topic> spec = TopicSpecifications.search(keyword, level, sort);
+        Specification<Topic> spec = TopicSpecifications.forLearners(keyword, level, sort);
         Page<TopicResponse> topicPage = topicRepository.findAll(spec, pageable)
                 .map(TopicResponse::from);
 
@@ -70,9 +72,27 @@ public class TopicService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "topicDetails", key = "#id")
     public TopicResponse getTopicById(Long id) {
-        Topic topic = topicRepository.findById(id)
+        Topic topic = topicRepository.findByIdAndStatus(id, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + id));
 
+        return TopicResponse.from(topic);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TopicResponse> getTopicsForAdmin(String keyword, Level level, TopicSort sort,
+            ContentStatus status, Pageable pageable) {
+        Specification<Topic> spec = TopicSpecifications.forAdmin(keyword, level, sort, status);
+
+        Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+        Page<TopicResponse> page = topicRepository.findAll(spec, unsorted).map(TopicResponse::from);
+        return PageResponse.from(page);
+    }
+
+    @Transactional(readOnly = true)
+    public TopicResponse getTopicForAdmin(Long id) {
+        Topic topic = topicRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + id));
         return TopicResponse.from(topic);
     }
 
@@ -86,6 +106,7 @@ public class TopicService {
         topic.setTitle(request.getTitle());
         topic.setLevel(request.getLevel());
         topic.setDescription(request.getDescription());
+        topic.setStatus(ContentStatus.DRAFT);
 
         try {
             Topic savedTopic = topicRepository.save(topic);
@@ -136,20 +157,23 @@ public class TopicService {
                 .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + id));
 
         if (userProgressRepository.existsByTopic_Id(id)) {
-            throw new ResourceConflictException("Cannot delete topic: users have started learning it!");
+            throw new ResourceConflictException(
+                    "Cannot delete topic: users have started learning it. Archive it instead.");
         }
 
         if (quizAttemptRepository.existsByQuiz_Topic_Id(id)) {
-            throw new ResourceConflictException("Cannot delete topic: related quiz attempts exist!");
+            throw new ResourceConflictException(
+                    "Cannot delete topic: related quiz attempts exist. Archive it instead.");
         }
 
         if (userVocabularyRepository.existsByFlashcard_Topic_Id(id)) {
-            throw new ResourceConflictException("Cannot delete topic: users have saved its flashcards");
+            throw new ResourceConflictException(
+                    "Cannot delete topic: users have saved its flashcards. Archive it instead.");
         }
 
         if (dictationResultRepository.existsByLesson_Topic_Id(id)) {
             throw new ResourceConflictException(
-                    "Cannot delete topic: users have submitted dictation results for its lessons");
+                    "Cannot delete topic: users have submitted dictation results for its lessons. Archive it instead.");
         }
 
         String oldImageUrl = topic.getImageUrl();
@@ -189,5 +213,17 @@ public class TopicService {
         }
 
         return TopicResponse.from(updatedTopic);
+    }
+
+    @Transactional
+    public TopicResponse changeStatus(Long id, ContentStatus status) {
+        Topic topic = topicRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + id));
+
+        topic.setStatus(status);
+        Topic saved = topicRepository.save(topic);
+        eventPublisher.publishEvent(new TopicChangedEvent(id));
+
+        return TopicResponse.from(saved);
     }
 }

@@ -1,9 +1,13 @@
 package com.example.englishlearningplatform.controller;
 
 import jakarta.validation.Valid;
+
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.englishlearningplatform.dto.common.StatusChangeRequest;
 import com.example.englishlearningplatform.dto.quiz.QuizRequest;
 import com.example.englishlearningplatform.dto.quiz.QuizSummaryResponse;
 import com.example.englishlearningplatform.service.QuizService;
@@ -16,6 +20,11 @@ public class AdminQuizController {
 
     public AdminQuizController(QuizService quizService) {
         this.quizService = quizService;
+    }
+
+    @GetMapping("/topics/{topicId}/quizzes")
+    public ResponseEntity<List<QuizSummaryResponse>> getQuizzes(@PathVariable Long topicId) {
+        return ResponseEntity.ok(quizService.getQuizzesForAdmin(topicId));
     }
 
     @PostMapping("/topics/{topicId}/quizzes")
@@ -34,5 +43,11 @@ public class AdminQuizController {
     public ResponseEntity<Void> deleteQuiz(@PathVariable Long id) {
         quizService.deleteQuiz(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/quizzes/{id}/status")
+    public ResponseEntity<QuizSummaryResponse> changeStatus(@PathVariable Long id,
+            @Valid @RequestBody StatusChangeRequest request) {
+        return ResponseEntity.ok(quizService.changeStatus(id, request.status()));
     }
 }

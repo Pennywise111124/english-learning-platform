@@ -24,8 +24,8 @@ final class DictationComparator {
 
         String normalized = text.toLowerCase(Locale.ROOT)
                 .replace('\u2019', '\'')
-                .replace('-', ' ')
-                .replaceAll("[^\\p{L}\\p{N}'\\s]", "");
+                .replaceAll("[^\\p{L}\\p{N}'\\s]", " ")
+                .trim();
 
         normalized = normalized.trim();
         if (normalized.isEmpty()) {

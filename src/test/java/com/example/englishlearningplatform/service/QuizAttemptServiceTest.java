@@ -112,7 +112,8 @@ class QuizAttemptServiceTest {
 
     private void mockSuccessfulUserAndQuiz() {
         when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
-        when(quizRepository.findById(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
+        when(quizRepository.findByIdAndStatusAndTopic_Status(QUIZ_ID, ContentStatus.PUBLISHED, ContentStatus.PUBLISHED))
+                .thenReturn(Optional.of(testQuiz));
     }
 
     // ------------------------------------------------------------------
@@ -130,14 +131,20 @@ class QuizAttemptServiceTest {
     }
 
     @Test
-    void submitQuiz_whenQuizNotFound_shouldThrowResourceNotFoundException() {
+    void submitQuiz_whenQuizNotPublished_throwsNotFound() {
         when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
-        when(quizRepository.findById(QUIZ_ID)).thenReturn(Optional.empty());
+        when(quizRepository.findByIdAndStatusAndTopic_Status(QUIZ_ID, ContentStatus.PUBLISHED, ContentStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
 
         SubmitQuizRequest request = new SubmitQuizRequest();
+        request.setAnswers(List.of(createAnswerItem(1001L, "Hanoi")));
 
         assertThrows(ResourceNotFoundException.class,
                 () -> quizAttemptService.submitQuiz(QUIZ_ID, request));
+
+        verify(quizRepository, never()).findById(any());
+        verify(quizAttemptRepository, never()).save(any(QuizAttempt.class));
+        verify(userProgressRepository, never()).save(any());
     }
 
     @Test
@@ -345,8 +352,9 @@ class QuizAttemptServiceTest {
         mockSuccessfulUserAndQuiz();
         when(quizQuestionRepository.findByQuizId(QUIZ_ID)).thenReturn(List.of(question1));
 
-        when(quizAttemptRepository.countAchievedQuizzesInTopic(eq(1L), eq(10L), anyInt())).thenReturn(2L);
-        when(quizRepository.countByTopicId(10L)).thenReturn(2L);
+        when(quizAttemptRepository.countAchievedQuizzesInTopic(eq(1L), eq(10L), anyInt(), eq(ContentStatus.PUBLISHED)))
+                .thenReturn(2L);
+        when(quizRepository.countByTopic_IdAndStatus(10L, ContentStatus.PUBLISHED)).thenReturn(2L);
 
         SubmitQuizRequest request = new SubmitQuizRequest();
 
@@ -365,8 +373,9 @@ class QuizAttemptServiceTest {
         mockSuccessfulUserAndQuiz();
         when(quizQuestionRepository.findByQuizId(QUIZ_ID)).thenReturn(List.of(question1));
 
-        when(quizAttemptRepository.countAchievedQuizzesInTopic(eq(1L), eq(10L), anyInt())).thenReturn(1L);
-        when(quizRepository.countByTopicId(10L)).thenReturn(2L);
+        when(quizAttemptRepository.countAchievedQuizzesInTopic(eq(1L), eq(10L), anyInt(), eq(ContentStatus.PUBLISHED)))
+                .thenReturn(1L);
+        when(quizRepository.countByTopic_IdAndStatus(10L, ContentStatus.PUBLISHED)).thenReturn(2L);
 
         SubmitQuizRequest request = new SubmitQuizRequest();
 
@@ -385,8 +394,9 @@ class QuizAttemptServiceTest {
         mockSuccessfulUserAndQuiz();
         when(quizQuestionRepository.findByQuizId(QUIZ_ID)).thenReturn(List.of(question1));
 
-        when(quizAttemptRepository.countAchievedQuizzesInTopic(eq(1L), eq(10L), anyInt())).thenReturn(0L);
-        when(quizRepository.countByTopicId(10L)).thenReturn(0L);
+        when(quizAttemptRepository.countAchievedQuizzesInTopic(eq(1L), eq(10L), anyInt(), eq(ContentStatus.PUBLISHED)))
+                .thenReturn(0L);
+        when(quizRepository.countByTopic_IdAndStatus(10L, ContentStatus.PUBLISHED)).thenReturn(0L);
 
         SubmitQuizRequest request = new SubmitQuizRequest();
 

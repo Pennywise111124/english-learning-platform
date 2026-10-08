@@ -2,6 +2,7 @@ package com.example.englishlearningplatform.service;
 
 import com.example.englishlearningplatform.dto.common.PageResponse;
 import com.example.englishlearningplatform.dto.vocabulary.VocabularyResponse;
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.entity.UserVocabulary;
@@ -173,7 +174,8 @@ class VocabularyServiceTest {
     void saveWord_whenAlreadySaved_shouldThrowResourceConflictException() {
         mockSecurityUser(testUser);
         when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Optional.of(testUser));
-        when(flashcardRepository.findById(testFlashcard.getId())).thenReturn(Optional.of(testFlashcard));
+        when(flashcardRepository.findByIdAndTopic_Status(testFlashcard.getId(), ContentStatus.PUBLISHED))
+                .thenReturn(Optional.of(testFlashcard));
         when(vocabularyRepository.existsByUser_IdAndFlashcard_Id(testUser.getId(), testFlashcard.getId()))
                 .thenReturn(true);
 
@@ -186,16 +188,15 @@ class VocabularyServiceTest {
     }
 
     @Test
-    void saveWord_whenFlashcardNotFound_shouldThrowResourceNotFoundException() {
+    void saveWord_whenTopicNotPublished_throwsNotFound() {
         mockSecurityUser(testUser);
         when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Optional.of(testUser));
-        when(flashcardRepository.findById(999L)).thenReturn(Optional.empty());
+        when(flashcardRepository.findByIdAndTopic_Status(testFlashcard.getId(), ContentStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
 
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> vocabularyService.saveWord(999L));
+        assertThrows(ResourceNotFoundException.class, () -> vocabularyService.saveWord(testFlashcard.getId()));
 
-        assertTrue(exception.getMessage().contains("Flashcard not found"));
+        verify(flashcardRepository, never()).findById(any());
         verify(vocabularyRepository, never()).save(any());
     }
 
@@ -203,7 +204,8 @@ class VocabularyServiceTest {
     void saveWord_success() {
         mockSecurityUser(testUser);
         when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Optional.of(testUser));
-        when(flashcardRepository.findById(testFlashcard.getId())).thenReturn(Optional.of(testFlashcard));
+        when(flashcardRepository.findByIdAndTopic_Status(testFlashcard.getId(), ContentStatus.PUBLISHED))
+                .thenReturn(Optional.of(testFlashcard));
         when(vocabularyRepository.existsByUser_IdAndFlashcard_Id(testUser.getId(), testFlashcard.getId()))
                 .thenReturn(false);
         when(clock.instant()).thenReturn(FIXED_NOW);
