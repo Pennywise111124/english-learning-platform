@@ -2,9 +2,9 @@
 # Project 1 — Nền tảng học tiếng Anh tích hợp AI
 *(AI English Learning Platform — trước đây gọi là "Chatbot Học Tiếng Anh"; đổi tên vì phạm vi đã lớn hơn 1 chatbot đơn thuần: gồm AI Chat, Topic/Flashcard, Quiz, Progress, Vocabulary/SRS, Dictation, Search)*
 
-**Phiên bản:** 1.8
-**Ngày tạo:** 28/08/2026 — cập nhật lần 8 (03/10/2026, hoàn thành M12)
-**Trạng thái:** M1–M12 hoàn thành (MVP + toàn bộ v1.1: Search/Filter/Pagination cho Topic, Vocabulary/SRS, Dictation)
+**Phiên bản:** 1.9
+**Ngày tạo:** 28/08/2026 — cập nhật lần 9 (07/10/2026, hoàn thành M13 Hardening + M14 Content Status)
+**Trạng thái:** M1–M14 hoàn thành (MVP + v1.1 + hardening + trạng thái nội dung Draft/Published/Archived)
 
 ---
 
@@ -22,7 +22,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 | Role | Mô tả |
 |---|---|
 | `USER` | Người học: chat với AI, học bài, làm quiz, xem tiến độ cá nhân |
-| `ADMIN` | Quản trị nội dung: CRUD chủ đề học, flashcard, quiz |
+| `ADMIN` | Quản trị nội dung: CRUD chủ đề học, flashcard, quiz, bài Dictation; quản lý trạng thái nội dung (Draft/Published/Archived) |
 
 ### 1.3. Công nghệ sử dụng
 
@@ -36,7 +36,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 | AI Provider | xKiro (`api.xkiro.com/v1`, chuẩn OpenAI-compatible) | Dùng `WebClient`/`RestClient` |
 | Upload file | Lưu local filesystem (giai đoạn đầu), có thể nâng cấp cloud storage sau | Ảnh flashcard, avatar; audio Dictation (M12, xem FR-7) |
 | Frontend | HTML/CSS/JavaScript thuần + Tailwind CSS (qua CDN) | Gọi REST API bằng `fetch`, WebSocket bằng `SockJS + STOMP` client. **Sửa 05/09/2026:** đổi từ Bootstrap (dự kiến ban đầu) sang Tailwind. **Cập nhật M9:** redesign toàn bộ theo design system riêng (Duolingo-inspired) — xem chi tiết đầy đủ ở mục 10 (mới). |
-| Testing | JUnit 5 + Mockito | Theo đúng Phase 5 đã học |
+| Testing | JUnit 5 + Mockito + MockMvc + Testcontainers (PostgreSQL 16) | Unit test Service (Mockito), test `GlobalExceptionHandler` bằng MockMvc standalone, integration test Repository/Specification/migration trên PostgreSQL thật (M13). **Mọi `mvnw test` đều cần Docker đang chạy.** |
 | API Documentation | springdoc-openapi 3.1.1 | Swagger UI tự sinh từ code tại `/swagger-ui.html` — nguồn tham chiếu chính xác nhất cho request/response shape thật, ưu tiên hơn tài liệu này khi có sai lệch. Thêm ở M9. |
 
 ### 1.4. Ràng buộc & nguyên tắc làm việc
@@ -46,7 +46,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - Cẩn trọng khi áp dụng lại 1 rule cũ (VD: cache side-effect vs quyết định dùng Async — 2 tiêu chí độc lập, đã từng nhầm)
 - Mọi Enum trong Entity dùng `@Enumerated(EnumType.STRING)`, không dùng mặc định (ORDINAL) — tránh lỗi âm thầm khi thêm giá trị enum mới về sau làm lệch dữ liệu cũ
 - Lưu ý: Spring Boot 4 mặc định dùng **Jackson 3** (package `tools.jackson.databind`, bean `JsonMapper`), KHÔNG phải Jackson 2 (`com.fasterxml.jackson.databind.ObjectMapper`) như quen thuộc — phát hiện khi code `AiClientImpl` ở M4. Cần nhớ khi làm việc với JSON serialize/deserialize thủ công ở các milestone sau.
-- Lưu ý: `SecurityConfig` mặc định trả 403 thay vì 401 khi thiếu/sai JWT (do chưa custom `AuthenticationEntryPoint`) — đã fix ở M4 bằng `HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)`, áp dụng cho toàn bộ API từ M4 trở đi.
+- Lưu ý: `SecurityConfig` mặc định trả 403 thay vì 401 khi thiếu/sai JWT (do chưa custom `AuthenticationEntryPoint`) — đã fix ở M4 bằng `HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)`, áp dụng cho toàn bộ API từ M4 trở đi. (M13: `HttpStatusEntryPoint` đã được thay bằng `JsonAuthenticationEntryPoint` để 401 có body.)
 - Lưu ý: phát hiện ở M7 — thiếu `.requestMatchers("/error").permitAll()` trong `SecurityConfig` khiến MỌI lỗi 403 (`AccessDeniedException`, VD: USER hợp lệ gọi route `hasRole("ADMIN")`) bị biến thành 401 rỗng. Nguyên nhân: Spring Boot tự forward nội bộ sang `/error` để render error body, request forward này đi lại qua Security Filter Chain; `JwtAuthenticationFilter` (kế thừa `OncePerRequestFilter`) mặc định bỏ qua dispatch `ERROR` (không set lại `SecurityContext`) nên `/error` rơi vào trạng thái anonymous, bị chặn tiếp bởi `anyRequest().authenticated()`, rồi `AuthenticationEntryPoint` ghi đè 403 thành 401. Bug tồn tại từ M4 (khi thêm `hasRole("ADMIN")`) nhưng chưa từng lộ ra vì chưa có test nào dùng token USER hợp lệ gọi route ADMIN cho tới M7. Đã fix bằng cách thêm `/error` vào danh sách `permitAll()`.
 - Lưu ý: phát hiện ở M8 khi viết Unit Test — 3 lỗi kỹ thuật lặp lại nhiều lần, đáng nhớ cho các milestone sau: (1) mock 1 method trả về object thường (không phải `Optional`) mà quên stub sẽ mặc định trả `null` (khác `Optional` được Mockito tự trả `Optional.empty()`), dễ gây `NullPointerException` ở bất kỳ chỗ nào service đọc lại giá trị từ `save()`; (2) `ArgumentCaptor.capture()` khớp với **mọi** lời gọi bất kể kiểu tham số thật (khác `any(SomeClass.class)` có kiểm tra kiểu runtime) — nếu 1 method bị gọi nhiều lần với các loại Event/tham số khác nhau trong cùng 1 lần thực thi, dùng `capture()` với `verify(times(1))` mặc định sẽ gây lỗi `TooManyActualInvocations`; cách đúng là `verify(times(n))` rồi tự lọc lại theo `instanceof`; (3) khi input được validate theo kiểu exact-match (VD: `options.contains(rawAnswer)`) TRƯỚC, rồi mới tới bước so sánh case-insensitive/trim, thì input có khoảng trắng thừa hoặc sai case sẽ bị chặn ngay ở bước validate — không bao giờ chạm tới được bước so khớp linh hoạt hơn phía sau.
 - Lưu ý: phát hiện ở M9 — CORS **không có cấu hình mặc định** trong Spring Security, phải khai báo tường minh (`CorsConfigurationSource` bean + `.cors(...)` trong `SecurityFilterChain`) ngay khi FE/BE chạy khác origin (kể cả localhost khác port, hoặc qua tunnel như ngrok). Riêng SockJS (WebSocket) tự gửi request kèm `withCredentials: true` cho bước `/info` — nếu bật `allowCredentials(true)` phía Backend, **bắt buộc** dùng `setAllowedOriginPatterns(...)` thay vì `setAllowedOrigins("*")` (Spring Security cấm kết hợp wildcard `*` với credentials, ném exception lúc khởi động). Preflight `OPTIONS` cũng phải nằm trong danh sách `permitAll()` riêng, đặt trước `anyRequest().authenticated()`, nếu không JWT filter sẽ chặn preflight trước khi CORS kịp xử lý.
@@ -59,14 +59,22 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - Lưu ý: phát hiện ở M10 — 1 `Specification` dùng chung cho cả query dữ liệu lẫn query đếm (`count`) của Spring Data JPA; `ORDER BY` (đặc biệt kèm subquery) chỉ được áp dụng nhánh dữ liệu, phải tự kiểm tra `query.getResultType()` khác `Long`/`long` trước khi gọi `query.orderBy(...)`, nếu không count query sẽ sai hoặc lỗi.
 - Lưu ý: phát hiện ở M10/M11 (lặp lại nhiều lần) — thêm 1 tham số constructor mới vào Service (VD thêm Repository để retrofit check) mà quên thêm `@Mock` tương ứng trong test class cũ sẽ KHÔNG gây lỗi biên dịch — Mockito lặng lẽ truyền `null` vào tham số không có mock khớp, và test chỉ vỡ lúc chạy (`NullPointerException`) tại đúng nhánh code mới chạm tới tham số đó; phải rà lại mọi test dùng `@InjectMocks` của Service đó ngay khi đổi constructor.
 - Lưu ý: phát hiện ở M10/M11 — `MockitoExtension` dùng strict stubbing mặc định: nếu 1 test stub sẵn 1 lời gọi nhưng nhánh code thực tế throw exception SỚM HƠN (trước khi chạm tới lời gọi đó), test sẽ vỡ với `UnnecessaryStubbingException` dù logic đúng — chỉ stub đúng những gì nhánh code thật sự sẽ gọi tới trong test đó.
-- Lưu ý: phát hiện ở M11 — `GlobalExceptionHandler` ban đầu (từ M1-M7) chưa bắt `HttpMessageNotReadableException` (body JSON hỏng hoặc sai kiểu, VD gửi chuỗi cho field `Boolean`) và `MethodArgumentTypeMismatchException` (path variable sai kiểu, VD `/api/vocabulary/abc/save`) — cả 2 rơi xuống handler `Exception.class` chung, trả nhầm `500` thay vì `400`. Vá ở M11 bằng 2 `@ExceptionHandler` riêng. Lỗi có từ trước M11 nhưng chỉ lộ rõ khi M11 là milestone đầu tiên có field kiểu `Boolean` trong request body.
+- Lưu ý: phát hiện ở M11 — `GlobalExceptionHandler` ban đầu (từ M1-M7) chưa bắt `HttpMessageNotReadableException` (body JSON hỏng hoặc sai kiểu, VD gửi chuỗi cho field `Boolean`) và `MethodArgumentTypeMismatchException` (path variable sai kiểu, VD `/api/vocabulary/abc/save`) — cả 2 rơi xuống handler `Exception.class` chung, trả nhầm `500` thay vì `400`. Vá ở M11 bằng 2 `@ExceptionHandler` riêng. Lỗi có từ trước M11 nhưng chỉ lộ rõ khi M11 là milestone đầu tiên có field kiểu `Boolean` trong request body. (M13: các handler vá từng cái này được thay bằng cách kế thừa `ResponseEntityExceptionHandler`, xem bullet M13 bên dưới; chỉ còn handler riêng cho `MultipartException` và `MethodArgumentTypeMismatchException`.)
 - Lưu ý: phát hiện ở M11 — 1 tính năng cho phép sửa/xoá dữ liệu Admin quản lý (Topic/Flashcard) phải được rà lại MỖI KHI thêm 1 entity cá nhân mới tham chiếu tới nó qua FK (ở đây là `UserVocabulary` tham chiếu `Flashcard`), nếu không sẽ vi phạm rule "không cascade xoá lịch sử cá nhân" (mục 2.3) một cách âm thầm — Admin xoá Flashcard/Topic thành công nhưng để lại bản ghi `UserVocabulary` mồ côi, hoặc tệ hơn là câu lệnh xoá tự nổ lỗi 500 do vi phạm ràng buộc FK nếu FK đó có cascade ở tầng DB.
 - Lưu ý: phát hiện ở M12 — `Specification` + `Pageable` có `Sort`: nếu `Pageable` truyền vào `findAll(spec, pageable)` có `Sort`, Spring Data **ghi đè** `ORDER BY` do chính `Specification` đặt, nên `sort=recent`/`title` âm thầm mất tác dụng mà không báo lỗi. Khi `ORDER BY` nằm trong `Specification` (như `TopicSpecifications`, `DictationLessonSpecifications`), phải dùng `PageRequest.of(page, size)` **không kèm Sort**. Có test `ArgumentCaptor<Pageable>` khoá lại (`pageable.getSort().isUnsorted()`).
 - Lưu ý: phát hiện ở M12 — PostgreSQL xếp `NULL` lên **đầu** khi `ORDER BY ... DESC`. Khi sắp xếp theo cột có thể rỗng (VD thời điểm làm bài gần nhất, bài chưa làm = null), bản ghi null sẽ nằm trên cùng. Giải quyết bằng một khoá sắp xếp đứng trước: `CASE WHEN EXISTS(...) THEN 0 ELSE 1 END`.
 - Lưu ý: phát hiện ở M12 — `ON DELETE CASCADE` ở DB chỉ xoá **record**, không xoá **file** trên đĩa. Với entity có file đính kèm bị cascade theo cha (Lesson theo Topic), Service phải đọc danh sách đường dẫn file **trước khi xoá** (sau khi xoá, record con đã biến mất theo cascade nên danh sách rỗng), rồi publish `FileDeletionEvent` cho từng file. Tương tự, khi upload phải tìm entity **trước** khi gọi `storeAudio`/`storeImage`, nếu không entity không tồn tại vẫn sinh ra file mồ côi.
-- Lưu ý: phát hiện ở M12 — `GlobalExceptionHandler` chưa bắt `HttpRequestMethodNotSupportedException`, `HttpMediaTypeNotSupportedException`, `MultipartException` nên cả ba rơi vào handler `Exception` chung và trả nhầm `500` (VD gọi endpoint upload bằng body JSON). Đã vá bằng 3 handler riêng (`405`, `415`, `400`). Cùng loại lỗ hổng với bullet M11 phía trên.
+- Lưu ý: phát hiện ở M12 — `GlobalExceptionHandler` chưa bắt `HttpRequestMethodNotSupportedException`, `HttpMediaTypeNotSupportedException`, `MultipartException` nên cả ba rơi vào handler `Exception` chung và trả nhầm `500` (VD gọi endpoint upload bằng body JSON). Đã vá bằng 3 handler riêng (`405`, `415`, `400`). Cùng loại lỗ hổng với bullet M11 phía trên. (M13: các handler vá từng cái này được thay bằng cách kế thừa `ResponseEntityExceptionHandler`, xem bullet M13 bên dưới; chỉ còn handler riêng cho `MultipartException` và `MethodArgumentTypeMismatchException`.)
 - Lưu ý: phát hiện ở M12 — Spring chỉ tự chọn constructor khi class có đúng một constructor; nếu thêm constructor thứ hai (để giữ test cũ không phải sửa, như `FileStorageServiceImpl` 3 và 4 tham số), phải gắn `@Autowired` vào constructor mà Spring cần dùng, thiếu thì báo "No default constructor found". Ngoài ra, stub Mockito lồng nhau (`when(a).thenReturn(helper())` mà `helper()` bên trong lại gọi `when(...)`) ném `UnfinishedStubbingException` — tạo đối tượng mock ra biến riêng trước rồi mới stub.
 - Lưu ý: phát hiện ở M12 (Frontend) — khối `catch` chỉ hiện một câu cố định (VD "Failed to load topics") che mất nguyên nhân thật: `truncate()` ném `TypeError` vì `Topic.description` là `null` (cột cho phép NULL) làm cả trang Admin báo lỗi mà không có dấu vết. Luôn `console.error('[tênHàm]', error)` và hiện `error.message` trong `catch`.
+- Lưu ý: phát hiện ở M13 — `@ExceptionHandler(Exception.class)` trong `@RestControllerAdvice` **nuốt mọi exception chuẩn của Spring MVC chưa được khai báo riêng** (thiếu `@RequestParam` → `MissingServletRequestParameterException`, `@Size` trên tham số → `HandlerMethodValidationException`...) và trả `500`. Cơ chế: exception đi vào `ExceptionHandlerExceptionResolver` (các `@ExceptionHandler` của project) TRƯỚC `DefaultHandlerExceptionResolver` (nơi biết map sang 400/405/415...); handler `Exception.class` khớp mọi thứ nên resolver sau không bao giờ chạy tới. Đây là gốc của lỗi lặp lại ở M11 và M12. Giải pháp ở M13: `GlobalExceptionHandler extends ResponseEntityExceptionHandler` (lớp cha khai báo sẵn ~15 exception chuẩn với status đúng), ghi đè `handleExceptionInternal` để đổi body sang `ErrorResponse {message, status, timestamp}`, cộng 3 method giữ message theo hợp đồng cũ (`handleMethodArgumentNotValid` dạng `field:message`, `handleHttpMessageNotReadable`, `handleHandlerMethodValidationException`). Khi nhiều handler cùng khớp, Spring chọn handler có kiểu exception **gần nhất** trong cây kế thừa (vì vậy `MaxUploadSizeExceededException` ra `413` của lớp cha, không rơi vào handler `MultipartException` của project).
+- Lưu ý: quyết định ở M13 — `DataIntegrityViolationException` không khớp constraint nào Service đã biết **giữ `500`** (không đổi thành `409`): Service đã tự bắt các constraint biết trước và đổi thành `ResourceConflictException`, nên vi phạm lạ lọt tới đây là bug phía server, trả `409` sẽ che mất nó. Mọi `5xx` (kể cả từ lớp cha như `MissingPathVariableException`) trả message cố định `Internal server error`, chi tiết chỉ nằm trong log (`log.error`). `HttpMessageNotReadable` giữ message `Malformed or missing request body` (là một phần hợp đồng API, không để câu chữ của Spring quyết định).
+- Lưu ý: M13 — lỗi `401`/`403` sinh ra ở tầng Security Filter Chain, TRƯỚC khi tới Controller nên `@RestControllerAdvice` không bắt được. Phải cấu hình `AuthenticationEntryPoint` (`JsonAuthenticationEntryPoint`) và `AccessDeniedHandler` (`JsonAccessDeniedHandler`) trong `SecurityConfig.exceptionHandling(...)` để body có cùng shape `{message, status, timestamp}`. Message cố định, không dùng `ex.getMessage()`, không log username/token.
+- Lưu ý: M13/M14 — integration test dùng `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` + Testcontainers PostgreSQL (một container dùng chung qua lớp cha `PostgresIntegrationTestBase`, `static { start(); }`). Flyway chạy V1→V11 thật trên container nên migration cũng được kiểm chứng. Bẫy: sau một lần flush thất bại (vi phạm unique/FK) PostgreSQL đánh dấu transaction aborted nên câu ném lỗi phải là câu **cuối** của test; test cascade cần `em.clear()` trước khi xoá (nếu không Hibernate báo lỗi trước khi tới DB) và sau khi xoá (nếu không `findById` trả bản cũ); `Instant.now()` có nano giây nhưng `TIMESTAMPTZ` chỉ giữ micro giây nên cần `truncatedTo(MICROS)` khi so sánh. Test mới nên có "mutation check" (tạm phá logic, test phải đỏ rồi hoàn tác).
+- Lưu ý: M14 — **cache hit bỏ qua toàn bộ thân method**, kể cả các check quyền/trạng thái bên trong. Với `@Cacheable` thì việc evict đúng là hàng rào DUY NHẤT. Phát hiện: `TopicCacheEvictionListener` từng chỉ evict `topics`/`topicDetails` nên sau khi xoá/archive Topic, `GET /api/topics/{id}/flashcards` vẫn trả flashcard cũ từ Redis (lỗi có sẵn từ M5). Đã vá: evict thêm `flashcardsByTopic::{topicId}`. Quy tắc mới: khi dữ liệu cache phụ thuộc thuộc tính của entity cha (trạng thái Topic), event của cha phải evict cache của con.
+- Lưu ý: M14 — nguyên tắc "mặc định đóng" cho điều kiện lọc quyền hiển thị: entity mới mặc định `DRAFT` (Service đặt tường minh), `Specification` tách hai điểm vào `forLearners(...)` (cố định `PUBLISHED`, không có tham số status nên không thể gọi nhầm) và `forAdmin(..., status)`; query phía người học dùng derived query có tên nói rõ (`findByIdAndStatusAndTopic_Status`). Query không lọc status chỉ còn tồn tại cho Admin. Query phía người học không còn dùng thì xoá hẳn (compiler sẽ chỉ chỗ còn gọi).
+- Lưu ý: M14 — Flyway ghi checksum từng migration đã chạy; **không sửa migration đã áp dụng vào DB thật**, phải thêm migration mới. Viết xong file SQL hoàn chỉnh rồi mới chạy bất cứ thứ gì có thể chạm DB thật (`spring-boot:run`); `mvnw test` an toàn vì dùng container tạo mới.
+- Lưu ý: M14 — JPQL nối chuỗi Java thiếu khoảng trắng (`"... >= :minScore" + "AND ..."` → `:minScoreAND`) làm Spring không dựng được context, nên MỌI test `@DataJpaTest`/`@SpringBootTest` đỏ kể cả test không liên quan. Khi test hàng loạt đỏ vô lý, đọc lỗi khởi động context trước.
 
 ---
 
@@ -109,8 +117,9 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
   - Khi dữ liệu nguồn thay đổi (Admin CUD Topic/Flashcard), invalidate các cache liên quan
   - Không bắt buộc cache mọi biến thể search/filter/pagination — chỉ cache các query có lợi ích rõ ràng (VD: trang đầu, không filter), tránh biến Redis thành hàng nghìn cache key khó kiểm soát khi có FR-9 (search/filter)
   - **Dependency Topic ↔ Flashcard — ĐÃ CHỐT tại M5:** `TopicResponse` hiện **không** có field tổng hợp từ Flashcard (không có `flashcardCount` hay tương tự), nên cập nhật Flashcard **không** cần invalidate chéo cache Topic — 2 cache (`topics`/`topicDetails` và `flashcardsByTopic`) hoàn toàn độc lập. Nếu sau này `TopicResponse` được bổ sung field tổng hợp từ Flashcard, phải quay lại bổ sung evict chéo ở `FlashcardService` (evict thêm cache `topics`/`topicDetails` khi Flashcard CUD).
+  - **CẬP NHẬT M14 (06/10/2026):** kết luận "2 cache độc lập" ở trên chỉ đúng khi `TopicResponse` không phụ thuộc Flashcard. Từ M14, danh sách Flashcard của một Topic phụ thuộc **trạng thái Topic** (Topic không `PUBLISHED` thì 404), nên `TopicChangedEvent(topicId != null)` evict thêm `flashcardsByTopic::{topicId}` (cạnh `topics` và `topicDetails::{id}`). Event tạo mới (`topicId = null`) chỉ clear `topics`. `TopicResponse` có thêm field `status`; sau khi triển khai nên `FLUSHALL` Redis dev một lần.
 
-- **ĐÃ CHỐT 23/09/2026 (M9):** `GET /api/topics`, `GET /api/topics/{id}`, `GET /api/topics/{id}/flashcards`, `GET /api/topics/{id}/quizzes` chuyển thành **public** (không cần JWT) — cho phép khách xem trước khi đăng ký, đúng tinh thần trang chủ mời chào người dùng mới. Các hành động sâu hơn (làm Quiz, Chat AI, xem Progress cá nhân) vẫn bắt buộc đăng nhập như cũ.
+- **ĐÃ CHỐT 23/09/2026 (M9):** `GET /api/topics`, `GET /api/topics/{id}`, `GET /api/topics/{id}/flashcards`, `GET /api/topics/{id}/quizzes` chuyển thành **public** (không cần JWT) — cho phép khách xem trước khi đăng ký, đúng tinh thần trang chủ mời chào người dùng mới. Các hành động sâu hơn (làm Quiz, Chat AI, xem Progress cá nhân) vẫn bắt buộc đăng nhập như cũ. (Từ M14 chỉ trả nội dung `PUBLISHED`, xem FR-10.)
 
 ### FR-4: Quiz & Đánh giá `[MVP]`
 - FR-4.1 (Admin): Tạo `Quiz` + `QuizQuestion` (trắc nghiệm) thuộc 1 Topic
@@ -131,7 +140,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - FR-5.1: User xem được tiến độ học của mình: `UserProgress` theo từng Topic (trạng thái hiện tại), và có thể xem lại lịch sử các lần làm quiz qua `QuizAttempt`
 - FR-5.2: User chỉ được xem tiến độ/lịch sử của chính mình — không cho truyền `userId` để xem của người khác (áp dụng cùng nguyên tắc FR-2.7)
 - FR-5.3: (Mở rộng, không bắt buộc) Thống kê tổng quan: số từ đã học, số quiz đã làm
-- FR-5.4: Công thức tính `UserProgress.progressPercent`. **ĐÃ CHỐT 03/09/2026 (M3):** xem công thức đầy đủ ở mục 8.
+- FR-5.4: Công thức tính `UserProgress.progressPercent`. **ĐÃ CHỐT 03/09/2026 (M3):** xem công thức đầy đủ ở mục 8. **CẬP NHẬT M14:** cả tử số (số Quiz "đạt") lẫn mẫu số (tổng số Quiz của Topic) chỉ đếm Quiz có `status = PUBLISHED` (`countAchievedQuizzesInTopic(..., status)` và `countByTopic_IdAndStatus`), để `progressPercent` không bao giờ vượt 100 khi có Quiz bị archive. Giá trị đã lưu không tính lại hàng loạt, chỉ cập nhật ở lần nộp bài kế tiếp.
 - FR-5.5 *(mới, M9)*: `GET /api/users/me/quiz-attempts?page=&size=` — lịch sử làm bài **tổng hợp mọi Quiz** của chính User, sort mới nhất trước. Khác với `GET /api/quizzes/{id}/attempts` (chỉ giới hạn theo 1 Quiz cụ thể, đã có từ M3) — dùng cho trang Progress hiển thị hoạt động gần đây không phân biệt Quiz nào.
 
 ### FR-6: Quản lý file upload `[MVP]`
@@ -146,7 +155,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - FR-6.3: Validate và xử lý lỗi file không hợp lệ
 - **ĐÃ CHỐT 10/09/2026 (M7)** — chi tiết implement:
   - Vị trí lưu: `app.upload.dir` (config, ngoài classpath), chia subfolder theo loại (`topics/`, `flashcards/`, `avatars/`)
-  - Giới hạn dung lượng: 5MB/file, chặn ở 2 lớp độc lập — `spring.servlet.multipart.max-file-size` (Spring tự chặn trước) và tự check lại thủ công trong `FileStorageService` (không tin 1 lớp validate duy nhất)
+  - Giới hạn dung lượng: 5MB/file, chặn ở 2 lớp độc lập — `spring.servlet.multipart.max-file-size` (Spring tự chặn trước) và tự check lại thủ công trong `FileStorageService` (không tin 1 lớp validate duy nhất). Vượt giới hạn Spring multipart trả `413` (M13).
   - Kiểm tra nội dung file thật: dùng `javax.imageio.ImageIO` đọc thử ảnh (`ImageReader.read()`) — nếu không đọc được hoặc `formatName` không thuộc `jpeg`/`png`, từ chối dù `Content-Type` header client khai đúng. Không dùng Apache Tika (không cần thiết ở quy mô hiện tại)
   - Filename: `UUID.randomUUID()` + extension xác định từ **format ảnh thật đã đọc được** (`ImageReader.getFormatName()`), không dựa vào Content-Type header hay tên file gốc — do đó path traversal bị loại trừ hoàn toàn bằng thiết kế (UUID không thể chứa `../`)
   - Serve file: `WebMvcConfig` map `/uploads/**` ra thư mục thật qua `addResourceHandlers`, route này `permitAll()` trong `SecurityConfig` (ảnh cần xem được qua thẻ `<img>` không cần đính JWT)
@@ -157,7 +166,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 
 ---
 
-## 2.1. MỞ RỘNG SAU MVP `[v1.1]` (Milestone M10–M12)
+## 2.1. MỞ RỘNG SAU MVP `[v1.1-v1.2]` (Milestone M10–M14)
 
 Sau khi hoàn thành MVP (M1–M9), tham khảo thêm sản phẩm Parroto, đã chọn 3 nhóm tính năng **ưu tiên làm trước** vì giá trị học Backend cao và độ phức tạp vừa sức để tiếp cận ngay sau MVP. Toàn bộ các nhóm còn lại (Shadowing, Voice Chat, Exam đầy đủ, YouTube Generator, Notification, Gamification...) **vẫn nằm trong kế hoạch**, được ghi ở mục 9 — Định hướng mở rộng dài hạn, làm sau khi nền tảng đã vững.
 
@@ -177,11 +186,11 @@ Người học nghe audio rồi gõ lại câu nghe được, hệ thống so s�
 **ĐÃ CHỐT 03/10/2026 (M12) — không lộ transcript:** mọi response phía User trước khi nộp bài (`DictationLessonResponse`, `DictationCatalogItem`) **không có `transcript`**; transcript chỉ xuất hiện trong response của `submit`. Admin có endpoint riêng trả `transcript` để điền form sửa.
 
 **ĐÃ CHỐT 03/10/2026 (M12) — thuật toán so sánh (FR-7.4/7.5), `DictationComparator`** (static pure function, không phụ thuộc Spring):
-- Chuẩn hoá: hạ chữ thường, `’` → `'`, `-` → khoảng trắng, xoá mọi ký tự không phải chữ/số/`'`/khoảng trắng (`\p{L}\p{N}`), cắt `'` ở đầu/cuối mỗi từ, tách theo khoảng trắng.
+- Chuẩn hoá (**đổi ở M13, 05/10/2026**): hạ chữ thường, `’` → `'`, mọi ký tự không phải chữ/số (`\p{L}\p{N}`)/`'`/khoảng trắng — kể cả `-` và dấu câu — được thay bằng **khoảng trắng** (không còn xoá), cắt `'` ở đầu/cuối mỗi từ, tách theo khoảng trắng.
 - So khớp mức từ bằng LCS (bảng quy hoạch động hướng suffix; quy ước khi hoà: ưu tiên bỏ từ của transcript trước, có test khoá lại). Giữa hai từ khớp liên tiếp: ghép từng cặp theo vị trí thành `WRONG` (`word` = từ user gõ, `expected` = từ transcript), phần transcript dư là `MISSING`, phần user dư là `EXTRA`.
 - `accuracy = round1(100 × số từ CORRECT / max(số từ transcript, số từ user))` (làm tròn 1 chữ số thập phân) — gõ thừa nhiều từ không thể lấy điểm cao.
 - Giới hạn: tối đa 1000 từ mỗi bên (`DictationComparator.MAX_WORDS`) và `@Size(max = 5000)` ký tự, vì bảng LCS tốn O(n×m). Admin cũng bị kiểm tra transcript (không rỗng sau chuẩn hoá, ≤ 1000 từ) khi tạo/sửa. Input chuẩn hoá ra rỗng → `400`.
-- Giới hạn chấp nhận: dấu câu bị xoá chứ không thành khoảng trắng (`hello,world` → `helloworld`); số viết bằng chữ số và bằng chữ coi là khác nhau (`5` ≠ `five`).
+- Giới hạn chấp nhận (M13): dấu đứng giữa hai chữ cũng tách từ (`hello,world` → `hello world`, 2 từ — đây là mục đích của thay đổi), nhưng hệ quả là `1,000` → `1` `000`, `3.5` → `3` `5`, `U.S.A.` → `u s a`. Số viết bằng chữ số và bằng chữ coi là khác nhau (`5` ≠ `five`). Vì vậy Admin nên viết số không có dấu phân cách (`1000`) và viết tắt không dùng dấu chấm (`USA`); hướng dẫn này đặt ở form Admin. Giới hạn 1000 từ được đếm **sau** chuẩn hoá. Dữ liệu cũ không cần migrate (`DictationResult.accuracy` lưu tại thời điểm làm bài, không tính lại).
 - `DictationResult.userInput` lưu **nguyên văn** bản người dùng gõ; `accuracy` kiểu `Double`; `createdAt` do server lấy từ `Clock`.
 
 **ĐÃ CHỐT 03/10/2026 (M12) — ownership & quy tắc xoá:** `DictationResult` chỉ lấy theo `userId` của JWT. Xoá Lesson đã có Result → `409`; xoá Topic mà **bất kỳ Lesson nào** của nó đã có Result → `409` (retrofit `TopicService.deleteTopic()` — Service cũ từ M2, dễ bỏ sót nhất của milestone, xem thêm mục 1.4). `dictation_lessons.topic_id` là `ON DELETE CASCADE` (nội dung Admin), `dictation_results` không cascade (lịch sử cá nhân). Vì cascade ở DB chỉ xoá record, `deleteTopic()` đọc danh sách `mediaUrl` của các Lesson **trước khi xoá** rồi publish một `FileDeletionEvent` cho mỗi file.
@@ -220,6 +229,20 @@ Nâng cấp Flashcard hiện có thành hệ thống ôn từ vựng cá nhân h
 - **Search + Filter + Sort + Pagination đầy đủ:** `GET /api/topics` (đây là danh sách chính người dùng duyệt/tìm, xứng đáng đầu tư đầy đủ) và `GET /api/dictation/lessons` (M12 — danh mục bài Dictation, xem FR-7.8)
 - **Chỉ Pagination đơn giản (page, size), không cần search/filter:** `GET /api/conversations`, `GET /api/quizzes/{id}/attempts`, `GET /api/vocabulary/today` (v1.1), lịch sử `DictationResult` (v1.1) — đây là các danh sách cá nhân, thường không lớn và không cần tìm kiếm phức tạp
 - **Không cần pagination (danh sách nhỏ, cố định theo 1 Topic):** `GET /api/topics/{id}/flashcards`, `GET /api/topics/{id}/quizzes`
+
+### FR-10: Trạng thái nội dung Draft / Published / Archived `[v1.2]` — ĐÃ IMPLEMENT 06/10/2026 (M14)
+Thay cách làm "chỉ được xoá khi chưa có dữ liệu phụ thuộc" (mục 2.3) bằng một lối thoát có chủ đích: Admin **ẩn** nội dung đã có lịch sử học mà không mất dữ liệu, và soạn nháp trước khi công bố.
+- FR-10.1: `Topic`, `Quiz`, `DictationLesson` có cột `status` (`DRAFT`/`PUBLISHED`/`ARCHIVED`, `@Enumerated(STRING)`). `Flashcard` **không** có status riêng, thừa hưởng từ Topic cha (Admin hiếm khi cần nháp từng thẻ; sửa thẻ đã có PUT).
+- FR-10.2: **Trạng thái hiệu lực** = bản thân `PUBLISHED` VÀ Topic cha `PUBLISHED`. Không lưu lan trạng thái xuống con (archive Topic không ghi `ARCHIVED` cho N Quiz) để khôi phục Topic không làm mất thông tin Quiz nào vốn đã `DRAFT`.
+- FR-10.3: Ai thấy gì. Khách/User chỉ thấy nội dung có trạng thái hiệu lực `PUBLISHED`; nội dung khác trả `404` (theo mục 2.3, không tiết lộ sự tồn tại). Admin thấy mọi trạng thái qua endpoint `/api/admin/**` riêng (không cache). Với endpoint danh sách, nội dung không `PUBLISHED` đơn giản không xuất hiện trong kết quả (không có `404`); `404` chỉ áp dụng khi truy cập trực tiếp một tài nguyên theo id hoặc theo Topic cha.
+  - Lọc theo trạng thái hiệu lực: `GET /api/topics`, `/api/topics/{id}`, `/api/topics/{id}/flashcards`, `/api/topics/{id}/quizzes`, `GET /api/quizzes/{id}`, `POST /api/quizzes/{id}/submit`, `GET /api/topics/{id}/dictation`, `GET /api/dictation/lessons`, `POST /api/dictation/{id}/submit`, `POST /api/vocabulary/{flashcardId}/save`.
+  - **Không lọc (lịch sử cá nhân vẫn xem được sau khi archive):** `GET /api/users/me/progress`, `GET /api/users/me/quiz-attempts`, `GET /api/quizzes/{id}/attempts`, toàn bộ `/api/vocabulary/*` trừ `save` (sổ từ vẫn ôn được vì SRS không được làm mất từ đã lưu), `GET /api/dictation/{id}/results`. Các `getMyResults` dùng `existsById` không lọc status là CÓ CHỦ ĐÍCH.
+- FR-10.4: Giá trị mặc định. Entity và Service đặt `DRAFT` tường minh khi Admin tạo mới (hệ quả: tạo xong phải bấm Publish mới hiện với người học). Migration V11: dòng cũ → `PUBLISHED` (nội dung đang chạy không biến mất), `CHECK (status IN (...))` tên `ck_<bảng>_status`, rồi `DROP DEFAULT` để Entity luôn tự đặt giá trị. Không thêm index cho `status` (chỉ 3 giá trị, cùng lập luận với `level` ở FR-9).
+- FR-10.5: Đổi trạng thái qua endpoint riêng `PATCH /api/admin/{topics|quizzes|dictation}/{id}/status` body `{status}` (không qua `PUT`, để sửa tiêu đề không vô tình đổi trạng thái). **Cho phép chuyển tự do giữa cả ba giá trị** (ĐÃ CHỐT 06/10/2026): lý do dùng archive là ẩn nội dung đã có lịch sử, và archive nhầm phải khôi phục được ngay. Điều kiện duy nhất, chỉ áp cho `PUBLISHED`: Quiz phải có ≥ 1 câu hỏi, Dictation phải có audio, nếu không `409`. Topic không có điều kiện. Giá trị lạ → `400`.
+- FR-10.6: Archive và xoá cứng cùng tồn tại. Archive luôn được phép. Xoá cứng giữ nguyên quy tắc mục 2.3 (chưa có dữ liệu phụ thuộc, nếu không `409`); message `409` gợi ý archive thay vì xoá (với Flashcard gợi ý archive Topic cha).
+- FR-10.7: Bất biến "Quiz `PUBLISHED` luôn có ≥ 1 câu hỏi": cổng vào là điều kiện publish (FR-10.5), cổng ra là `DELETE /api/admin/questions/{id}` trả `409` nếu đó là câu cuối của Quiz đang `PUBLISHED`. Quiz `DRAFT`/`ARCHIVED` xoá câu cuối được. **Giới hạn đã biết:** hai Admin cùng xoá hai câu cuối ở hai transaction song song có thể làm Quiz rỗng (race condition, chấp nhận vì chỉ Admin dùng; cách vá nếu cần: khoá bản ghi Quiz bằng `PESSIMISTIC_WRITE` trong `deleteQuestion`).
+- FR-10.8: Cache. `TopicChangedEvent` (AFTER_COMMIT) phát khi đổi trạng thái Topic, listener evict `topics`, `topicDetails::{id}` và `flashcardsByTopic::{id}` (xem FR-3.5). Quiz và Dictation chưa có cache nên chưa phát event.
+- FR-10.9: Response: `TopicResponse` và `QuizSummaryResponse` có thêm `status` (phía người học luôn là `PUBLISHED` nên không lộ gì); `AdminDictationLessonResponse` có thêm `status`.
 
 ---
 
@@ -266,7 +289,7 @@ Nguyên tắc chung: **mọi entity gắn với 1 User cụ thể chỉ được
 **Content deletion — không cascade xóa lịch sử cá nhân:**
 - Không hard-delete cascade xuống dữ liệu lịch sử cá nhân của User (`QuizAttempt`, `UserProgress`, và tương tự ở v1.1 như `DictationResult`, `UserVocabulary`)
 - MVP chọn cách đơn giản: Admin **chỉ được `DELETE` Topic/Quiz/Flashcard/Question/Dictation Lesson khi resource đó chưa có dữ liệu phụ thuộc** (chưa có `QuizAttempt`/`UserProgress`/`UserVocabulary`/`DictationResult` nào tham chiếu tới, kể cả gián tiếp: Topic bị chặn nếu Flashcard hoặc Dictation Lesson của nó đã có dữ liệu cá nhân) — nếu đã có, API trả `409 Conflict`
-- Cơ chế soft-delete/trạng thái nội dung (`DRAFT`/`PUBLISHED`/`ARCHIVED` — đã nêu ở mục 9, Admin Content Management `[v2+]`) sẽ thay thế cách làm đơn giản này khi làm tới v2+
+- **ĐÃ THỰC HIỆN ở M14 (FR-10):** cơ chế trạng thái nội dung `DRAFT`/`PUBLISHED`/`ARCHIVED` đã được thêm như một lối thoát bổ sung, KHÔNG thay thế quy tắc `409` ở trên: xoá cứng vẫn bị chặn khi có dữ liệu phụ thuộc, Admin dùng archive để ẩn nội dung đó mà không mất lịch sử.
 
 **Database indexing:**
 - Cân nhắc thêm index cho các cột khóa ngoại (FK) và các cột thường dùng để filter/sort/query
@@ -281,9 +304,9 @@ Nguyên tắc chung: **mọi entity gắn với 1 User cụ thể chỉ được
 |---|---|
 | NFR-1 | API tuân thủ REST convention (đúng HTTP method, status code) đã học ở Phase 2 |
 | NFR-2 | Áp dụng Layered Architecture + DTO (không expose Entity trực tiếp) — Phase 5 |
-| NFR-3 | Có Global Exception Handler (`@ControllerAdvice`) xử lý lỗi thống nhất |
+| NFR-3 | Có Global Exception Handler (`@RestControllerAdvice`, kế thừa `ResponseEntityExceptionHandler`) xử lý lỗi thống nhất; lỗi `401`/`403` từ tầng Security cũng trả cùng shape `{message, status, timestamp}` (M13) |
 | NFR-4 | Có Validation (`@Valid`, Bean Validation) cho input |
-| NFR-5 | Viết Unit Test (JUnit/Mockito) cho Service layer, tối thiểu các luồng chính. **Hoàn thành 13/09/2026 (M8):** 110 test case trên 10 class (5 Service chính bắt buộc + `FileStorageServiceImpl`/`ChatServiceImpl` optional + `JwtUtil`/2 `CacheEvictionListener` phát sinh trong lúc làm). Phạm vi: Unit test thuần, Mockito mock toàn bộ Repository/dependency, không dùng `@DataJpaTest`/Testcontainers (để dành M9 nếu cần integration test). Coverage tính theo nhánh logic (happy path + mọi nhánh throw exception), không chạy theo %. **Cập nhật M12 (03/10/2026):** tổng 198 test trên 14 class, chi tiết ở `Session_Summary.md` mục 6.|
+| NFR-5 | Viết Unit Test (JUnit/Mockito) cho Service layer, tối thiểu các luồng chính. **Hoàn thành 13/09/2026 (M8):** 110 test case trên 10 class (5 Service chính bắt buộc + `FileStorageServiceImpl`/`ChatServiceImpl` optional + `JwtUtil`/2 `CacheEvictionListener` phát sinh trong lúc làm). Phạm vi: Unit test thuần, Mockito mock toàn bộ Repository/dependency, không dùng `@DataJpaTest`/Testcontainers (để dành M9 nếu cần integration test). Coverage tính theo nhánh logic (happy path + mọi nhánh throw exception), không chạy theo %. **Cập nhật M12 (03/10/2026):** tổng 198 test trên 14 class, chi tiết ở `Session_Summary.md` mục 6. **Cập nhật M14 (06/10/2026):** tổng **339 test**, gồm cả integration test trên PostgreSQL thật (Testcontainers: `DictationRepositoryTest`, `TopicRepositoryTest`, `QuizRepositoryTest`, `QuizAttemptRepositoryTest`), `GlobalExceptionHandlerTest` (MockMvc standalone), `TopicQueryParserTest`. Còn nợ: unit test cho `JsonAccessDeniedHandler`/`JsonAuthenticationEntryPoint`.|
 | NFR-6 | Cache Redis phải có chiến lược invalidate rõ ràng, tránh dữ liệu cũ |
 | NFR-7 | JWT token có thời gian hết hạn hợp lý, không lưu password dạng plaintext |
 | NFR-8 | Code cần được rà soát cú pháp/chính tả annotation kỹ trước khi chạy (điểm yếu đã ghi nhận) |
@@ -336,7 +359,8 @@ Topic
  ├─ description: String
  ├─ level: Enum(BEGINNER, INTERMEDIATE, ADVANCED)
  ├─ imageUrl: String
- └─ createdAt: Instant   — ĐÃ CHỐT 29/09/2026 (M10), thêm qua migration V8, dùng cho sort=newest (FR-9.4); dòng cũ backfill = NOW() lúc migrate
+ ├─ createdAt: Instant   — ĐÃ CHỐT 29/09/2026 (M10), thêm qua migration V8, dùng cho sort=newest (FR-9.4); dòng cũ backfill = NOW() lúc migrate
+ └─ status: Enum(DRAFT, PUBLISHED, ARCHIVED)   — M14, migration V11, mặc định khi tạo = DRAFT (FR-10)
   [DB constraint: UNIQUE(title, level) — chốt 02/09/2026, cho phép trùng title nếu khác level]
 
 Flashcard
@@ -348,12 +372,13 @@ Flashcard
  ├─ meaning: String
  ├─ example: String
  ├─ imageUrl: String
- └─ audioUrl: String (nullable)   — CHỐT: URL external do Admin tự nhập (VD: link từ điển online có sẵn audio phát âm), KHÔNG phải file do hệ thống tự lưu trữ. FR-6 (file upload) chỉ áp dụng cho ảnh — không mở rộng sang audio ở MVP để tránh kéo thêm phạm vi không cần thiết (ngoại lệ từ M12: audio của Dictation là file upload thật, xem FR-7)
+ └─ audioUrl: String (nullable)   — CHỐT: URL external do Admin tự nhập (VD: link từ điển online có sẵn audio phát âm), KHÔNG phải file do hệ thống tự lưu trữ. FR-6 (file upload) chỉ áp dụng cho ảnh — không mở rộng sang audio ở MVP để tránh kéo thêm phạm vi không cần thiết (ngoại lệ từ M12: audio của Dictation là file upload thật, xem FR-7). (M14: không có status riêng, thừa hưởng trạng thái từ Topic, xem FR-10.1)
 
 Quiz
  ├─ id: Long
  ├─ topic: Topic (ManyToOne)     — CHỐT: 1 Topic có thể có nhiều Quiz (VD: Travel → Vocabulary Quiz, Grammar Quiz, Conversation Quiz)
- └─ title: String
+ ├─ title: String
+ └─ status: Enum(DRAFT, PUBLISHED, ARCHIVED)   — M14, migration V11 (FR-10)
   [DB constraint: UNIQUE INDEX (topic_id, LOWER(title)) — chốt 23/09/2026 (M9), chặn trùng tên Quiz (không phân biệt hoa/thường) trong cùng 1 Topic]
 
 QuizQuestion
@@ -410,7 +435,8 @@ DictationLesson — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
  ├─ title: String
  ├─ mediaUrl: String (nullable — NULL cho tới khi Admin upload audio; đường dẫn tương đối dạng /uploads/dictation/<uuid>.mp3)
  ├─ transcript: String (Text)
- └─ level: Enum(BEGINNER, INTERMEDIATE, ADVANCED) — @Enumerated(EnumType.STRING). Không có createdAt: "mới nhất" = id lớn nhất
+ ├─ level: Enum(BEGINNER, INTERMEDIATE, ADVANCED) — @Enumerated(EnumType.STRING). Không có createdAt: "mới nhất" = id lớn nhất
+ └─ status: Enum(DRAFT, PUBLISHED, ARCHIVED) — M14, migration V11 (FR-10). Bài chưa có audio không publish được
 
 DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
  ├─ id: Long
@@ -442,6 +468,8 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 
 ## 5. API ENDPOINTS
 
+**Quy ước lỗi chung (M13):** mọi lỗi trả `{message, status, timestamp}`. `400` (body hỏng/sai kiểu/thiếu tham số/validate), `401` (thiếu hoặc sai JWT), `403` (sai role), `404`, `405`, `409`, `413` (upload vượt giới hạn dung lượng), `415`, `500` (message cố định `Internal server error`), `503` (AI provider).
+
 ### Auth
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
@@ -464,7 +492,7 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 |---|---|---|---|
 | POST | `/api/admin/topics` | ADMIN | Tạo topic |
 | PUT | `/api/admin/topics/{id}` | ADMIN | Sửa topic |
-| DELETE | `/api/admin/topics/{id}` | ADMIN | Xóa topic. `409` nếu đã có `UserProgress`, `QuizAttempt`, `UserVocabulary` (qua flashcard của topic) hoặc `DictationResult` (qua lesson của topic). Sau commit, ảnh topic và audio của các Dictation Lesson trong topic được dọn khỏi đĩa |
+| DELETE | `/api/admin/topics/{id}` | ADMIN | Xóa topic. `409` nếu đã có `UserProgress`, `QuizAttempt`, `UserVocabulary` (qua flashcard của topic) hoặc `DictationResult` (qua lesson của topic). Sau commit, ảnh topic và audio của các Dictation Lesson trong topic được dọn khỏi đĩa. Message 409 gợi ý archive thay vì xoá (FR-10.6). |
 | POST | `/api/admin/topics/{id}/image` | ADMIN | Upload ảnh topic |
 | POST | `/api/admin/topics/{id}/flashcards` | ADMIN | Thêm flashcard vào topic |
 | PUT | `/api/admin/flashcards/{id}` | ADMIN | Sửa flashcard |
@@ -475,19 +503,19 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
 | GET | `/api/topics?page=&size=&keyword=&level=&sort=` | **Public** | Danh sách topic — search/filter/sort/pagination đầy đủ theo FR-9, ĐÃ IMPLEMENT 29/09/2026 (M10). `sort`: `newest` (mặc định) / `popular` / `title`. `keyword` tối đa 50 ký tự, tìm trong `title`+`description`, không phân biệt hoa/thường |
-| GET | `/api/topics/{id}` | **Public** | Chi tiết 1 topic |
-| GET | `/api/topics/{id}/flashcards` | **Public** | Danh sách flashcard theo topic |
+| GET | `/api/topics/{id}` | **Public** | Chi tiết 1 topic. Chỉ Topic `PUBLISHED`, nếu không `404` (FR-10.3) |
+| GET | `/api/topics/{id}/flashcards` | **Public** | Danh sách flashcard theo topic. Topic phải `PUBLISHED`, nếu không `404`; cache bị evict khi đổi trạng thái Topic |
 
 ### Quiz (Admin quản lý nội dung) `[MVP]`
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
 | POST | `/api/admin/topics/{id}/quizzes` | ADMIN | Tạo quiz mới thuộc topic |
 | PUT | `/api/admin/quizzes/{id}` | ADMIN | Sửa thông tin quiz |
-| DELETE | `/api/admin/quizzes/{id}` | ADMIN | Xóa quiz |
+| DELETE | `/api/admin/quizzes/{id}` | ADMIN | Xóa quiz. Message 409 gợi ý archive thay vì xoá (FR-10.6). |
 | POST | `/api/admin/quizzes/{quizId}/questions` | ADMIN | Thêm câu hỏi mới (bao gồm `correctAnswer`) vào quiz |
 | GET | `/api/admin/quizzes/{quizId}/questions` | ADMIN | Xem lại danh sách câu hỏi **kèm** `correctAnswer` (chỉ dùng điền sẵn form sửa) |
 | PUT | `/api/admin/questions/{id}` | ADMIN | Sửa câu hỏi |
-| DELETE | `/api/admin/questions/{id}` | ADMIN | Xóa câu hỏi |
+| DELETE | `/api/admin/questions/{id}` | ADMIN | Xóa câu hỏi. `409` nếu đó là câu hỏi cuối của Quiz đang `PUBLISHED` (FR-10.7) |
 
 ### Quiz (User làm bài) `[MVP]`
 | Method | Endpoint | Role | Mô tả |
@@ -516,12 +544,23 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 | GET | `/api/admin/topics/{id}/dictation` | ADMIN | *(bổ sung ngoài phạm vi gốc)* Danh sách bài của topic, CÓ `transcript`, gồm cả bài chưa có audio — dùng điền form sửa |
 | POST | `/api/admin/topics/{id}/dictation` | ADMIN | Tạo bài (`title`, `transcript`, `level`), `mediaUrl` = null (audio upload riêng). `200` |
 | PUT | `/api/admin/dictation/{id}` | ADMIN | Sửa `title`/`transcript`/`level` (KHÔNG đụng `mediaUrl`) |
-| DELETE | `/api/admin/dictation/{id}` | ADMIN | Xoá bài. `204`; `409` nếu đã có `DictationResult`. File audio dọn sau commit |
+| DELETE | `/api/admin/dictation/{id}` | ADMIN | Xoá bài. `204`; `409` nếu đã có `DictationResult`. File audio dọn sau commit. Message 409 gợi ý archive thay vì xoá (FR-10.6). |
 | POST | `/api/admin/dictation/{id}/audio` | ADMIN | *(bổ sung ngoài phạm vi gốc)* Upload audio multipart `file` (MP3/WAV/OGG/M4A, ≤ 10MB). Thay audio thì xoá file cũ sau commit |
-| GET | `/api/topics/{id}/dictation` | USER (cần JWT) | Bài đã có audio của topic, KHÔNG có `transcript` (không phân trang — nhỏ) |
+| GET | `/api/topics/{id}/dictation` | USER (cần JWT) | Bài đã có audio của topic, KHÔNG có `transcript` (không phân trang — nhỏ). Chỉ bài `PUBLISHED` có audio của Topic `PUBLISHED` |
 | GET | `/api/dictation/lessons?keyword=&topicId=&level=&progress=&sort=&page=&size=` | USER | *(bổ sung ngoài phạm vi gốc)* Danh mục bài kèm số liệu cá nhân (FR-7.8) |
 | POST | `/api/dictation/{id}/submit` | USER | Body `{userInput}`. `201`. Trả accuracy + từng từ (`CORRECT`/`WRONG`/`MISSING`/`EXTRA`) + transcript, lưu `DictationResult` |
 | GET | `/api/dictation/{id}/results?page=&size=` | USER | Lịch sử kết quả của chính mình cho bài này, mới nhất trước |
+
+### Admin — đọc dữ liệu mọi trạng thái & đổi trạng thái — ĐÃ IMPLEMENT 06/10/2026 (M14) (FR-10)
+| Method | Endpoint | Role | Mô tả |
+|---|---|---|---|
+| GET | `/api/admin/topics?page=&size=&keyword=&level=&sort=&status=` | ADMIN | Danh sách Topic mọi trạng thái, không cache. `status` rỗng = tất cả; giá trị lạ `400`. `keyword`/`level`/`sort` giống `GET /api/topics` (dùng chung `TopicQueryParser`) |
+| GET | `/api/admin/topics/{id}` | ADMIN | Chi tiết Topic ở mọi trạng thái |
+| GET | `/api/admin/topics/{id}/flashcards` | ADMIN | Flashcard của Topic ở mọi trạng thái, không cache |
+| GET | `/api/admin/topics/{id}/quizzes` | ADMIN | Quiz mọi trạng thái, kèm `questionCount` và `status` |
+| PATCH | `/api/admin/topics/{id}/status` | ADMIN | Body `{status}`. Chuyển tự do. Phát `TopicChangedEvent` |
+| PATCH | `/api/admin/quizzes/{id}/status` | ADMIN | Body `{status}`. `409` nếu publish Quiz chưa có câu hỏi |
+| PATCH | `/api/admin/dictation/{id}/status` | ADMIN | Body `{status}`. `409` nếu publish bài chưa có audio |
 
 ### Vocabulary/SRS — ĐÃ IMPLEMENT 29/09/2026 (M11) (FR-8)
 | Method | Endpoint | Role | Mô tả |
@@ -584,8 +623,10 @@ frontend/
 | **M10** | **(v1.1)** Search/Filter/Pagination cho Topic (FR-9) | **Hoàn thành 29/09/2026** |
 | **M11** | **(v1.1)** Vocabulary & SRS — lưu từ, thuật toán ôn tập (FR-8) | **Hoàn thành 29/09/2026** — bổ sung 3 endpoint ngoài phạm vi gốc (xem mục 5, Vocabulary/SRS) |
 | **M12** | **(v1.1)** Dictation — nghe, so sánh transcript, tính accuracy (FR-7) | **Hoàn thành 03/10/2026** — 9 endpoint (6 gốc + 3 bổ sung: danh sách Admin, upload audio, danh mục), migration V10, retrofit `TopicService.deleteTopic()`; tổng 198 test toàn dự án |
+| **M13** | **(hardening)** `GlobalExceptionHandler` kế thừa `ResponseEntityExceptionHandler` (vá gốc lỗi 500 nhầm), JSON body cho `401`/`403`, tokenizer Dictation (dấu câu → khoảng trắng), dọn `innerHTML` ở `admin.html`/`vocabulary.html`, bộ integration test Testcontainers | **Hoàn thành 05/10/2026** |
+| **M14** | **(v1.2)** Trạng thái nội dung Draft/Published/Archived (FR-10): migration V11, `PATCH .../status`, 4 endpoint đọc Admin, lọc theo trạng thái hiệu lực, vá cache, UI trạng thái ở `admin.html` | **Hoàn thành 06/10/2026** — tổng 339 test |
 
-*Thứ tự này ưu tiên CRUD/domain logic (Auth → Topic → Quiz) trước, rồi mới tới 2 phần "khó" là tích hợp AI và Redis/WebSocket — tránh việc học nhiều kỹ thuật khó cùng lúc ở M2 như bản trước. Mỗi milestone backend đều có bước test Postman + dựng mini-frontend ngay sau đó, thay vì dồn toàn bộ tích hợp frontend vào 1 milestone cuối (dễ gây debug integration dồn cục, khó xác định lỗi nằm ở đâu). M1–M9 là MVP bắt buộc; M10–M12 làm ngay sau khi MVP chạy ổn định. Các tính năng mở rộng khác (mục 9) vẫn nằm trong kế hoạch dài hạn, làm sau M12 hoặc song song với việc quay lại Project 2 tùy thời gian thực tế.*
+*Thứ tự này ưu tiên CRUD/domain logic (Auth → Topic → Quiz) trước, rồi mới tới 2 phần "khó" là tích hợp AI và Redis/WebSocket — tránh việc học nhiều kỹ thuật khó cùng lúc ở M2 như bản trước. Mỗi milestone backend đều có bước test Postman + dựng mini-frontend ngay sau đó, thay vì dồn toàn bộ tích hợp frontend vào 1 milestone cuối (dễ gây debug integration dồn cục, khó xác định lỗi nằm ở đâu). M1–M9 là MVP bắt buộc; M10–M14 làm ngay sau khi MVP chạy ổn định. Các tính năng mở rộng khác (mục 9) vẫn nằm trong kế hoạch dài hạn, làm sau M14 hoặc song song với việc quay lại Project 2 tùy thời gian thực tế.*
 
 ---
 
@@ -598,7 +639,7 @@ Các điểm dưới đây **cố ý chưa khóa cứng** ngay trong Requirement
 | Database: PostgreSQL hay MySQL | ~~M1~~ **Đã chốt 01/09/2026: PostgreSQL** | Không ảnh hưởng thiết kế tổng thể, chỉ khác driver/config; PostgreSQL mở khóa dùng JSONB cho `QuizQuestion.options` |
 | Có dùng Refresh Token hay chỉ Access Token đơn giản | ~~M1~~ **Đã chốt 01/09/2026: cả Access + Refresh Token** | Refresh Token lưu DB để có thể revoke, không chỉ dựa vào thời gian hết hạn |
 | Kiểu lưu `QuizQuestion.options` (JSONB / `@ElementCollection`) | ~~M3~~ **Đã chốt 03/09/2026: `@ElementCollection`** | Không dùng JSONB dù PostgreSQL hỗ trợ — ưu tiên database-independent, đơn giản hơn cho quy mô hiện tại |
-| Công thức tính `UserProgress.progressPercent` và điều kiện `COMPLETED` (FR-5.4) | ~~M3~~ **Đã chốt 03/09/2026** | 1 Quiz được coi là "đạt" ⟺ tồn tại ít nhất 1 QuizAttempt của User cho Quiz đó có score ≥ 70 progressPercent = round(100 × (số Quiz "đạt") / (tổng số Quiz thuộc Topic)) status = COMPLETED  ⟺  (số Quiz "đạt") == (tổng số Quiz thuộc Topic)  VÀ  tổng số Quiz > 0 status = IN_PROGRESS trong mọi trường hợp còn lại (đã có ít nhất 1 lần hoạt động nhưng chưa COMPLETED) |
+| Công thức tính `UserProgress.progressPercent` và điều kiện `COMPLETED` (FR-5.4) | ~~M3~~ **Đã chốt 03/09/2026** | 1 Quiz được coi là "đạt" ⟺ tồn tại ít nhất 1 QuizAttempt của User cho Quiz đó có score ≥ 70 progressPercent = round(100 × (số Quiz "đạt") / (tổng số Quiz thuộc Topic)) status = COMPLETED  ⟺  (số Quiz "đạt") == (tổng số Quiz thuộc Topic)  VÀ  tổng số Quiz > 0 status = IN_PROGRESS trong mọi trường hợp còn lại (đã có ít nhất 1 lần hoạt động nhưng chưa COMPLETED). (M14: cả hai vế chỉ đếm Quiz `PUBLISHED`, xem FR-5.4) |
 | Định nghĩa "lượt học" dùng cho `sort=popular` (FR-9.4) | ~~M10~~ **Đã chốt 29/09/2026** | Đếm số người học riêng biệt qua `UserProgress` (đã có `UNIQUE(user, topic)` sẵn), không thêm counter/entity mới. Xem chi tiết ở FR-9.4 |
 | Cách tạo `Conversation.title` | ~~M4~~ **Đã chốt 04/09/2026** | Tự động lấy từ nội dung `Message` đầu tiên của User trong Conversation, cắt tối đa 50 ký tự (thêm "..." nếu bị cắt). Chỉ set 1 lần, không ghi đè ở các message sau |
 | Số lượng message lịch sử đính kèm làm AI context (FR-2.8) | ~~M4~~ **Đã chốt 04/09/2026** | N = 10 message gần nhất (bao gồm cả message User vừa gửi). Config qua `app.ai.context-message-limit` trong `application.yml`, không hardcode |
@@ -610,17 +651,21 @@ Các điểm dưới đây **cố ý chưa khóa cứng** ngay trong Requirement
 | Quyền + cache của `GET /api/topics/{id}/dictation` và danh mục Dictation | ~~M12~~ **Đã chốt 03/10/2026** | Cần JWT (không `permitAll` như các `GET /api/topics/*`), response không có `transcript`, không cache (dữ liệu nhỏ và theo từng user) |
 | Chiến lược Cache Eviction & Phòng ngừa Race Condition | ~~M5~~ **Đã chốt 05/09/2026** | Không dùng @CacheEvict trực tiếp trên method có @Transactional để tránh race condition evict-trước-commit (Redis bị xóa trước khi DB commit, dẫn đến request đọc lại đúng lúc đó sẽ cache lại dữ liệu cũ). Giải pháp: Dùng @TransactionalEventListener(phase = AFTER_COMMIT) lắng nghe Domain Event do Service phát ra sau khi DB update thành công, rồi xóa cache thủ công qua CacheManager. Nếu Transaction bị Rollback, event xóa cache hoàn toàn bị hủy, giữ an toàn tuyệt đối cho Redis Cache. |
 | Kiến trúc WebSocket Streaming (FR-2.5/FR-2.7) | ~~M6~~ **Đã chốt 08/09/2026** | **Ownership (FR-2.7) áp dụng 2 điểm khác REST:** xác thực JWT ở STOMP CONNECT (qua `ChannelInterceptor`, không qua `JwtAuthenticationFilter` cũ vì STOMP frame sau CONNECT không đi qua HTTP filter chain), check ownership `Conversation` ở STOMP SUBSCRIBE (method `chatService.isOwner()` mới thêm). **Lỗi ở tầng ChannelInterceptor/subscribe callback không đi qua `@MessageExceptionHandler`** (chỉ bắt exception đồng bộ trong `@MessageMapping`) — cần `StompSubProtocolErrorHandler` riêng để trả STOMP ERROR frame rõ ràng trước khi Spring đóng kết nối (đóng kết nối là hành vi đúng chuẩn STOMP, không tránh được). **Tách reply/meta khi stream:** xem chi tiết ở FR-2.5. **Known limitation chấp nhận:** `save()` JPA là blocking call chạy trên Reactor event loop thread trong `sendMessageStream()` — chấp nhận ở quy mô hiện tại, cân nhắc `Schedulers.boundedElastic()` nếu traffic tăng lớn. |
+| Chiến lược xử lý lỗi toàn cục (M13) | ~~M13~~ **Đã chốt 05/10/2026** | Kế thừa `ResponseEntityExceptionHandler`, ghi đè format và 3 message theo hợp đồng cũ; `DataIntegrityViolationException` lạ giữ 500; `5xx` message cố định; upload quá cỡ 413. Chi tiết ở mục 1.4 |
+| Phạm vi `status` và quy tắc hiển thị (M14) | ~~M14~~ **Đã chốt 06/10/2026** | 3 entity có status, Flashcard thừa hưởng Topic; trạng thái hiệu lực = bản thân + Topic cha `PUBLISHED`; lịch sử cá nhân vẫn xem được. Chi tiết FR-10 |
+| Cho phép chuyển trạng thái tự do hay chặn một số cạnh (M14) | ~~M14~~ **Đã chốt 06/10/2026: tự do** | Archive nhầm phải khôi phục dễ; điều kiện duy nhất áp cho `PUBLISHED` (Quiz có câu hỏi, Dictation có audio) |
+| Giá trị `status` của dữ liệu cũ và dữ liệu mới (M14) | ~~M14~~ **Đã chốt 06/10/2026** | Dòng cũ `PUBLISHED` (V11), dòng tạo mới `DRAFT` |
 
 
 ---
 
-## 9. ĐỊNH HƯỚNG MỞ RỘNG DÀI HẠN (v2+ — SAU M12)
+## 9. ĐỊNH HƯỚNG MỞ RỘNG DÀI HẠN (v2+ — SAU M14)
 
-Tham khảo từ [parroto.app](https://parroto.app/vi) (28/08/2026). Đây là **roadmap thật sự**, không phải danh sách loại bỏ — vẫn muốn làm, nhưng **sau khi nền tảng (M1–M12) đã vững**, vì mỗi nhóm dưới đây đòi hỏi kỹ thuật/hạ tầng riêng khá nặng, nên cần Backend đã chắc mới bắt đầu để tránh vỡ kiến trúc giữa chừng. Thứ tự trong bảng là gợi ý độ ưu tiên/độ khó tăng dần khi quay lại:
+Tham khảo từ [parroto.app](https://parroto.app/vi) (28/08/2026). Đây là **roadmap thật sự**, không phải danh sách loại bỏ — vẫn muốn làm, nhưng **sau khi nền tảng (M1–M14) đã vững**, vì mỗi nhóm dưới đây đòi hỏi kỹ thuật/hạ tầng riêng khá nặng, nên cần Backend đã chắc mới bắt đầu để tránh vỡ kiến trúc giữa chừng. Thứ tự trong bảng là gợi ý độ ưu tiên/độ khó tăng dần khi quay lại:
 
 | Nhóm | Ghi chú kỹ thuật khi triển khai |
 |---|---|
-| Admin Content Management đầy đủ (status Draft/Published/Archived) | Dễ nhất — chỉ cần thêm field `status` vào Topic/Quiz/Lesson đã có |
+| ~~Admin Content Management (status Draft/Published/Archived)~~ | **ĐÃ LÀM ở M14 (FR-10)**. Phần còn lại nếu cần: lịch hẹn công bố, lịch sử thay đổi trạng thái |
 | User Profile mở rộng (statistics, achievements) | Mở rộng tự nhiên từ entity `User`, ghép cùng Gamification |
 | Gamification (XP, streak, leaderboard, achievement) | Cần thêm entity `Achievement`, `UserAchievement`; leaderboard nên cache Redis (sorted set) |
 | Learning Profile & Personalized Path | Cần đủ dữ liệu tích lũy từ Progress/Vocab để gợi ý có ý nghĩa — nên làm sau khi có user thật dùng thử |
@@ -723,27 +768,30 @@ Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) bỏ 
 | File | Vai trò |
 |---|---|
 | `config.js` | `API_BASE_URL` (điểm duy nhất cần sửa khi đổi domain Backend/ngrok URL) + `imageSrc(path)` (nối domain vào đường dẫn ảnh tương đối Backend trả về) + `audioSrc(path)` (M12 — như `imageSrc` nhưng trả chuỗi rỗng khi không có đường dẫn, vì audio rỗng phải là rỗng, không có placeholder) |
-| `ui.js` | (M12) Hàm dựng giao diện dùng chung: `el(tag, class, text)` (tạo phần tử bằng `textContent` — dữ liệu server/người dùng KHÔNG đi qua `innerHTML`), `buildLevelBadge`, `buildPagerButton`/`buildPageInfo` (nút phân trang cùng style `vocabulary.html`: `btn-3d` khi bật, nền xám khi tắt), `createSelect` (dropdown tự vẽ, có ARIA + bàn phím, thay `<select>` gốc cho bộ lọc), `createFilterBar` (ô tìm kiếm + lọc Level + công tắc cho danh sách đã tải sẵn trong trình duyệt), `createSearchBox` (ô tìm kiếm debounce cho bộ lọc chạy ở server), `LEVEL_FILTER_OPTIONS` |
-| `topicPicker.js` | (M12) `createTopicPicker({ container, onChange, ... })` — combobox chọn Topic có tìm kiếm: gõ từ khoá → gọi `GET /api/topics` lấy tối đa 8 kết quả (không dính giới hạn 100 Topic). Dùng ở `admin.html` (Working topic dùng chung cho Flashcards/Quizzes/Dictation) và `dictation.html` (lọc theo Topic). API: `getValue`, `setValue`, `setValueById`, `focus`, `destroy` |
+| `ui.js` | Hàm dựng giao diện dùng chung: `el(tag, class, text)` (tạo phần tử bằng `textContent`, dữ liệu server/người dùng KHÔNG đi qua `innerHTML`), `buildLevelBadge`, `buildPagerButton`/`buildPageInfo`, `createSelect` (dropdown tự vẽ có ARIA + bàn phím, thay `<select>` gốc; dùng ở `topics.html`, `admin.html`, `dictation.html`), `createFilterBar`, `createSearchBox`, `LEVEL_FILTER_OPTIONS`. **M14:** `STATUS_FILTER_OPTIONS`, `buildStatusBadge(status)` (icon + chữ + viền, không chỉ dựa vào màu: Draft xám nét đứt, Published xanh lá đặc, Archived cam đặc), `buildStatusSelect({current, label, onChange, onError})` (dropdown đổi trạng thái trong dòng danh sách; menu `position: fixed` gắn vào `<body>` để không bị bảng/khung `overflow` cắt, tự lật lên trên khi sát mép dưới, chỉ một menu mở tại một thời điểm; `onChange` async, ném lỗi thì giữ nguyên giá trị cũ) |
+| `topicPicker.js` | `createTopicPicker({ container, onChange, source, ... })` — combobox chọn Topic có tìm kiếm, tối đa 8 kết quả. **M14:** tham số `source`: `'public'` (mặc định, gọi `GET /api/topics`, dùng ở `dictation.html`) hoặc `'admin'` (gọi `GET /api/admin/topics`, thấy cả Topic nháp/archived kèm huy hiệu trạng thái, dùng ở `admin.html`). API: `getValue`, `setValue`, `setValueById`, `focus`, `destroy` |
 | `toast.js` | `showToast(message, type)` — dùng cho hành động tức thời (submit, upload, xoá). KHÔNG dùng cho lỗi/rỗng của 1 khối nội dung chính — trường hợp đó viết inline text ngay tại khối đó (người dùng luôn thấy, không trôi mất sau 3 giây) |
 | `chat.js` | `connectChat()`/`subscribeConversation()`/`sendChatMessage()`/`unsubscribeConversation()` — STOMP over SockJS, tách riêng khỏi `chat.html` |
 | `footer.js` | `initFooter()` — footer dùng chung cho mọi trang app (trừ `index.html`) |
 | `theme.js` | Dark/light mode, xem mục 10.3 |
+| `api.js` | Engine `request()` gắn `err.status` vào lỗi (M14) để trang phân biệt `404` ("không còn tồn tại") với lỗi khác. Hàm Admin dùng endpoint `/api/admin/**` (`adminGetTopics`, `adminGetTopic`, `adminGetFlashcards`, `adminGetQuizzes`, `adminChange{Topic|Quiz|Dictation}Status`), KHÔNG dùng lại API public vì API public giờ ẩn bản nháp |
 
 ### 10.8. Skeleton loading
 
 Mọi khu vực nội dung chính chờ API phải có skeleton (khung `div.skeleton` — shimmer animation định nghĩa trong `style.css`) thay vì "Loading..." chữ hoặc để trắng, hiển thị ngay khi bắt đầu gọi API, tự bị ghi đè khi có data thật.
 
-### 10.9. Backlog/giới hạn đã biết, chưa xử lý
+### 10.9. Backlog và giới hạn đã biết (FE + BE), chưa xử lý
 
 - ~~`topics.html`: 3 ô Search/Level/Sort hiện chưa có tác dụng lọc thật~~ **Đã nối thật 29/09/2026 (M10)** — có debounce 300ms cho ô search, guard chống response trả về trễ ghi đè kết quả mới hơn, `maxlength=50` khớp giới hạn Backend.
 - `vocabulary.html` (M11): tab "Due Today" giữ `queue` trong bộ nhớ trình duyệt, không tự đồng bộ real-time nếu dữ liệu đổi từ nguồn khác (VD: xoá 1 từ ở tab "All Words" khi từ đó đang nằm trong `queue` của tab Due — đã vá bằng cách đồng bộ thủ công `queue` ngay trong `handleDeleteWord`, nhưng đây vẫn là state 2 nơi cần giữ khớp tay, không phải nguồn dữ liệu single source of truth thật sự).
 - Accessibility nâng cao (skip link, `focus-visible` toàn diện, `aria-hidden` cho icon trang trí) mới chỉ áp dụng đầy đủ cho `index.html` (qua audit Impeccable) — các trang còn lại (kể cả `vocabulary.html`, `dictation.html`) chưa rà theo cùng chuẩn, để dành đợt polish sau nếu cần. (Các component M12 `createSelect`/`topicPicker` đã có ARIA combobox/listbox + bàn phím.)
-- **Modal "Manage Questions" của `admin.html` (từ M3) vẫn dựng bằng `innerHTML`:** nội dung câu hỏi/đáp án chứa `<` hiển thị sai; `addOptionRow` nhét giá trị vào `value="${value}"` nên đáp án chứa dấu `"` bị cắt khi mở lại để sửa, và bấm Save sẽ **ghi đè bản đã cắt** (rủi ro hỏng dữ liệu). Chưa sửa. Các tab Topics/Flashcards/Quizzes/Dictation của `admin.html` đã chuyển sang dựng bằng DOM + `textContent` ở M12.
-- `vocabulary.html` còn hiển thị `word`/`meaning` qua template `innerHTML` (dữ liệu do Admin nhập) — chưa chuyển sang `textContent`.
-- `403` của `/api/admin/**` trả JSON mặc định của Spring (`timestamp/status/error/path`, không có `message`) vì `SecurityConfig` chưa có `accessDeniedHandler` — FE chỉ hiện `HTTP 403`. Có từ trước M12, chỉ Admin chạm tới.
 - Dictation: thẻ `<audio>` không gửi được header `ngrok-skip-browser-warning` như `fetch` (đã test phát được qua ngrok trên trình duyệt desktop); `.m4a` chưa kiểm chứng trên Safari — nếu lỗi, bỏ M4A khỏi whitelist `FileStorageServiceImpl.detectAudioExtension`.
 - Dictation backend: nếu transaction rollback sau khi `storeAudio` đã ghi file thì file mới thành mồ côi (cùng giới hạn đã biết với `updateTopicImage` ở M7, tần suất rất thấp); file văn bản UTF-16 (bắt đầu `FF FE`) lọt qua nhận dạng MP3 frame-sync (chỉ Admin upload, chỉ phục vụ như audio nên rủi ro thấp).
+- `progress.html`: thẻ Topic đã archive vẫn bấm được, vào `topic-detail.html` sẽ thấy "This topic is no longer available" (xử lý bằng `error.status === 404`). Cải tiến để dành: thêm cờ `topicAvailable` vào `UserProgressResponse` để thẻ xám đi và gắn nhãn "Archived" ngay trên danh sách.
+- `progress.html` còn dựng thẻ bằng `innerHTML` (tên Topic do Admin nhập), chưa chuyển sang `el()`. `topics.html` cũng còn dựng thẻ Topic bằng `innerHTML`.
+- Không có test tự động cho Controller và FE; các luồng đó kiểm bằng bộ Postman và kiểm tay.
+- Chưa có unit test cho `JsonAccessDeniedHandler`/`JsonAuthenticationEntryPoint`; chưa có mutation check cho quy tắc "câu hỏi cuối" (`<= 1` → `<= 0`).
+- Race condition khi hai Admin xoá hai câu hỏi cuối của cùng Quiz `PUBLISHED` (xem FR-10.7).
 
 ---
 

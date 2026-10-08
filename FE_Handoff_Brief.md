@@ -1,5 +1,5 @@
 # FRONTEND — TÀI LIỆU TRA CỨU NHANH KHI CODE THÊM TRANG
-*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination), M11 (Vocabulary/SRS) và M12 (Dictation). File này dùng khi build tiếp trang mới ở M13+, tra nhanh contract API + quy ước design system, không cần đọc lại toàn bộ Requirements.md mỗi lần. Cập nhật lần gần nhất: 03/10/2026, sau M12.)*
+*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination), M11 (Vocabulary/SRS), M12 (Dictation), M13 (hardening: lỗi 401/403 có body, 413) và M14 (trạng thái nội dung Draft/Published/Archived). File này dùng khi build tiếp trang mới ở M15+, tra nhanh contract API + quy ước design system. Cập nhật lần gần nhất: 07/10/2026, sau M14.)*
 
 **Repo:** `github.com/Pennywise111124/english-learning-platform`, nhánh `main`
 **Vai trò:** code trong thư mục `frontend/`. Không động vào Backend Java (thư mục gốc, ngoài `frontend/`).
@@ -19,14 +19,14 @@
 frontend/
 ├── index.html (landing page công khai — có footer riêng, không dùng footer.js)
 ├── chat.html (yêu cầu đăng nhập)
-├── topics.html (PUBLIC — khách xem được; M10: nối thật Search/Level/Sort; M12: khách thấy sidebar, mục cần tài khoản mở modal đăng nhập)
+├── topics.html (PUBLIC — khách xem được; M10: nối thật Search/Level/Sort; M12: khách thấy sidebar; M14: chỉ hiện Topic PUBLISHED, hai ô lọc dùng createSelect)
 ├── topic-detail.html (PUBLIC — khách xem được; M11: thêm nút Save flashcard; M12: thêm thẻ Dictation, thẻ Quiz/Dictation/nút Save của khách mở modal đăng nhập kèm redirectTo)
 ├── quiz.html (yêu cầu đăng nhập — checkAuth() ngay đầu)
 ├── progress.html (yêu cầu đăng nhập)
 ├── profile.html (yêu cầu đăng nhập)
 ├── vocabulary.html (yêu cầu đăng nhập — mới hoàn toàn ở M11, tab "Due Today"/"All Words")
 ├── dictation.html (yêu cầu đăng nhập — mới hoàn toàn ở M12: danh mục bài có tìm kiếm/lọc/phân trang + màn luyện tập; bộ lọc lưu trên URL, mở trực tiếp được bằng ?topicId=)
-├── admin.html (yêu cầu đăng nhập + role ADMIN — checkAdmin(); M12: tab Dictation, ô "Working topic" dùng chung cho Flashcards/Quizzes/Dictation, tab Topics có tìm kiếm/lọc/phân trang)
+├── admin.html (yêu cầu đăng nhập + role ADMIN — checkAdmin(); M12: tab Dictation, ô "Working topic" dùng chung, tab Topics có tìm kiếm/lọc/phân trang; M14: cột/ô đổi trạng thái Draft/Published/Archived ở Topics, Quizzes, Dictation, bộ lọc Status, mọi lệnh đọc dùng endpoint /api/admin/**)
 ├── test-websocket.html (công cụ test riêng, không tính vào bộ chính)
 ├── js/
 │ ├── api.js (fetch engine + toàn bộ hàm gọi API — xem mục 4)
@@ -36,11 +36,11 @@ frontend/
 │ ├── footer.js (initFooter() — dùng chung mọi trang app, TRỪ index.html)
 │ ├── authModal.js (modal Login/Sign Up dùng chung — thay login.html/register.html cũ, đã bỏ hẳn; M12: nhận detail { mode, redirectTo })
 │ ├── toast.js (showToast(message, type))
-│ ├── ui.js (M12 — el(), buildLevelBadge, buildPagerButton/buildPageInfo, createSelect, createFilterBar, createSearchBox)
-│ ├── topicPicker.js (M12 — combobox chọn Topic có tìm kiếm, gọi GET /api/topics)
+│ ├── ui.js (M12 — el(), buildLevelBadge, buildPagerButton/buildPageInfo, createSelect, createFilterBar, createSearchBox; M14 — buildStatusBadge, buildStatusSelect, STATUS_FILTER_OPTIONS)
+│ ├── topicPicker.js (M12 — combobox chọn Topic có tìm kiếm; M14 — tham số source: 'public' gọi GET /api/topics, 'admin' gọi GET /api/admin/topics)
 │ ├── theme.js (dark/light mode)
 │ ├── chat.js (STOMP/SockJS, chỉ chat.html dùng)
-│ └── tailwind-config.js (design token — xem mục 5)
+│ └── tailwind-config.js (design token — xem mục 7)
 └── css/
 └── style.css (CSS custom property màu + component class + skeleton/animation)
 ```
@@ -51,10 +51,10 @@ frontend/
 
 - `API_BASE_URL` khai báo **duy nhất** ở `js/config.js` — đổi 1 chỗ này khi backend đổi domain (VD: URL ngrok mới mỗi phiên dev).
 - Login nhận **username hoặc email** cùng 1 field (Backend tự thử cả 2).
-- `api.js` tự động: gắn `Authorization: Bearer <token>`, tự gọi `/api/auth/refresh` khi gặp `401` rồi thử lại request gốc 1 lần, nếu vẫn thất bại mới `clearAuth()` + redirect `index.html?auth=login`.
+- `api.js` tự động: gắn `Authorization: Bearer <token>`, tự gọi `/api/auth/refresh` khi gặp `401` rồi thử lại request gốc 1 lần, nếu vẫn thất bại mới `clearAuth()` + redirect `index.html?auth=login`. (401 và 403 đều có body {message, status, timestamp} từ M13.)
 - Route bị chặn bởi `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal Login qua query param). Logout chủ động → redirect `index.html` **trơn**, không kèm query param.
 
-## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M12)
+## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M14)
 
 ### Auth
 
@@ -83,7 +83,9 @@ level: BEGINNER | INTERMEDIATE | ADVANCED, không phân biệt hoa/thường
 sort: newest (mặc định) | popular | title — SAI giá trị trả 400, không có sort theo level
 GET /api/topics/{id} → Topic
 GET /api/topics/{id}/flashcards → mảng Flashcard (không phân trang)
-GET /api/topics/{id}/quizzes → mảng { id, title, questionCount } — PUBLIC, chỉ tên+số câu hỏi, KHÔNG phải nội dung
+GET /api/topics/{id}/quizzes → mảng { id, title, questionCount, status } — PUBLIC, chỉ tên+số câu hỏi, KHÔNG phải nội dung (status luôn PUBLISHED ở API public)
+LƯU Ý M14: mọi GET trong khối này chỉ trả nội dung có trạng thái hiệu lực PUBLISHED (Topic PUBLISHED, và Quiz PUBLISHED nếu là danh sách Quiz).
+Topic DRAFT/ARCHIVED -> 404 (cả /{id}, /{id}/flashcards, /{id}/quizzes). Trang phải xử lý 404 bằng error.status === 404 (xem topic-detail.html), không hiện "Failed to load".
 ```
 
 ### Quizzes — cần JWT (khác GET /api/topics/{id}/quizzes ở trên)
@@ -92,6 +94,7 @@ GET /api/topics/{id}/quizzes → mảng { id, title, questionCount } — PUBLIC,
 GET /api/quizzes/{id} → { id, title, questions: [{id, question, options}] } — KHÔNG có correctAnswer
 POST /api/quizzes/{id}/submit {answers: [{questionId, answer}]} → QuizResult (mục 6)
 GET /api/quizzes/{id}/attempts?page=&size= → PageResponse<QuizAttempt> — CHỈ riêng Quiz này
+M14: GET /api/quizzes/{id} và POST /api/quizzes/{id}/submit trả 404 nếu Quiz hoặc Topic cha không PUBLISHED. Lịch sử (GET .../attempts, GET /api/users/me/quiz-attempts, GET /api/users/me/progress) vẫn xem được sau khi nội dung bị archive.
 ```
 
 ### Vocabulary/SRS — cần JWT (mới hoàn toàn ở M11)
@@ -104,21 +107,23 @@ GET /api/vocabulary/today?page=&size= → PageResponse<VocabularyResponse> — c
 GET /api/vocabulary?page=&size= → PageResponse<VocabularyResponse> — TOÀN BỘ sổ từ đã lưu, không lọc theo hạn, mới lưu gần nhất trước
 GET /api/vocabulary/topics/{topicId}/saved-ids → mảng flashcardId (Set<Long>, không phân trang) — dùng để hiện đúng trạng thái nút Save khi vào lại 1 Topic
 DELETE /api/vocabulary/{id} → 204. Ownership qua id của UserVocabulary, sai chủ trả 404 (không phải của người khác cũng không phải không tồn tại — đồng nhất)
+M14: POST /api/vocabulary/{flashcardId}/save trả 404 nếu Topic của flashcard không PUBLISHED. Các endpoint còn lại (today, danh sách, review, delete, saved-ids) KHÔNG lọc: sổ từ vựng vẫn ôn được sau khi Topic bị archive.
 ```
 
 ### Dictation — cần JWT (mới hoàn toàn ở M12)
 
 ````
-GET /api/topics/{topicId}/dictation → mảng { id, topicId, title, mediaUrl, level } — chỉ bài ĐÃ CÓ audio, KHÔNG có transcript. 404 nếu Topic không tồn tại
+GET /api/topics/{topicId}/dictation → mảng { id, topicId, title, mediaUrl, level } — chỉ bài ĐÃ CÓ audio, KHÔNG có transcript. 404 nếu Topic không tồn tại hoặc không PUBLISHED
 KHÁC các GET /api/topics/* ở trên: KHÁCH GỌI SẼ BỊ 401 và api.js tự clearAuth + đá về trang đăng nhập — trang PUBLIC (topic-detail.html) phải kiểm tra getUser() trước khi gọi
 GET /api/dictation/lessons?keyword=&topicId=&level=&progress=&sort=&page=&size= → PageResponse<DictationCatalogItem> (danh mục, dùng cho dictation.html)
 keyword ≤ 50 ký tự (tìm cả tên bài lẫn tên Topic); level BEGINNER|INTERMEDIATE|ADVANCED (không phân biệt hoa/thường);
 progress NEW (chưa làm bao giờ) | PRACTICED (đã làm ≥ 1 lần); sort newest (mặc định) | title | recent (bài vừa luyện lên đầu, bài chưa làm xuống cuối)
 Tham số sai kiểu/giá trị → 400. topicId không tồn tại → trang rỗng (KHÔNG 404). Chỉ bài đã có audio, KHÔNG có transcript. size > 100 → 400
 POST /api/dictation/{lessonId}/submit {userInput} → DictationSubmitResponse (201)
-userInput bắt buộc, ≤ 5000 ký tự, phải có ≥ 1 từ hợp lệ và ≤ 1000 từ, nếu không 400. 404 nếu bài không tồn tại hoặc chưa có audio.
+userInput bắt buộc, ≤ 5000 ký tự, phải có ≥ 1 từ hợp lệ và ≤ 1000 từ, nếu không 400. 404 nếu bài không tồn tại, chưa có audio hoặc không PUBLISHED (kể cả Topic cha).
 Gửi NGUYÊN BẢN, KHÔNG trim/lowercase ở FE (server tự chuẩn hoá, lưu bản gốc)
 GET /api/dictation/{lessonId}/results?page=&size= → PageResponse<DictationResultResponse>, mới nhất trước, chỉ của chính mình. 404 nếu bài không tồn tại
+M14: GET /api/topics/{id}/dictation, GET /api/dictation/lessons, POST /api/dictation/{id}/submit chỉ áp dụng cho bài PUBLISHED có audio và Topic cha PUBLISHED, nếu không 404 (catalog thì bài bị ẩn). GET /api/dictation/{id}/results vẫn xem được sau khi archive.
 ````
 
 Hàm trong `api.js`: `getDictationLessons(topicId)`, `getDictationCatalog({keyword, topicId, level, progress, sort, page, size})`, `submitDictation(lessonId, userInput)`, `getDictationResults(lessonId, page, size)`.
@@ -147,25 +152,44 @@ POST /api/admin/flashcards/{id}/image multipart "file" → Flashcard
 POST/PUT/DELETE /api/admin/topics/{id}/quizzes, /api/admin/quizzes/{id} (title phải duy nhất trong cùng Topic, không phân biệt hoa/thường — 409 nếu trùng)
 GET /api/admin/quizzes/{quizId}/questions → mảng { id, question, options, correctAnswer } — CÓ đáp án đúng, chỉ dùng điền sẵn form sửa
 POST/PUT/DELETE /api/admin/quizzes/{id}/questions, /api/admin/questions/{id}
-GET /api/admin/topics/{id}/dictation → mảng { id, topicId, title, mediaUrl, transcript, level } — CÓ transcript, gồm cả bài chưa có audio (mediaUrl null)
-POST /api/admin/topics/{id}/dictation {title, transcript, level} → lesson (200), mediaUrl luôn null — KHÔNG có mediaUrl trong body, audio upload riêng. transcript phải có ≥ 1 từ hợp lệ và ≤ 1000 từ, nếu không 400
+GET /api/admin/topics/{id}/dictation → mảng { id, topicId, title, mediaUrl, transcript, level, status } — CÓ transcript, gồm cả bài chưa có audio (mediaUrl null)
+POST /api/admin/topics/{id}/dictation {title, transcript, level} → lesson (200), mediaUrl luôn null, status luôn DRAFT — KHÔNG có mediaUrl trong body, audio upload riêng. transcript phải có ≥ 1 từ hợp lệ và ≤ 1000 từ, nếu không 400
 PUT /api/admin/dictation/{id} {title, transcript, level} (không đụng mediaUrl); DELETE /api/admin/dictation/{id} → 204, 409 nếu đã có kết quả của User
 POST /api/admin/dictation/{id}/audio multipart "file" (MP3/WAV/OGG/M4A, ≤ 10MB) → lesson; 400 nếu sai định dạng/quá lớn/thiếu part "file"/không phải multipart
-(api.js: adminGetDictationLessons, adminCreateDictationLesson, adminUpdateDictationLesson, adminDeleteDictationLesson, adminUploadDictationAudio. adminGetTopics({keyword, level, sort, page, size}) giờ nhận tham số, mặc định size 10, dùng chung GET /api/topics)
+(api.js: adminGetDictationLessons, adminCreateDictationLesson, adminUpdateDictationLesson, adminDeleteDictationLesson, adminUploadDictationAudio.)
 ```
 
-*(Dictation đã xong ở M12 — xem khối Dictation phía trên và các dòng Admin ngay trên. Vocabulary-SRS và Search nâng cao đã xong ở M10/M11.)*
+### Admin — đọc mọi trạng thái & đổi trạng thái (M14) — cần JWT + ADMIN
+
+```
+GET /api/admin/topics?page=&size=&keyword=&level=&sort=&status= → PageResponse<Topic> (mọi trạng thái, không cache)
+status: DRAFT | PUBLISHED | ARCHIVED, không phân biệt hoa/thường; rỗng = tất cả; giá trị lạ -> 400. keyword/level/sort giống GET /api/topics
+GET /api/admin/topics/{id} → Topic (mọi trạng thái)
+GET /api/admin/topics/{id}/flashcards → mảng Flashcard (không cache, Topic ở mọi trạng thái)
+GET /api/admin/topics/{id}/quizzes → mảng { id, title, questionCount, status } (mọi trạng thái)
+PATCH /api/admin/topics/{id}/status {status} → Topic
+PATCH /api/admin/quizzes/{id}/status {status} → { id, title, questionCount, status }   409 nếu publish Quiz chưa có câu hỏi
+PATCH /api/admin/dictation/{id}/status {status} → AdminDictationLesson   409 nếu publish bài chưa có audio
+Chuyển trạng thái TỰ DO giữa 3 giá trị. status thiếu -> 400 ("status:must not be null"), giá trị lạ -> 400 ("Malformed or missing request body").
+Tạo mới (POST topic/quiz/dictation) luôn ra DRAFT: phải PATCH sang PUBLISHED thì người học mới thấy.
+DELETE /api/admin/questions/{id} → 409 nếu là câu hỏi cuối của Quiz đang PUBLISHED.
+DELETE topic/quiz/dictation/flashcard → 409 nếu đã có dữ liệu cá nhân; message gợi ý archive (Flashcard: archive Topic cha).
+```
+
+Hàm trong api.js: adminGetTopics({keyword, level, sort, status, page, size}), adminGetTopic(id), adminGetFlashcards(topicId), adminGetQuizzes(topicId), adminChangeTopicStatus(id, status), adminChangeQuizStatus(id, status), adminChangeDictationStatus(id, status).
+KHÔNG dùng getTopicDetail/getFlashcards/getQuizzesByTopic (API public) trong trang Admin: chúng ẩn bản nháp.
+adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 
 ## 5. Quy ước chung
 
 - **Pagination:** `page` (mặc định 0), `size` (mặc định 20, tối đa 100 — vượt quá trả `400`, không tự cắt). Response `{content, totalPages, totalElements, page, size}`.
-- **Lỗi:** `{message, status, timestamp}` — hiện `message` qua `showToast()` (hành động tức thời) hoặc inline text tại khối nội dung (khi cả 1 khu vực load thất bại — không dùng toast vì tự biến mất sau 3s, người dùng dễ bỏ lỡ).
+- **Lỗi:** luôn `{message, status, timestamp}`, kể cả `401` (thiếu/sai JWT), `403` (sai role), `413` (upload vượt dung lượng, trước đây là 400), `405`, `415`, `500` (message cố định "Internal server error"). Hiện `message` qua `showToast()` (hành động tức thời) hoặc inline text tại khối nội dung (khi cả 1 khu vực load thất bại — không dùng toast vì tự biến mất sau 3s). `request()` trong `api.js` gắn `error.status` (số HTTP) vào Error để phân biệt `404` với lỗi khác.
 - **Ownership sai** → luôn `404`, không `403` (không tiết lộ resource có tồn tại hay không).
 - **Chat:** câu trả lời AI KHÔNG đến qua response của `POST /api/conversations/{id}/messages` — luôn qua kênh WebSocket. Đừng nhầm request REST đó với luồng nhận trả lời.
-- **Upload file (ảnh, audio):** multipart, part tên `file`. Lỗi trả `400` (sai định dạng, quá lớn, thiếu part, không phải multipart), `405`/`415` cho sai method/Content-Type. Backend nhận dạng định dạng bằng nội dung file, không tin Content-Type hay đuôi file. `mediaUrl`/`imageUrl` là đường dẫn TƯƠNG ĐỐI — luôn qua `audioSrc()`/`imageSrc()` (`config.js`) trước khi gán vào `<audio>`/`<img>`.
+- **Upload file (ảnh, audio):** multipart, part tên `file`. Lỗi: `400` (sai định dạng, thiếu part, không phải multipart), `413` (file vượt dung lượng cho phép), `405`/`415` cho sai method/Content-Type. Backend nhận dạng định dạng bằng nội dung file, không tin Content-Type hay đuôi file. `mediaUrl`/`imageUrl` là đường dẫn TƯƠNG ĐỐI — luôn qua `audioSrc()`/`imageSrc()` (`config.js`) trước khi gán vào `<audio>`/`<img>`.
 - **Trang PUBLIC gọi API cần JWT:** khách sẽ nhận `401`, `api.js` tự `clearAuth()` rồi redirect — kiểm tra `getUser()` trước khi gọi, khách bấm hành động cần tài khoản thì mở `open-auth-modal` kèm `redirectTo` thay vì gọi API.
-- **`403` của `/api/admin/**`:** body là JSON mặc định của Spring (không có `message`), `api.js` sẽ hiện `HTTP 403` — chỉ Admin chạm tới, đã ghi backlog.
 - **Dữ liệu từ server/Admin/người dùng → DOM:** dùng `textContent` (hoặc `el()` trong `ui.js`), KHÔNG nhét vào `innerHTML`/thuộc tính HTML (tên có dấu `"` hay `<` sẽ vỡ giao diện hoặc thành lỗ hổng XSS).
+- **Trạng thái nội dung (M14):** khách/người học chỉ thấy nội dung PUBLISHED; nội dung khác là `404`. Trang người học gặp `404` ở chi tiết Topic phải hiện "This topic is no longer available", không phải "Failed to load". Admin luôn dùng endpoint `/api/admin/**` để đọc.
 
 ## 6. Shape dữ liệu thật (xác nhận qua Swagger, không phải bản nháp)
 
@@ -176,14 +200,15 @@ POST /api/admin/dictation/{id}/audio multipart "file" (MP3/WAV/OGG/M4A, ≤ 10MB
 // avatarUrl là đường dẫn TƯƠNG ĐỐI — luôn qua imageSrc() (config.js) trước khi gán vào <img src>, không dùng thẳng
 
 // Topic
-{ "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "/uploads/topics/<uuid>.jpg" }
+{ "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "/uploads/topics/<uuid>.jpg", "status": "PUBLISHED" }
+// status (M14): ở API public luôn là PUBLISHED. ở API admin có thể là DRAFT | PUBLISHED | ARCHIVED. description có thể là null.
 // KHÔNG có createdAt trong response dù entity đã có field này từ M10 — chỉ dùng nội bộ để sort=newest
 
 // Flashcard
 { "id": 1, "word": "airport", "meaning": "sân bay", "example": "...", "imageUrl": "...", "audioUrl": null }
 
 // Quiz — danh sách theo Topic (PUBLIC)
-{ "id": 1, "title": "Travel Vocabulary Quiz", "questionCount": 5 }
+{ "id": 1, "title": "Travel Vocabulary Quiz", "questionCount": 5, "status": "PUBLISHED" }
 
 // Quiz — chi tiết (cần JWT, KHÔNG correctAnswer)
 { "id": 1, "title": "Travel Vocabulary Quiz", "questions": [
@@ -233,14 +258,14 @@ POST /api/admin/dictation/{id}/audio multipart "file" (MP3/WAV/OGG/M4A, ≤ 10MB
              { "word": "will", "status": "WRONG", "expected": "would" },
              { "word": "a", "status": "MISSING", "expected": null },
              { "word": "really", "status": "EXTRA", "expected": null } ] }
-// (words trong ví dụ trên chỉ minh hoạ 4 nhãn, không phải kết quả đầy đủ của câu mẫu), words đã chuẩn hoá (chữ thường, không dấu câu), theo thứ tự đọc. status: CORRECT | WRONG | MISSING | EXTRA
+// (words trong ví dụ trên chỉ minh hoạ 4 nhãn, không phải kết quả đầy đủ của câu mẫu), words đã chuẩn hoá (chữ thường; mọi dấu câu thành khoảng trắng nên "hello,world" là 2 từ, "1,000" thành "1" và "000", "U.S.A." thành "u" "s" "a"), theo thứ tự đọc. status: CORRECT | WRONG | MISSING | EXTRA
 // WRONG: word = từ người dùng gõ, expected = từ đúng. MISSING: word = từ transcript mà người dùng bỏ sót. EXTRA: word = từ người dùng gõ thừa
 
 // DictationResultResponse — lịch sử. userInput là nguyên văn người dùng gõ (có thể chứa < > "): chỉ đi qua textContent
 { "id": 2, "lessonId": 1, "userInput": "I will like cup of tea please", "accuracy": 62.5, "createdAt": "2026-10-01T03:50:44.302226Z" }
 
 // Admin — AdminDictationLesson (có transcript)
-{ "id": 1, "topicId": 23, "title": "At the cafe", "mediaUrl": null, "transcript": "I would like a cup of coffee, please.", "level": "BEGINNER" }
+{ "id": 1, "topicId": 23, "title": "At the cafe", "mediaUrl": null, "transcript": "I would like a cup of coffee, please.", "level": "BEGINNER", "status": "DRAFT" }
 ````
 
 ## 7. Design System — tóm tắt thực dụng (chi tiết đầy đủ + lý do quyết định: `Requirements.md` mục 10)
@@ -296,8 +321,8 @@ Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) **b�
 Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào bất kỳ `<button>` nào, không cần gắn `onclick` tay. Muốn đăng nhập xong đi tới đúng trang vừa bấm: `window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login', redirectTo: 'quiz.html?topicId=23' } }))` — `redirectTo` chỉ nhận tên trang `.html` tương đối kèm query, mỗi lần mở modal đều đặt lại, đóng modal thì bị xoá; mở không kèm `redirectTo` luôn về `chat.html`.
 
 **Component dùng chung (M12) — dùng lại thay vì viết mới:**
-- `js/ui.js`: `el(tag, class, text)` (tạo phần tử bằng `textContent`, KHÔNG `innerHTML`), `buildLevelBadge(level)`, `buildPagerButton(label, disabled, onClick)` + `buildPageInfo(text)` (phân trang đúng style `vocabulary.html`), `createSelect({container, label, options, value, icon, onChange})` (dropdown tự vẽ cho bộ lọc, thay `<select>` gốc; vẫn dùng `<select>` gốc trong form có `required`/`reset()`), `createFilterBar({...})` (lọc trong trình duyệt cho danh sách đã tải sẵn), `createSearchBox({container, label, placeholder, onSearch})` (tìm kiếm debounce cho bộ lọc chạy ở server), `LEVEL_FILTER_OPTIONS`.
-- `js/topicPicker.js`: `createTopicPicker({container, onChange, placeholder, ariaLabel, inputId})` → `{getValue, setValue, setValueById, focus, destroy}`. Chọn Topic có tìm kiếm qua `GET /api/topics` (không giới hạn 100 Topic); `onChange` chỉ chạy khi NGƯỜI DÙNG chọn/xoá, `setValue()` không kích hoạt nó.
+- `js/ui.js`: `el(tag, class, text)` (tạo phần tử bằng `textContent`, KHÔNG `innerHTML`), `buildLevelBadge(level)`, `buildPagerButton(label, disabled, onClick)` + `buildPageInfo(text)`, `createSelect({container, label, options, value, icon, onChange})` (dropdown tự vẽ cho bộ lọc, thay `<select>` gốc, có ARIA + bàn phím; dùng ở `topics.html`, `admin.html`, `dictation.html`; vẫn dùng `<select>` gốc trong form có `required`/`reset()`), `createFilterBar({...})`, `createSearchBox({...})`, `LEVEL_FILTER_OPTIONS`. **M14:** `STATUS_FILTER_OPTIONS`; `buildStatusBadge(status)` (icon + chữ + viền, không chỉ dựa vào màu: Draft xám nét đứt, Published xanh lá đặc, Archived cam đặc); `buildStatusSelect({current, label, onChange, onError})` (dropdown đổi trạng thái trong dòng danh sách, menu `position: fixed` gắn vào `<body>` nên không bị bảng `overflow` cắt, tự lật lên khi sát mép dưới; `onChange` phải là hàm async, ném lỗi thì giữ giá trị cũ và gọi `onError(error)`).
+- `js/topicPicker.js`: `createTopicPicker({container, onChange, placeholder, ariaLabel, inputId, source})` → `{getValue, setValue, setValueById, focus, destroy}`. `source: 'public'` (mặc định, `GET /api/topics`, chỉ Topic PUBLISHED, dùng ở `dictation.html`) hoặc `'admin'` (`GET /api/admin/topics`, thấy cả nháp/archived kèm huy hiệu trạng thái, dùng ở `admin.html`). `onChange` chỉ chạy khi NGƯỜI DÙNG chọn/xoá, `setValue()` không kích hoạt nó.
 - Mẫu bộ lọc lưu trên URL (`dictation.html`, `admin.html`): đọc `URLSearchParams` lúc khởi động (bỏ qua giá trị sai), `history.replaceState` sau mỗi lần đổi, để F5 và gửi link vẫn quay về đúng trạng thái.
 
 **Skeleton loading:** mọi khu vực chờ API phải render `div.skeleton` (shimmer có sẵn trong `style.css`) ngay khi bắt đầu gọi API, không dùng chữ "Loading..." hay để trắng.
@@ -314,6 +339,8 @@ Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào b�
 8. Danh sách tải bằng API mà có thể đổi nhanh (gõ tìm kiếm, đổi bộ lọc, đổi Topic): dùng biến đếm `requestId` để bỏ kết quả cũ trả về trễ (`const requestId = ++counter` ở đầu hàm, `if (requestId !== counter) return;` sau mỗi `await`, **và cả trong `catch`**). Cũng bỏ kết quả nếu người dùng đã rời màn hình đó (VD `currentLesson` đã bị `null`).
 9. Chọn Topic → `createTopicPicker`; dropdown bộ lọc → `createSelect`; phân trang → `buildPagerButton`/`buildPageInfo`; trang public cần dữ liệu cá nhân → kiểm tra `getUser()` trước khi gọi API.
 10. Khối `catch` luôn `console.error('[tênHàm]', error)` và hiện `error.message` (không chỉ một câu cố định), nếu không lỗi thật bị che mất.
+11. Trang Admin chỉ dùng hàm `admin*` trong `api.js` để ĐỌC dữ liệu (endpoint `/api/admin/**`); dùng API public sẽ không thấy bản nháp. Danh sách có trạng thái: `buildStatusSelect` cho ô đổi, `buildStatusBadge` cho nơi chỉ hiển thị.
+12. Trang người học gọi API chi tiết một Topic/Quiz: xử lý `error.status === 404` thành thông báo "không còn tồn tại" thay vì lỗi chung.
 
 ---
 *Nguồn xác nhận cao nhất khi có sai lệch với file này: Swagger UI (`/swagger-ui.html`) cho API, `Requirements.md` mục 10 cho design system đầy đủ.*
