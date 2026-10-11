@@ -1,5 +1,5 @@
 # FRONTEND — TÀI LIỆU TRA CỨU NHANH KHI CODE THÊM TRANG
-*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination), M11 (Vocabulary/SRS), M12 (Dictation), M13 (hardening: lỗi 401/403 có body, 413) và M14 (trạng thái nội dung Draft/Published/Archived). File này dùng khi build tiếp trang mới ở M15+, tra nhanh contract API + quy ước design system. Cập nhật lần gần nhất: 07/10/2026, sau M14.)*
+*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination), M11 (Vocabulary/SRS), M12 (Dictation), M13 (hardening: lỗi 401/403 có body, 413), M14 (trạng thái nội dung Draft/Published/Archived), M15 (cờ `topicAvailable`, bỏ `innerHTML` ở progress/topics) và M16 (XP, streak, múi giờ, đồng hồ). File này dùng khi build tiếp trang mới ở M17+, tra nhanh contract API + quy ước design system. Cập nhật lần gần nhất: 10/10/2026, sau M16.)*
 
 **Repo:** `github.com/Pennywise111124/english-learning-platform`, nhánh `main`
 **Vai trò:** code trong thư mục `frontend/`. Không động vào Backend Java (thư mục gốc, ngoài `frontend/`).
@@ -11,7 +11,7 @@
 - HTML/CSS/JavaScript thuần + Tailwind CSS qua CDN (`cdn.tailwindcss.com`, config ở `js/tailwind-config.js`). Không React/Vue/build tool.
 - Gọi REST qua `js/api.js` (đã có sẵn `request()` engine — tự gắn JWT, tự refresh token khi 401, tự gắn header `ngrok-skip-browser-warning` cho môi trường dev qua tunnel). **Không tự viết `fetch()` riêng trong từng trang** — luôn thêm hàm mới vào `api.js` rồi import.
 - WebSocket qua `js/chat.js` (SockJS + STOMP) — chỉ dùng cho trang Chat, không dùng lại pattern này cho trang khác trừ khi thật sự cần realtime.
-- `localStorage` dùng cho: JWT (`linguistai_token`/`linguistai_refresh_token`), user cache (`linguistai_user`), theme (`linguistai_theme`), trạng thái sidebar thu gọn (`linguistai_sidebar_collapsed`). `sessionStorage` (M12) chỉ dùng cho Topic Admin đang làm việc (`linguistai_admin_topic`).
+- `localStorage` dùng cho: JWT (`linguistai_token`/`linguistai_refresh_token`), user cache (`linguistai_user`, từ M16 có thêm `timezone`; `clock.js` đọc múi giờ từ cache này mỗi lần tick, nên `api.updateTimezone` phải cập nhật lại cache), theme (`linguistai_theme`), trạng thái sidebar thu gọn (`linguistai_sidebar_collapsed`). `sessionStorage` (M12) chỉ dùng cho Topic Admin đang làm việc (`linguistai_admin_topic`).
 
 ## 2. Cấu trúc thư mục hiện tại
 
@@ -19,11 +19,11 @@
 frontend/
 ├── index.html (landing page công khai — có footer riêng, không dùng footer.js)
 ├── chat.html (yêu cầu đăng nhập)
-├── topics.html (PUBLIC — khách xem được; M10: nối thật Search/Level/Sort; M12: khách thấy sidebar; M14: chỉ hiện Topic PUBLISHED, hai ô lọc dùng createSelect)
+├── topics.html (PUBLIC — khách xem được; M10: nối thật Search/Level/Sort; M12: khách thấy sidebar; M14: chỉ hiện Topic PUBLISHED, hai ô lọc dùng createSelect; M15: thẻ Topic dựng bằng el(), không còn innerHTML)
 ├── topic-detail.html (PUBLIC — khách xem được; M11: thêm nút Save flashcard; M12: thêm thẻ Dictation, thẻ Quiz/Dictation/nút Save của khách mở modal đăng nhập kèm redirectTo)
 ├── quiz.html (yêu cầu đăng nhập — checkAuth() ngay đầu)
-├── progress.html (yêu cầu đăng nhập)
-├── profile.html (yêu cầu đăng nhập)
+├── progress.html (yêu cầu đăng nhập; M15: thẻ Topic đã archive/nháp bị làm mờ + nhãn "Unavailable", không bấm được, dựng bằng el(); M16: thẻ XP/level và thẻ streak hai trạng thái kèm khiên băng, xem mục 7)
+├── profile.html (yêu cầu đăng nhập; M16: mục chọn múi giờ)
 ├── vocabulary.html (yêu cầu đăng nhập — mới hoàn toàn ở M11, tab "Due Today"/"All Words")
 ├── dictation.html (yêu cầu đăng nhập — mới hoàn toàn ở M12: danh mục bài có tìm kiếm/lọc/phân trang + màn luyện tập; bộ lọc lưu trên URL, mở trực tiếp được bằng ?topicId=)
 ├── admin.html (yêu cầu đăng nhập + role ADMIN — checkAdmin(); M12: tab Dictation, ô "Working topic" dùng chung, tab Topics có tìm kiếm/lọc/phân trang; M14: cột/ô đổi trạng thái Draft/Published/Archived ở Topics, Quizzes, Dictation, bộ lọc Status, mọi lệnh đọc dùng endpoint /api/admin/**)
@@ -32,13 +32,14 @@ frontend/
 │ ├── api.js (fetch engine + toàn bộ hàm gọi API — xem mục 4)
 │ ├── auth.js (JWT storage, checkAuth()/checkAdmin(), getUser()/setUser())
 │ ├── config.js (API_BASE_URL — SỬA DUY NHẤT Ở ĐÂY khi đổi domain Backend; imageSrc(path), audioSrc(path) — M12)
-│ ├── navbar.js (sidebar trái thu gọn được + topbar — trang đã đăng nhập; khách vẫn thấy sidebar, mục cần tài khoản có ổ khoá và mở modal đăng nhập kèm redirectTo — M12)
+│ ├── navbar.js (sidebar trái thu gọn được + topbar — trang đã đăng nhập; khách vẫn thấy sidebar, mục cần tài khoản có ổ khoá và mở modal đăng nhập kèm redirectTo — M12; M16: topbar người đã đăng nhập có <div id="topbarClock">)
 │ ├── footer.js (initFooter() — dùng chung mọi trang app, TRỪ index.html)
-│ ├── authModal.js (modal Login/Sign Up dùng chung — thay login.html/register.html cũ, đã bỏ hẳn; M12: nhận detail { mode, redirectTo })
+│ ├── authModal.js (modal Login/Sign Up dùng chung — thay login.html/register.html cũ, đã bỏ hẳn; M12: nhận detail { mode, redirectTo }; M16: gửi múi giờ trình duyệt lúc đăng ký)
 │ ├── toast.js (showToast(message, type))
 │ ├── ui.js (M12 — el(), buildLevelBadge, buildPagerButton/buildPageInfo, createSelect, createFilterBar, createSearchBox; M14 — buildStatusBadge, buildStatusSelect, STATUS_FILTER_OPTIONS)
 │ ├── topicPicker.js (M12 — combobox chọn Topic có tìm kiếm; M14 — tham số source: 'public' gọi GET /api/topics, 'admin' gọi GET /api/admin/topics)
 │ ├── theme.js (dark/light mode)
+│ ├── clock.js (M16 — initClock(container): đồng hồ HH:MM theo múi giờ người dùng cho topbar; trả hàm dừng timer)
 │ ├── chat.js (STOMP/SockJS, chỉ chat.html dùng)
 │ └── tailwind-config.js (design token — xem mục 7)
 └── css/
@@ -54,12 +55,13 @@ frontend/
 - `api.js` tự động: gắn `Authorization: Bearer <token>`, tự gọi `/api/auth/refresh` khi gặp `401` rồi thử lại request gốc 1 lần, nếu vẫn thất bại mới `clearAuth()` + redirect `index.html?auth=login`. (401 và 403 đều có body {message, status, timestamp} từ M13.)
 - Route bị chặn bởi `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal Login qua query param). Logout chủ động → redirect `index.html` **trơn**, không kèm query param.
 
-## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M14)
+## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M16)
 
 ### Auth
 
 ```
-POST /api/auth/register {username, email, password} → 200, không có body
+POST /api/auth/register {username, email, password, timezone?} → 200, không có body
+timezone (M16, không bắt buộc): tên IANA như "Asia/Tokyo"; thiếu/rỗng → "Asia/Ho_Chi_Minh". Tên không nằm trong danh sách IANA hoặc không có dấu "/" (ví dụ "+05:00", "EST", "GMT+7") → 400 "Invalid timezone". Riêng "UTC" hợp lệ.
 POST /api/auth/login {username, password} → {accessToken, refreshToken, user}
 POST /api/auth/refresh {refreshToken} → {accessToken}
 ```
@@ -70,8 +72,10 @@ POST /api/auth/refresh {refreshToken} → {accessToken}
 GET /api/users/me → User object (mục 6)
 POST /api/users/me/avatar multipart, field "file" → User object
 POST /api/users/me/password {currentPassword, newPassword} → 200, không có body
-GET /api/users/me/progress → mảng UserProgress (mục 6)
+GET /api/users/me/progress → mảng UserProgress (mục 6), mỗi phần tử có topicAvailable (M15)
 GET /api/users/me/quiz-attempts?page=&size= → PageResponse<QuizAttempt> — TỔNG HỢP mọi Quiz
+GET /api/users/me/stats → UserStats (mục 6) — M16
+PATCH /api/users/me/timezone {timezone} → User object (có timezone mới); 400 "Invalid timezone" nếu tên không hợp lệ — M16
 ```
 
 ### Topics — **PUBLIC**, không cần JWT
@@ -177,6 +181,7 @@ DELETE topic/quiz/dictation/flashcard → 409 nếu đã có dữ liệu cá nh�
 ```
 
 Hàm trong api.js: adminGetTopics({keyword, level, sort, status, page, size}), adminGetTopic(id), adminGetFlashcards(topicId), adminGetQuizzes(topicId), adminChangeTopicStatus(id, status), adminChangeQuizStatus(id, status), adminChangeDictationStatus(id, status).
+Hàm gamification/profile trong api.js (M16): register(email, username, password, timezone) (tham số cuối tuỳ chọn; authModal tự thử lại không kèm timezone nếu server báo "Invalid timezone"), getMyStats(), updateTimezone(timezone) (gọi setUser nên cache khớp server).
 KHÔNG dùng getTopicDetail/getFlashcards/getQuizzesByTopic (API public) trong trang Admin: chúng ẩn bản nháp.
 adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 
@@ -190,14 +195,17 @@ adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 - **Trang PUBLIC gọi API cần JWT:** khách sẽ nhận `401`, `api.js` tự `clearAuth()` rồi redirect — kiểm tra `getUser()` trước khi gọi, khách bấm hành động cần tài khoản thì mở `open-auth-modal` kèm `redirectTo` thay vì gọi API.
 - **Dữ liệu từ server/Admin/người dùng → DOM:** dùng `textContent` (hoặc `el()` trong `ui.js`), KHÔNG nhét vào `innerHTML`/thuộc tính HTML (tên có dấu `"` hay `<` sẽ vỡ giao diện hoặc thành lỗ hổng XSS).
 - **Trạng thái nội dung (M14):** khách/người học chỉ thấy nội dung PUBLISHED; nội dung khác là `404`. Trang người học gặp `404` ở chi tiết Topic phải hiện "This topic is no longer available", không phải "Failed to load". Admin luôn dùng endpoint `/api/admin/**` để đọc.
+- **Múi giờ và "ngày" (M16):** streak/XP chia ngày theo `user.timezone` do server tính; mọi timestamp server trả vẫn là UTC (`Instant`). FE chỉ hiển thị. Lưu ý `toLocaleDateString()` ở `progress.html` dùng múi giờ trình duyệt nên có thể lệch ngày với ngày tính streak nếu hai múi giờ khác nhau.
+- **XP không có API ghi:** FE không bao giờ gửi XP hay streak. Server tự cộng sau khi nộp quiz/ôn từ "đã nhớ"/nộp dictation; sau các thao tác đó chỉ cần gọi lại `getMyStats()` nếu trang cần số mới. XP có thể trễ một chút so với response của thao tác (cộng sau commit) và hiếm khi mất nếu server lỗi.
 
 ## 6. Shape dữ liệu thật (xác nhận qua Swagger, không phải bản nháp)
 
 ```json
 // User object — trả về lồng trong AuthResponse.user (login), hoặc trực tiếp (GET /api/users/me, upload avatar).
 // Riêng register KHÔNG trả object này (response rỗng, 200 không có body)
-{ "id": 1, "username": "john", "email": "john@mail.com", "role": "USER", "avatarUrl": "/uploads/avatars/<uuid>.jpg" }
+{ "id": 1, "username": "john", "email": "john@mail.com", "role": "USER", "avatarUrl": "/uploads/avatars/<uuid>.jpg", "timezone": "Asia/Ho_Chi_Minh" }
 // avatarUrl là đường dẫn TƯƠNG ĐỐI — luôn qua imageSrc() (config.js) trước khi gán vào <img src>, không dùng thẳng
+// timezone (M16): luôn có giá trị; tài khoản cũ nhận "Asia/Ho_Chi_Minh" từ migration. Cache localStorage của phiên đăng nhập trước M16 chưa có field này cho tới khi đăng nhập lại.
 
 // Topic
 { "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "/uploads/topics/<uuid>.jpg", "status": "PUBLISHED" }
@@ -225,7 +233,16 @@ adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 { "id": 1, "score": 80, "correctAnswers": 4, "totalQuestions": 5, "completedAt": "2026-09-23T10:00:00Z" }
 
 // UserProgress (mảng, không phân trang)
-{ "topicId": 1, "topicTitle": "Travel", "status": "IN_PROGRESS", "progressPercent": 60, "updatedAt": "..." }
+{ "topicId": 1, "topicTitle": "Travel", "status": "IN_PROGRESS", "progressPercent": 60, "updatedAt": "...", "topicAvailable": true }
+// topicAvailable (M15): false khi Topic không còn PUBLISHED (nháp/archived). FE làm mờ thẻ, gắn "Unavailable", không cho bấm. Dùng `item.topicAvailable !== false` để an toàn với dữ liệu cũ.
+// Dùng `!== false` (không dùng truthy) để thẻ vẫn bấm được nếu server cũ chưa trả field này.
+
+// UserStats — GET /api/users/me/stats (M16)
+{ "totalXp": 20, "level": 1, "xpToNextLevel": 80, "currentStreak": 1, "longestStreak": 1, "activeToday": true, "freezeAvailable": true }
+// level = floor(sqrt(totalXp/100)) + 1; level L trải từ 100*(L-1)^2 đến 100*L^2 XP. xpToNextLevel = 100*level^2 - totalXp.
+// currentStreak đã tính "hiển thị": nếu quá hạn thì trả 0 dù longestStreak vẫn giữ. activeToday = hôm nay (theo múi giờ người dùng) đã có hoạt động.
+// freezeAvailable: tuần hiện tại (bắt đầu thứ Hai) chưa dùng đóng băng. Đóng băng tự áp dụng, che đúng một ngày bỏ lỡ.
+// Người dùng chưa có hoạt động nào: toàn 0, level 1, xpToNextLevel 100, freezeAvailable true.
 
 // Conversation
 { "id": 1, "title": "Small talk practice", "createdAt": "...", "updatedAt": "..." }
@@ -327,6 +344,13 @@ Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào b�
 
 **Skeleton loading:** mọi khu vực chờ API phải render `div.skeleton` (shimmer có sẵn trong `style.css`) ngay khi bắt đầu gọi API, không dùng chữ "Loading..." hay để trắng.
 
+**Gamification UI (M16) — `progress.html`:**
+- Thẻ streak hai trạng thái: **đỏ** (`text-error`, nền `bg-error-container`) khi `activeToday && currentStreak > 0`; **xám** (`text-on-surface-variant`, nền `bg-surface-container-high`) trong mọi trường hợp còn lại. Đổi bằng cách gán lại `className`, không dùng màu hardcode.
+- Khiên băng là SVG tự vẽ (hằng số tĩnh `SHIELD_OK`, `SHIELD_BROKEN`; gán bằng `innerHTML` được phép vì không chứa dữ liệu server): còn đóng băng → khiên nguyên `text-secondary`; đã dùng → khiên vỡ đôi `text-outline`. Ghi chú dưới: "Streak freeze ready…" / "…used this week. It renews on Monday".
+- Thanh level: phần trăm = (totalXp − 100·(L−1)²) / (100·(2L−1)). Lỗi tải gamification hiện inline ở `#gamificationError`, không toast.
+- Đồng hồ topbar (`clock.js`): cập nhật mỗi 15 giây, tooltip "Your day resets in Xh Ym". Chỉ người đã đăng nhập thấy.
+- Chọn múi giờ ở `profile.html`: `<select>` từ `Intl.supportedValuesOf('timeZone')` (có danh sách dự phòng), nút "Use my browser's timezone" và "Save timezone".
+
 ## 8. Checklist khi thêm 1 trang mới
 
 1. Copy đúng khung `<head>` (script chống nháy + font + Tailwind CDN + `tailwind-config.js` + `style.css`) từ 1 trang gần nhất đã có (VD `progress.html`).
@@ -341,6 +365,8 @@ Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào b�
 10. Khối `catch` luôn `console.error('[tênHàm]', error)` và hiện `error.message` (không chỉ một câu cố định), nếu không lỗi thật bị che mất.
 11. Trang Admin chỉ dùng hàm `admin*` trong `api.js` để ĐỌC dữ liệu (endpoint `/api/admin/**`); dùng API public sẽ không thấy bản nháp. Danh sách có trạng thái: `buildStatusSelect` cho ô đổi, `buildStatusBadge` cho nơi chỉ hiển thị.
 12. Trang người học gọi API chi tiết một Topic/Quiz: xử lý `error.status === 404` thành thông báo "không còn tồn tại" thay vì lỗi chung.
+13. Trang cần số liệu XP/streak: gọi `api.getMyStats()` (cần JWT), có `try/catch` hiện lỗi inline. Không tự tính streak ở FE. Đổi múi giờ qua `api.updateTimezone` để cache `user.timezone` được cập nhật, đồng hồ topbar sẽ đổi ở lần tick kế.
+14. Id mới của M16 (gõ sai một id làm cả script module dừng im lặng): `progress.html` — `levelValue`, `xpValue`, `levelBar`, `levelHint`, `streakValue`, `streakIconBox`, `streakIcon`, `streakHint`, `freezeIcon`, `freezeHint`, `gamificationError`; `profile.html` — `timezoneSelect`, `detectTimezoneBtn`, `saveTimezoneBtn`; topbar — `topbarClock`.
 
 ---
 *Nguồn xác nhận cao nhất khi có sai lệch với file này: Swagger UI (`/swagger-ui.html`) cho API, `Requirements.md` mục 10 cho design system đầy đủ.*

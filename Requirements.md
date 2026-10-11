@@ -2,9 +2,9 @@
 # Project 1 — Nền tảng học tiếng Anh tích hợp AI
 *(AI English Learning Platform — trước đây gọi là "Chatbot Học Tiếng Anh"; đổi tên vì phạm vi đã lớn hơn 1 chatbot đơn thuần: gồm AI Chat, Topic/Flashcard, Quiz, Progress, Vocabulary/SRS, Dictation, Search)*
 
-**Phiên bản:** 1.9
-**Ngày tạo:** 28/08/2026 — cập nhật lần 9 (07/10/2026, hoàn thành M13 Hardening + M14 Content Status)
-**Trạng thái:** M1–M14 hoàn thành (MVP + v1.1 + hardening + trạng thái nội dung Draft/Published/Archived)
+**Phiên bản:** 1.10
+**Ngày tạo:** 28/08/2026 — cập nhật lần 10 (10/10/2026, hoàn thành M15 Hardening 2 + M16 Gamification XP/Streak)
+**Trạng thái:** M1–M16 hoàn thành (MVP + v1.1 + hardening + trạng thái nội dung + test bảo mật/đồng thời + XP & streak)
 
 ---
 
@@ -36,7 +36,7 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 | AI Provider | xKiro (`api.xkiro.com/v1`, chuẩn OpenAI-compatible) | Dùng `WebClient`/`RestClient` |
 | Upload file | Lưu local filesystem (giai đoạn đầu), có thể nâng cấp cloud storage sau | Ảnh flashcard, avatar; audio Dictation (M12, xem FR-7) |
 | Frontend | HTML/CSS/JavaScript thuần + Tailwind CSS (qua CDN) | Gọi REST API bằng `fetch`, WebSocket bằng `SockJS + STOMP` client. **Sửa 05/09/2026:** đổi từ Bootstrap (dự kiến ban đầu) sang Tailwind. **Cập nhật M9:** redesign toàn bộ theo design system riêng (Duolingo-inspired) — xem chi tiết đầy đủ ở mục 10 (mới). |
-| Testing | JUnit 5 + Mockito + MockMvc + Testcontainers (PostgreSQL 16) | Unit test Service (Mockito), test `GlobalExceptionHandler` bằng MockMvc standalone, integration test Repository/Specification/migration trên PostgreSQL thật (M13). **Mọi `mvnw test` đều cần Docker đang chạy.** |
+| Testing | JUnit 5 + Mockito + MockMvc + Testcontainers (PostgreSQL 16) | Unit test Service (Mockito), test `GlobalExceptionHandler` bằng MockMvc standalone, integration test Repository/Specification/migration trên PostgreSQL thật (M13). **Mọi `mvnw test` đều cần Docker đang chạy.** Từ M15: test bảo mật ma trận bằng `@SpringBootTest` + `MockMvc` (`SecurityMatrixIntegrationTest`), test đồng thời hai luồng trên PostgreSQL thật (`QuizServiceConcurrencyTest`, `GamificationConcurrencyTest`). |
 | API Documentation | springdoc-openapi 3.1.1 | Swagger UI tự sinh từ code tại `/swagger-ui.html` — nguồn tham chiếu chính xác nhất cho request/response shape thật, ưu tiên hơn tài liệu này khi có sai lệch. Thêm ở M9. |
 
 ### 1.4. Ràng buộc & nguyên tắc làm việc
@@ -70,11 +70,21 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 - Lưu ý: phát hiện ở M13 — `@ExceptionHandler(Exception.class)` trong `@RestControllerAdvice` **nuốt mọi exception chuẩn của Spring MVC chưa được khai báo riêng** (thiếu `@RequestParam` → `MissingServletRequestParameterException`, `@Size` trên tham số → `HandlerMethodValidationException`...) và trả `500`. Cơ chế: exception đi vào `ExceptionHandlerExceptionResolver` (các `@ExceptionHandler` của project) TRƯỚC `DefaultHandlerExceptionResolver` (nơi biết map sang 400/405/415...); handler `Exception.class` khớp mọi thứ nên resolver sau không bao giờ chạy tới. Đây là gốc của lỗi lặp lại ở M11 và M12. Giải pháp ở M13: `GlobalExceptionHandler extends ResponseEntityExceptionHandler` (lớp cha khai báo sẵn ~15 exception chuẩn với status đúng), ghi đè `handleExceptionInternal` để đổi body sang `ErrorResponse {message, status, timestamp}`, cộng 3 method giữ message theo hợp đồng cũ (`handleMethodArgumentNotValid` dạng `field:message`, `handleHttpMessageNotReadable`, `handleHandlerMethodValidationException`). Khi nhiều handler cùng khớp, Spring chọn handler có kiểu exception **gần nhất** trong cây kế thừa (vì vậy `MaxUploadSizeExceededException` ra `413` của lớp cha, không rơi vào handler `MultipartException` của project).
 - Lưu ý: quyết định ở M13 — `DataIntegrityViolationException` không khớp constraint nào Service đã biết **giữ `500`** (không đổi thành `409`): Service đã tự bắt các constraint biết trước và đổi thành `ResourceConflictException`, nên vi phạm lạ lọt tới đây là bug phía server, trả `409` sẽ che mất nó. Mọi `5xx` (kể cả từ lớp cha như `MissingPathVariableException`) trả message cố định `Internal server error`, chi tiết chỉ nằm trong log (`log.error`). `HttpMessageNotReadable` giữ message `Malformed or missing request body` (là một phần hợp đồng API, không để câu chữ của Spring quyết định).
 - Lưu ý: M13 — lỗi `401`/`403` sinh ra ở tầng Security Filter Chain, TRƯỚC khi tới Controller nên `@RestControllerAdvice` không bắt được. Phải cấu hình `AuthenticationEntryPoint` (`JsonAuthenticationEntryPoint`) và `AccessDeniedHandler` (`JsonAccessDeniedHandler`) trong `SecurityConfig.exceptionHandling(...)` để body có cùng shape `{message, status, timestamp}`. Message cố định, không dùng `ex.getMessage()`, không log username/token.
-- Lưu ý: M13/M14 — integration test dùng `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` + Testcontainers PostgreSQL (một container dùng chung qua lớp cha `PostgresIntegrationTestBase`, `static { start(); }`). Flyway chạy V1→V11 thật trên container nên migration cũng được kiểm chứng. Bẫy: sau một lần flush thất bại (vi phạm unique/FK) PostgreSQL đánh dấu transaction aborted nên câu ném lỗi phải là câu **cuối** của test; test cascade cần `em.clear()` trước khi xoá (nếu không Hibernate báo lỗi trước khi tới DB) và sau khi xoá (nếu không `findById` trả bản cũ); `Instant.now()` có nano giây nhưng `TIMESTAMPTZ` chỉ giữ micro giây nên cần `truncatedTo(MICROS)` khi so sánh. Test mới nên có "mutation check" (tạm phá logic, test phải đỏ rồi hoàn tác).
+- Lưu ý: M13/M14 — integration test dùng `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` + Testcontainers PostgreSQL (một container dùng chung qua lớp cha `PostgresIntegrationTestBase`, `static { start(); }`). Flyway chạy V1→V12 thật trên container nên migration cũng được kiểm chứng. Bẫy: sau một lần flush thất bại (vi phạm unique/FK) PostgreSQL đánh dấu transaction aborted nên câu ném lỗi phải là câu **cuối** của test; test cascade cần `em.clear()` trước khi xoá (nếu không Hibernate báo lỗi trước khi tới DB) và sau khi xoá (nếu không `findById` trả bản cũ); `Instant.now()` có nano giây nhưng `TIMESTAMPTZ` chỉ giữ micro giây nên cần `truncatedTo(MICROS)` khi so sánh. Test mới nên có "mutation check" (tạm phá logic, test phải đỏ rồi hoàn tác).
 - Lưu ý: M14 — **cache hit bỏ qua toàn bộ thân method**, kể cả các check quyền/trạng thái bên trong. Với `@Cacheable` thì việc evict đúng là hàng rào DUY NHẤT. Phát hiện: `TopicCacheEvictionListener` từng chỉ evict `topics`/`topicDetails` nên sau khi xoá/archive Topic, `GET /api/topics/{id}/flashcards` vẫn trả flashcard cũ từ Redis (lỗi có sẵn từ M5). Đã vá: evict thêm `flashcardsByTopic::{topicId}`. Quy tắc mới: khi dữ liệu cache phụ thuộc thuộc tính của entity cha (trạng thái Topic), event của cha phải evict cache của con.
 - Lưu ý: M14 — nguyên tắc "mặc định đóng" cho điều kiện lọc quyền hiển thị: entity mới mặc định `DRAFT` (Service đặt tường minh), `Specification` tách hai điểm vào `forLearners(...)` (cố định `PUBLISHED`, không có tham số status nên không thể gọi nhầm) và `forAdmin(..., status)`; query phía người học dùng derived query có tên nói rõ (`findByIdAndStatusAndTopic_Status`). Query không lọc status chỉ còn tồn tại cho Admin. Query phía người học không còn dùng thì xoá hẳn (compiler sẽ chỉ chỗ còn gọi).
 - Lưu ý: M14 — Flyway ghi checksum từng migration đã chạy; **không sửa migration đã áp dụng vào DB thật**, phải thêm migration mới. Viết xong file SQL hoàn chỉnh rồi mới chạy bất cứ thứ gì có thể chạm DB thật (`spring-boot:run`); `mvnw test` an toàn vì dùng container tạo mới.
 - Lưu ý: M14 — JPQL nối chuỗi Java thiếu khoảng trắng (`"... >= :minScore" + "AND ..."` → `:minScoreAND`) làm Spring không dựng được context, nên MỌI test `@DataJpaTest`/`@SpringBootTest` đỏ kể cả test không liên quan. Khi test hàng loạt đỏ vô lý, đọc lỗi khởi động context trước.
+- Lưu ý: M15 — **`@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` mà KHÔNG kế thừa `PostgresIntegrationTestBase` sẽ kết nối thẳng vào DB dev trong `application.yml`**, ghi và xoá dữ liệu thật. Mọi test dùng `replace = NONE` bắt buộc `extends PostgresIntegrationTestBase`. Test hai luồng cần `@Transactional(propagation = NOT_SUPPORTED)` ở cấp class (để commit thật) và phải dọn dữ liệu ở `@AfterEach` vì container dùng chung.
+- Lưu ý: M15 — vá race condition bằng khoá bi quan: (1) **khoá bản ghi cha TRƯỚC rồi mới đọc trạng thái và đếm**, khoá sau khi đã đọc thì giá trị đã cũ; (2) quan hệ `LAZY` giúp lấy id mà không nạp entity, nên entity chỉ được nạp sau khi giành khoá; (3) phải khoá cả đường "đi vào" (`changeStatus` publish) lẫn đường "đi ra" (`deleteQuestion`), vì race có hai chiều; (4) unit test không kiểm được `@Lock`, chỉ test tích hợp hai luồng mới bắt được. Test ép thứ tự bằng `CountDownLatch` (luồng 1 giữ khoá, luồng 2 phải bị chặn rồi thấy dữ liệu đã commit) thay vì chạy đua ngẫu nhiên.
+- Lưu ý: M15 — `MockMvc` **không thực hiện ERROR dispatch** (bước container forward sang `/error`), và `JsonAuthenticationEntryPoint`/`JsonAccessDeniedHandler` dùng `setStatus` + tự ghi body, **không gọi `sendError`**, nên lỗi M7 không còn tái hiện được. Dòng `/error` trong `permitAll()` hiện chỉ là lớp phòng thủ cho lỗi do container sinh ra; xoá nó không làm test nào đỏ (mutant tương đương, đã xác nhận). Giữ nguyên dòng đó. Cơ chế bảo vệ thật là hai handler dùng `setStatus`, đã có unit test.
+- Lưu ý: M15 — test bảo mật ma trận quét **mọi endpoint `/api/admin/**` đã đăng ký** qua `RequestMappingHandlerMapping` (nên endpoint admin thêm sau này tự bị kiểm tra, miễn là đã có route), dùng body JSON hỏng `{` và id `999999` để không ghi dữ liệu. `CacheManager` `@Primary` kiểu `ConcurrentMapCacheManager` trong test thay Redis (`spring.cache.type=simple` vô tác dụng vì `RedisConfig` tự khai báo `RedisCacheManager`). Route mới cần xác thực phải thêm vào `authenticatedRoutes()` trong test này.
+- Lưu ý: M15/M16 — **mutation check phải kiểm cả bản thân bảng mutation**. Gặp ba loại kết quả cần phân biệt: (1) mutant tương đương (ví dụ `gap <= 2` khi nhánh trước đã xử lý `gap == 1`; `getRequestURL()` không chứa query string) — xanh là đúng, không phải thiếu test; (2) mutation gây lỗi biên dịch (`Unresolved compilation problem`) làm test đỏ vì lý do sai, không chứng minh gì — phải thiết kế lại mutation; (3) mutation nhắm vào test ở class khác — phải chạy đúng class chứa test đó. Không mutate `Math.max(0, x)` trong vòng `while` của `isqrt` (số âm làm vòng lặp gần như vô hạn).
+- Lưu ý: M16 — **không thể khoá dòng chưa tồn tại**. Với bảng 1 dòng/người dùng tạo lười (`user_stats`), phải `INSERT ... ON CONFLICT (user_id) DO NOTHING` bằng native query rồi mới `findByUserIdForUpdate` (`PESSIMISTIC_WRITE`). Mọi thao tác ghi sổ cái nằm SAU lệnh khoá. Test hai luồng chứng minh: hai luồng cùng ghi cho user mới không vi phạm unique, tổng XP đúng, và luồng thứ hai chờ khoá rồi cộng lên trạng thái đã commit (kỳ vọng 102, bỏ khoá ra 2 do ghi đè mất cập nhật).
+- Lưu ý: M16 — luồng ghi XP là `publishEvent` trong transaction nghiệp vụ → `@TransactionalEventListener(AFTER_COMMIT)` → `GamificationService.record` với `@Transactional(REQUIRES_NEW)`. `record` phải nằm ở **bean khác** với listener (tránh self-invocation làm `REQUIRES_NEW` không có tác dụng). Listener bắt mọi `Exception` và chỉ `log.error`, nên lỗi gamification không làm hỏng bài nộp đã commit. Đánh đổi chấp nhận: hiếm khi mất XP nếu listener lỗi. `GamificationEventFlowTest` chứng minh cả hai chiều: commit thì có XP, rollback thì không (đổi sang `@EventListener` hoặc `AFTER_ROLLBACK` làm test đỏ).
+- Lưu ý: M16 — **"ngày" của streak tính theo múi giờ người dùng, còn lưu trữ vẫn là UTC.** Mâu thuẫn với quy tắc "UTC mọi nơi" (mục 2.3) chỉ nằm ở việc tính ngày địa phương; mọi timestamp vẫn là `Instant`/`TIMESTAMPTZ`. Test phải có hai ca đối xứng: cùng ngày địa phương nhưng qua nửa đêm UTC (Hà Nội, tính một lần), và cùng ngày UTC nhưng khác ngày địa phương (Los Angeles, tính hai lần). Chỉ nhận tên múi giờ nằm trong `ZoneId.getAvailableZoneIds()` **và** có dấu `/` hoặc đúng `UTC`, để chặn `+05:00`, `EST`, `GMT+7`, `GMT`, `EST5EDT`.
+- Lưu ý: M16 — sổ cái XP **không ghi dòng 0 XP**, vì dòng đó sẽ chiếm khoá `dedupe_key` và chặn lần làm tốt hơn trong cùng ngày; nhưng hoạt động 0 XP **vẫn cập nhật streak**. Khoá chống trùng có kèm ngày địa phương (`VR:{id}:{ngày}`, `DC:{lessonId}:{ngày}`), nên một mutant bỏ phần ngày chỉ bị bắt nếu test kiểm trực tiếp giá trị `dedupe_key` hoặc làm cùng bài ở hai ngày.
+- Lưu ý: M16 — `@ConfigurationProperties` dạng `record` phải gắn `@Validated` và `@Positive`: thiếu một khoá trong `application.yml` thì giá trị là 0 và app im lặng cho 0 XP (đặc biệt `quizParticipationDailyLimit = 0` làm người học không bao giờ nhận XP quiz). Test dùng `@TestPropertySource` không đọc `application.yml` thật; chỉ test `@SpringBootTest` (như ma trận bảo mật) mới kiểm chứng khối YAML. Bean được đăng ký qua `@EnableConfigurationProperties({AiProperties.class, GamificationProperties.class})` ở `AiWebClientConfig`.
 
 ---
 
@@ -166,9 +176,9 @@ Xây dựng backend Spring Boot cho một ứng dụng học tiếng Anh, cho ph
 
 ---
 
-## 2.1. MỞ RỘNG SAU MVP `[v1.1-v1.2]` (Milestone M10–M14)
+## 2.1. MỞ RỘNG SAU MVP `[v1.1-v1.3]` (Milestone M10–M16)
 
-Sau khi hoàn thành MVP (M1–M9), tham khảo thêm sản phẩm Parroto, đã chọn 3 nhóm tính năng **ưu tiên làm trước** vì giá trị học Backend cao và độ phức tạp vừa sức để tiếp cận ngay sau MVP. Toàn bộ các nhóm còn lại (Shadowing, Voice Chat, Exam đầy đủ, YouTube Generator, Notification, Gamification...) **vẫn nằm trong kế hoạch**, được ghi ở mục 9 — Định hướng mở rộng dài hạn, làm sau khi nền tảng đã vững.
+Sau khi hoàn thành MVP (M1–M9), tham khảo thêm sản phẩm Parroto, đã chọn 3 nhóm tính năng **ưu tiên làm trước** vì giá trị học Backend cao và độ phức tạp vừa sức để tiếp cận ngay sau MVP. Toàn bộ các nhóm còn lại (Shadowing, Voice Chat, Exam đầy đủ, YouTube Generator, Notification, Gamification (một phần đã làm ở M16)...) **vẫn nằm trong kế hoạch**, được ghi ở mục 9 — Định hướng mở rộng dài hạn, làm sau khi nền tảng đã vững. Gamification bước 1 (FR-11) đã làm ở M16.
 
 ### FR-7: Dictation `[v1.1]` — ĐÃ IMPLEMENT 03/10/2026 (M12)
 Người học nghe audio rồi gõ lại câu nghe được, hệ thống so sánh với transcript và chỉ ra lỗi.
@@ -240,9 +250,42 @@ Thay cách làm "chỉ được xoá khi chưa có dữ liệu phụ thuộc" (m
 - FR-10.4: Giá trị mặc định. Entity và Service đặt `DRAFT` tường minh khi Admin tạo mới (hệ quả: tạo xong phải bấm Publish mới hiện với người học). Migration V11: dòng cũ → `PUBLISHED` (nội dung đang chạy không biến mất), `CHECK (status IN (...))` tên `ck_<bảng>_status`, rồi `DROP DEFAULT` để Entity luôn tự đặt giá trị. Không thêm index cho `status` (chỉ 3 giá trị, cùng lập luận với `level` ở FR-9).
 - FR-10.5: Đổi trạng thái qua endpoint riêng `PATCH /api/admin/{topics|quizzes|dictation}/{id}/status` body `{status}` (không qua `PUT`, để sửa tiêu đề không vô tình đổi trạng thái). **Cho phép chuyển tự do giữa cả ba giá trị** (ĐÃ CHỐT 06/10/2026): lý do dùng archive là ẩn nội dung đã có lịch sử, và archive nhầm phải khôi phục được ngay. Điều kiện duy nhất, chỉ áp cho `PUBLISHED`: Quiz phải có ≥ 1 câu hỏi, Dictation phải có audio, nếu không `409`. Topic không có điều kiện. Giá trị lạ → `400`.
 - FR-10.6: Archive và xoá cứng cùng tồn tại. Archive luôn được phép. Xoá cứng giữ nguyên quy tắc mục 2.3 (chưa có dữ liệu phụ thuộc, nếu không `409`); message `409` gợi ý archive thay vì xoá (với Flashcard gợi ý archive Topic cha).
-- FR-10.7: Bất biến "Quiz `PUBLISHED` luôn có ≥ 1 câu hỏi": cổng vào là điều kiện publish (FR-10.5), cổng ra là `DELETE /api/admin/questions/{id}` trả `409` nếu đó là câu cuối của Quiz đang `PUBLISHED`. Quiz `DRAFT`/`ARCHIVED` xoá câu cuối được. **Giới hạn đã biết:** hai Admin cùng xoá hai câu cuối ở hai transaction song song có thể làm Quiz rỗng (race condition, chấp nhận vì chỉ Admin dùng; cách vá nếu cần: khoá bản ghi Quiz bằng `PESSIMISTIC_WRITE` trong `deleteQuestion`).
+- FR-10.7: Bất biến "Quiz `PUBLISHED` luôn có ≥ 1 câu hỏi": cổng vào là điều kiện publish (FR-10.5), cổng ra là `DELETE /api/admin/questions/{id}` trả `409` nếu đó là câu cuối của Quiz đang `PUBLISHED`. Quiz `DRAFT`/`ARCHIVED` xoá câu cuối được. **ĐÃ VÁ race condition ở M15 (10/10/2026):** `QuizRepository.findByIdForUpdate` (`@Lock(PESSIMISTIC_WRITE)`) được gọi trong cả `deleteQuestion` và `changeStatus`, khoá Quiz **trước** khi đọc `status` và đếm câu hỏi, nên hai Admin thao tác song song bị tuần tự hoá (cả race "hai người cùng xoá hai câu cuối" lẫn race "một người publish, một người xoá câu duy nhất của bản nháp"). Có test hai luồng (`QuizServiceConcurrencyTest`) và test `InOrder` (khoá trước, đếm sau).
 - FR-10.8: Cache. `TopicChangedEvent` (AFTER_COMMIT) phát khi đổi trạng thái Topic, listener evict `topics`, `topicDetails::{id}` và `flashcardsByTopic::{id}` (xem FR-3.5). Quiz và Dictation chưa có cache nên chưa phát event.
 - FR-10.9: Response: `TopicResponse` và `QuizSummaryResponse` có thêm `status` (phía người học luôn là `PUBLISHED` nên không lộ gì); `AdminDictationLessonResponse` có thêm `status`.
+- FR-10.10 *(M15)*: `UserProgressResponse` có thêm cờ `topicAvailable` (`true` khi Topic ở trạng thái `PUBLISHED`), để `progress.html` làm mờ thẻ, gắn nhãn "Unavailable" và không cho bấm với Topic đã archive/nháp. Không phát sinh truy vấn thêm; `UserProgressRepository.findByUser_Id` dùng `@EntityGraph(attributePaths = "topic")` để tránh N+1.
+
+### FR-11: Gamification, bước 1: XP & Streak `[v1.3]` — ĐÃ IMPLEMENT 10/10/2026 (M16)
+Người học nhận XP khi học, có level, streak theo ngày và một lần "đóng băng" streak mỗi tuần. Leaderboard và achievement để M17.
+- FR-11.1: Hoạt động cho XP (số XP nằm trong `application.yml` khối `app.gamification`, không hardcode; `GamificationProperties` có `@Validated @Positive`):
+
+| Hoạt động | XP mặc định | Khoá chống trùng (`dedupe_key`, `UNIQUE (user_id, dedupe_key)`) |
+|---|---|---|
+| Nộp quiz (tham gia) | 10 | Tối đa 3 lần mỗi ngày mỗi Quiz: `QP:{quizId}:{ngày}:{slot 1..3}` |
+| Quiz đạt (`score ≥ 70`) | +10 | Một lần duy nhất mỗi Quiz: `QPASS:{quizId}` |
+| Ôn từ "đã nhớ" | 2 | Mỗi bản ghi từ vựng mỗi ngày một lần: `VR:{userVocabularyId}:{ngày}` ("chưa nhớ" không có XP) |
+| Nộp dictation | `min(10, round(accuracy/10))` | Mỗi bài mỗi ngày một lần: `DC:{lessonId}:{ngày}` |
+
+- FR-11.2: **XP = 0 thì không ghi sổ cái** (để không chiếm khoá chống trùng), nhưng hoạt động đó **vẫn tính là ngày có hoạt động cho streak** (ví dụ quiz lần thứ 4 trong ngày, dictation accuracy < 5, ôn "chưa nhớ").
+- FR-11.3: **Ngày địa phương.** Ngày của hoạt động = `occurredAt` quy đổi theo `users.timezone` (tên IANA, mặc định `Asia/Ho_Chi_Minh`). Chọn lúc đăng ký (FE gửi múi giờ trình duyệt, server từ chối tên lạ nên FE thử lại không kèm timezone) và đổi được qua `PATCH /api/users/me/timezone`. Múi giờ lưu hỏng thì `zoneOf` log WARN và dùng mặc định.
+- FR-11.4: **Streak và đóng băng.** Tuần bắt đầu thứ Hai. Gọi `L` = `last_active_date`, `D` = ngày hoạt động:
+
+| Điều kiện | Kết quả |
+|---|---|
+| `L` null | streak = 1 |
+| `D ≤ L` | giữ nguyên (`D < L` xảy ra khi đổi múi giờ) |
+| `D = L + 1` | streak + 1 |
+| `D = L + 2`, tuần của **ngày bị bỏ lỡ** (`L + 1`) chưa dùng đóng băng | streak + 1, `freeze_used_week` = thứ Hai của tuần ngày bị bỏ lỡ |
+| `D = L + 2`, tuần đó đã dùng đóng băng | streak = 1 |
+| `D ≥ L + 3` | streak = 1 |
+
+  Đóng băng gắn với tuần của **ngày bị bỏ lỡ**, không phải tuần của `D` (thứ Bảy → thứ Hai: ngày bỏ lỡ là Chủ nhật, thuộc tuần cũ). Đóng băng tự áp dụng, che đúng một ngày. `longest_streak = max(longest, current)` sau mỗi lần. Logic nằm trong `StreakCalculator` (hàm thuần, không phụ thuộc Spring).
+- FR-11.5: **Đọc streak không ghi DB.** `displayStreak(state, hôm nay)`: chênh ≤ 1 ngày thì hiện `current_streak`; chênh 2 ngày và tuần ngày bị bỏ lỡ còn đóng băng thì vẫn hiện (sẽ được cứu ở hoạt động kế); còn lại hiện 0. `freezeAvailable` = tuần hiện tại chưa dùng đóng băng.
+- FR-11.6: **Level** = `floor(sqrt(totalXp / 100)) + 1`; `xpToNextLevel = 100 × level² − totalXp`. Không lưu cột level. `LevelCalculator` dùng căn nguyên (`isqrt`) để đúng ở số lớn.
+- FR-11.7: **API.** `GET /api/users/me/stats` → `{totalXp, level, xpToNextLevel, currentStreak, longestStreak, activeToday, freezeAvailable}` (chưa có dòng thống kê thì toàn 0, `freezeAvailable = true`). `PATCH /api/users/me/timezone` body `{timezone}` → `UserResponse` (có `timezone`); tên không hợp lệ → `400 "Invalid timezone"`. `POST /api/auth/register` nhận thêm `timezone` không bắt buộc. `UserResponse` có thêm `timezone`.
+- FR-11.8: **Kiến trúc ghi XP.** Service quiz/vocab/dictation `publishEvent(LearningActivityEvent)` ngay sau khi lưu; chỉ phát khi thao tác thành công (ca 404/validate không phát). `GamificationListener` (`AFTER_COMMIT`) gọi `GamificationService.record` (`REQUIRES_NEW`): tạo dòng `user_stats` nếu chưa có → khoá `PESSIMISTIC_WRITE` → ghi sổ cái bằng `INSERT ... ON CONFLICT DO NOTHING` (trả 1 nếu ghi được) → cập nhật tổng XP và streak. Xem mục 1.4.
+- FR-11.9: **Không backfill.** Hoạt động trước V12 không có XP; người dùng cũ bắt đầu từ 0 (migration V12 chỉ tạo sẵn dòng `user_stats` rỗng cho người dùng hiện có).
+- FR-11.10: **Giới hạn đã biết.** (a) Listener lỗi thì mất XP của lần đó (chỉ có log). (b) Ngưỡng "đạt" tồn tại ở hai nơi: `QuizAttemptService.PASS_SCORE_THRESHOLD = 70` (tiến độ Topic) và `app.gamification.quiz-pass-score` (XP); hiện bằng nhau, nên gom về một nguồn khi có dịp. (c) Bỏ lỡ một ngày mà đã dùng đóng băng tuần đó thì streak về 1; chưa có khiên mua bằng xu (xem mục 9).
 
 ---
 
@@ -257,6 +300,7 @@ Nguyên tắc chung: **mọi entity gắn với 1 User cụ thể chỉ được
 | `UserProgress` | Chỉ chủ sở hữu mới xem tiến độ của mình | FR-5.2 |
 | `UserVocabulary` (v1.1) | Chỉ chủ sở hữu mới xem/sửa sổ từ vựng cá nhân | mở rộng theo FR-5.2 |
 | `DictationResult` (v1.1, M12) | Chỉ chủ sở hữu mới xem kết quả dictation của mình; số liệu cá nhân trong danh mục (`attempts`, `bestAccuracy`, `lastAttemptAt`) cũng chỉ tính theo user trong JWT | mở rộng theo FR-5.2, FR-7.8 |
+| `XpEvent` / `UserStats` (v1.3, M16) | Chỉ chủ sở hữu mới xem thống kê của mình; `userId` luôn lấy từ JWT (`GET /api/users/me/stats` dùng `Authentication.getName()`), không có tham số `userId` | FR-11 |
 
 **Cách thực thi (kỹ thuật):** ở Service layer, mọi query lấy dữ liệu theo user phải luôn lọc thêm điều kiện `userId = principal.getId()` lấy từ `SecurityContext`/JWT — tuyệt đối không dùng `userId` client gửi lên để query trực tiếp. Đây là nơi rất dễ mắc lỗi IDOR (Insecure Direct Object Reference) nếu chủ quan.
 
@@ -274,6 +318,7 @@ Nguyên tắc chung: **mọi entity gắn với 1 User cụ thể chỉ được
 - Các trường timestamp hệ thống (`createdAt`, `updatedAt`, `completedAt`...) đều do server sinh ra, không do client truyền vào
 - Client chịu trách nhiệm chuyển đổi UTC sang timezone hiển thị phù hợp
 - **[CẬP NHẬT 01/09/2026 — thay đổi so với bản gốc]** Dùng `Instant` (không phải `LocalDateTime`) cho mọi timestamp ở tầng Entity, map sang cột `TIMESTAMPTZ` ở PostgreSQL. Lý do đổi: `LocalDateTime.now()` phụ thuộc timezone của JVM chạy app, dễ tái phát lỗi quên UTC đã ghi nhận ở mục 1.4; `Instant` loại bỏ khả năng quên bằng thiết kế thay vì bằng kỷ luật nhớ gọi `ZoneOffset.UTC` thủ công. Quyết định này chốt trong lúc code M1 (`User`/`RefreshToken`), áp dụng đồng loạt cho mọi entity có timestamp về sau (xem mục 4).
+- **[CẬP NHẬT M16, 10/10/2026]** Ngoại lệ có chủ đích duy nhất về "ngày": streak tính **ngày địa phương** theo `users.timezone` (FR-11.3). Lưu trữ vẫn hoàn toàn UTC; chỉ phép chia ngày dùng múi giờ người dùng, `LocalDate` chỉ xuất hiện ở `xp_events.local_date` và `user_stats.last_active_date`/`freeze_used_week`.
 
 **Conversation/Entity timestamp — server-owned:**
 - `createdAt`/`updatedAt` luôn do backend gán, client không được ghi đè qua request body
@@ -306,7 +351,7 @@ Nguyên tắc chung: **mọi entity gắn với 1 User cụ thể chỉ được
 | NFR-2 | Áp dụng Layered Architecture + DTO (không expose Entity trực tiếp) — Phase 5 |
 | NFR-3 | Có Global Exception Handler (`@RestControllerAdvice`, kế thừa `ResponseEntityExceptionHandler`) xử lý lỗi thống nhất; lỗi `401`/`403` từ tầng Security cũng trả cùng shape `{message, status, timestamp}` (M13) |
 | NFR-4 | Có Validation (`@Valid`, Bean Validation) cho input |
-| NFR-5 | Viết Unit Test (JUnit/Mockito) cho Service layer, tối thiểu các luồng chính. **Hoàn thành 13/09/2026 (M8):** 110 test case trên 10 class (5 Service chính bắt buộc + `FileStorageServiceImpl`/`ChatServiceImpl` optional + `JwtUtil`/2 `CacheEvictionListener` phát sinh trong lúc làm). Phạm vi: Unit test thuần, Mockito mock toàn bộ Repository/dependency, không dùng `@DataJpaTest`/Testcontainers (để dành M9 nếu cần integration test). Coverage tính theo nhánh logic (happy path + mọi nhánh throw exception), không chạy theo %. **Cập nhật M12 (03/10/2026):** tổng 198 test trên 14 class, chi tiết ở `Session_Summary.md` mục 6. **Cập nhật M14 (06/10/2026):** tổng **339 test**, gồm cả integration test trên PostgreSQL thật (Testcontainers: `DictationRepositoryTest`, `TopicRepositoryTest`, `QuizRepositoryTest`, `QuizAttemptRepositoryTest`), `GlobalExceptionHandlerTest` (MockMvc standalone), `TopicQueryParserTest`. Còn nợ: unit test cho `JsonAccessDeniedHandler`/`JsonAuthenticationEntryPoint`.|
+| NFR-5 | Viết Unit Test (JUnit/Mockito) cho Service layer, tối thiểu các luồng chính. **Hoàn thành 13/09/2026 (M8):** 110 test case trên 10 class (5 Service chính bắt buộc + `FileStorageServiceImpl`/`ChatServiceImpl` optional + `JwtUtil`/2 `CacheEvictionListener` phát sinh trong lúc làm). Phạm vi: Unit test thuần, Mockito mock toàn bộ Repository/dependency, không dùng `@DataJpaTest`/Testcontainers (để dành M9 nếu cần integration test). Coverage tính theo nhánh logic (happy path + mọi nhánh throw exception), không chạy theo %. **Cập nhật M12 (03/10/2026):** tổng 198 test trên 14 class, chi tiết ở `Session_Summary.md` mục 6. **Cập nhật M14 (06/10/2026):** tổng **339 test**, gồm cả integration test trên PostgreSQL thật (Testcontainers: `DictationRepositoryTest`, `TopicRepositoryTest`, `QuizRepositoryTest`, `QuizAttemptRepositoryTest`), `GlobalExceptionHandlerTest` (MockMvc standalone), `TopicQueryParserTest`. **Cập nhật M15 (09/10/2026):** 426 test (thêm test hai handler 401/403, mutation check cho `QuizService`, `QuizServiceConcurrencyTest`, `SecurityMatrixIntegrationTest` 59 test, `UserProgressResponseTest`). **Cập nhật M16 (10/10/2026):** tổng **511 test** (thêm `StreakCalculatorTest`, `LevelCalculatorTest`, `TimezoneUtilsTest`, `GamificationServiceTest`, `GamificationConcurrencyTest`, `GamificationEventFlowTest`, `GamificationListenerTest`, `UserServiceTest`, và test phát event ở ba service). Toàn bộ mutation check đã chạy; mutant tương đương được ghi ở mục 1.4. Còn thiếu: test tự động cho Controller và FE.|
 | NFR-6 | Cache Redis phải có chiến lược invalidate rõ ràng, tránh dữ liệu cũ |
 | NFR-7 | JWT token có thời gian hết hạn hợp lý, không lưu password dạng plaintext |
 | NFR-8 | Code cần được rà soát cú pháp/chính tả annotation kỹ trước khi chạy (điểm yếu đã ghi nhận) |
@@ -325,6 +370,7 @@ User
  ├─ passwordHash: String
  ├─ role: Enum(USER, ADMIN)
  ├─ avatarUrl: String
+ ├─ timezone: String   — M16, migration V12; tên IANA, NOT NULL, mặc định 'Asia/Ho_Chi_Minh'; CHECK không rỗng
  └─ createdAt: Instant
 
 Conversation
@@ -460,6 +506,29 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
  [DB constraint: UNIQUE(user_id, flashcard_id) — 1 User chỉ có tối đa 1 bản ghi ôn tập cho mỗi Flashcard]
  [Index: (user_id, next_review_at) — phục vụ trực tiếp truy vấn GET /api/vocabulary/today]
 
+--- Entity v1.3 — Milestone M16 (migration V12) ---
+
+XpEvent — sổ cái XP, chỉ thêm, không sửa/xoá
+ ├─ id: Long
+ ├─ userId: Long (cột user_id, KHÔNG @ManyToOne; FK không cascade — lịch sử cá nhân)
+ ├─ type: Enum(QUIZ_PARTICIPATION, QUIZ_PASS, VOCAB_REVIEW, DICTATION) — @Enumerated(STRING), khớp CHECK ck_xp_events_type
+ ├─ xp: int (≥ 0; thực tế luôn > 0 vì XP = 0 không ghi sổ cái)
+ ├─ localDate: LocalDate (ngày địa phương lúc nhận XP)
+ ├─ dedupeKey: String (≤ 100 ký tự)
+ └─ createdAt: Instant (từ Clock)
+ [DB constraint: UNIQUE(user_id, dedupe_key) — chặn nhận trùng XP ở tầng DB]
+ [Index: (user_id, local_date DESC)]
+
+UserStats — 1 dòng / người dùng (khoá chính chính là user_id, không @GeneratedValue)
+ ├─ userId: Long
+ ├─ totalXp: long
+ ├─ currentStreak: int
+ ├─ longestStreak: int (CHECK longest ≥ current)
+ ├─ lastActiveDate: LocalDate (nullable)
+ ├─ freezeUsedWeek: LocalDate (nullable; ngày thứ Hai của tuần đã dùng đóng băng)
+ └─ updatedAt: Instant
+ [Người dùng đăng ký sau V12 không có dòng này; tạo lười bằng INSERT ... ON CONFLICT DO NOTHING ở lần hoạt động đầu tiên]
+
 ```
 
 **Lưu ý khi implement:** cân nhắc kỹ Lazy vs Eager Loading giữa các quan hệ trên (Phase 3) để tránh N+1, đặc biệt khi load `Conversation` kèm `Message`, hoặc `Topic` kèm `Flashcard`.
@@ -473,7 +542,7 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 ### Auth
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
-| POST | `/api/auth/register` | Public | Đăng ký |
+| POST | `/api/auth/register` | Public | Đăng ký. Body có thêm `timezone` không bắt buộc (tên IANA; thiếu thì dùng `Asia/Ho_Chi_Minh`; tên lạ `400`) |
 | POST | `/api/auth/login` | Public | Đăng nhập, trả JWT |
 | POST | `/api/auth/refresh` | Public | Làm mới access token bằng refresh token (không cấp lại refresh token mới — dùng lại token cũ tới khi hết hạn 7 ngày) |
 
@@ -528,7 +597,7 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 ### Progress `[MVP]`
 | Method | Endpoint | Role | Mô tả |
 |---|---|---|---|
-| GET | `/api/users/me/progress` | USER | Xem tiến độ học của bản thân — luôn lấy `userId` từ JWT, không nhận `?userId=` từ query (FR-5.2) |
+| GET | `/api/users/me/progress` | USER | Xem tiến độ học của bản thân — luôn lấy `userId` từ JWT, không nhận `?userId=` từ query (FR-5.2). Mỗi phần tử có thêm `topicAvailable` (FR-10.10). |
 
 ### Profile `[MVP]`
 | Method | Endpoint | Role | Mô tả |
@@ -537,6 +606,8 @@ DictationResult — ĐÃ IMPLEMENT 03/10/2026 (M12), migration V10
 | POST | `/api/users/me/avatar` | USER | Upload/cập nhật avatar cá nhân, dùng chung rule validate với FR-6 |
 | POST | `/api/users/me/password` | USER | Đổi mật khẩu — yêu cầu đúng mật khẩu hiện tại (FR-1.7) |
 | GET | `/api/users/me/quiz-attempts?page=&size=` | USER | Lịch sử làm bài tổng hợp mọi Quiz, mới nhất trước (FR-5.5) |
+| GET | `/api/users/me/stats` | USER | XP, level, streak, đóng băng (FR-11.7) |
+| PATCH | `/api/users/me/timezone` | USER | Body `{timezone}`; đổi múi giờ dùng để chia ngày cho streak. `400` nếu tên không hợp lệ |
 
 ### Dictation — ĐÃ IMPLEMENT 03/10/2026 (M12) (FR-7)
 | Method | Endpoint | Role | Mô tả |
@@ -625,8 +696,10 @@ frontend/
 | **M12** | **(v1.1)** Dictation — nghe, so sánh transcript, tính accuracy (FR-7) | **Hoàn thành 03/10/2026** — 9 endpoint (6 gốc + 3 bổ sung: danh sách Admin, upload audio, danh mục), migration V10, retrofit `TopicService.deleteTopic()`; tổng 198 test toàn dự án |
 | **M13** | **(hardening)** `GlobalExceptionHandler` kế thừa `ResponseEntityExceptionHandler` (vá gốc lỗi 500 nhầm), JSON body cho `401`/`403`, tokenizer Dictation (dấu câu → khoảng trắng), dọn `innerHTML` ở `admin.html`/`vocabulary.html`, bộ integration test Testcontainers | **Hoàn thành 05/10/2026** |
 | **M14** | **(v1.2)** Trạng thái nội dung Draft/Published/Archived (FR-10): migration V11, `PATCH .../status`, 4 endpoint đọc Admin, lọc theo trạng thái hiệu lực, vá cache, UI trạng thái ở `admin.html` | **Hoàn thành 06/10/2026** — tổng 339 test |
+| **M15** | **(hardening 2)** Test hai handler 401/403, mutation check `QuizService`, vá race condition xoá câu hỏi cuối bằng `PESSIMISTIC_WRITE` (có test hai luồng), ma trận bảo mật `SecurityMatrixIntegrationTest`, `topicAvailable`, bỏ `innerHTML` ở `progress.html`/`topics.html` | **Hoàn thành 09/10/2026** — tổng 426 test |
+| **M16** | **(v1.3)** Gamification bước 1: XP, level, streak + đóng băng theo tuần, múi giờ người dùng (FR-11): migration V12, `GamificationService`, event `AFTER_COMMIT`, `GET /me/stats`, `PATCH /me/timezone`; FE: thẻ XP/streak/khiên ở `progress.html`, chọn múi giờ ở `profile.html`, đồng hồ trên topbar | **Hoàn thành 10/10/2026** — tổng 511 test |
 
-*Thứ tự này ưu tiên CRUD/domain logic (Auth → Topic → Quiz) trước, rồi mới tới 2 phần "khó" là tích hợp AI và Redis/WebSocket — tránh việc học nhiều kỹ thuật khó cùng lúc ở M2 như bản trước. Mỗi milestone backend đều có bước test Postman + dựng mini-frontend ngay sau đó, thay vì dồn toàn bộ tích hợp frontend vào 1 milestone cuối (dễ gây debug integration dồn cục, khó xác định lỗi nằm ở đâu). M1–M9 là MVP bắt buộc; M10–M14 làm ngay sau khi MVP chạy ổn định. Các tính năng mở rộng khác (mục 9) vẫn nằm trong kế hoạch dài hạn, làm sau M14 hoặc song song với việc quay lại Project 2 tùy thời gian thực tế.*
+*Thứ tự này ưu tiên CRUD/domain logic (Auth → Topic → Quiz) trước, rồi mới tới 2 phần "khó" là tích hợp AI và Redis/WebSocket — tránh việc học nhiều kỹ thuật khó cùng lúc ở M2 như bản trước. Mỗi milestone backend đều có bước test Postman + dựng mini-frontend ngay sau đó, thay vì dồn toàn bộ tích hợp frontend vào 1 milestone cuối (dễ gây debug integration dồn cục, khó xác định lỗi nằm ở đâu). M1–M9 là MVP bắt buộc; M10–M16 làm ngay sau khi MVP chạy ổn định. Các tính năng mở rộng khác (mục 9) vẫn nằm trong kế hoạch dài hạn, làm sau M16 hoặc song song với việc quay lại Project 2 tùy thời gian thực tế.*
 
 ---
 
@@ -655,19 +728,25 @@ Các điểm dưới đây **cố ý chưa khóa cứng** ngay trong Requirement
 | Phạm vi `status` và quy tắc hiển thị (M14) | ~~M14~~ **Đã chốt 06/10/2026** | 3 entity có status, Flashcard thừa hưởng Topic; trạng thái hiệu lực = bản thân + Topic cha `PUBLISHED`; lịch sử cá nhân vẫn xem được. Chi tiết FR-10 |
 | Cho phép chuyển trạng thái tự do hay chặn một số cạnh (M14) | ~~M14~~ **Đã chốt 06/10/2026: tự do** | Archive nhầm phải khôi phục dễ; điều kiện duy nhất áp cho `PUBLISHED` (Quiz có câu hỏi, Dictation có audio) |
 | Giá trị `status` của dữ liệu cũ và dữ liệu mới (M14) | ~~M14~~ **Đã chốt 06/10/2026** | Dòng cũ `PUBLISHED` (V11), dòng tạo mới `DRAFT` |
+| Cách vá race condition xoá câu hỏi cuối (M15) | ~~M15~~ **Đã chốt 09/10/2026** | `@Lock(PESSIMISTIC_WRITE)` trên `findByIdForUpdate`, khoá trước rồi đọc và đếm, áp dụng cho `deleteQuestion` và `changeStatus`. Chọn khoá bi quan thay `@Version` vì chỉ Admin dùng, đơn giản hơn. FR-10.7 |
+| Cách test bảo mật route (M15) | ~~M15~~ **Đã chốt 09/10/2026** | `@SpringBootTest` + `MockMvc` trên Testcontainers PostgreSQL, `CacheManager` trong bộ nhớ thay Redis, token lấy qua API thật; không dùng `@WebMvcTest`. Mục 1.4 |
+| Hoạt động cho XP và chống farm (M16) | ~~M16~~ **Đã chốt 09/10/2026** | Bảng ở FR-11.1; khoá chống trùng `UNIQUE (user_id, dedupe_key)`; số XP nằm trong `application.yml` |
+| Múi giờ của streak (M16) | ~~M16~~ **Đã chốt 09/10/2026** | Cột `users.timezone`, ngày tính theo múi giờ người dùng, lưu trữ vẫn UTC. FR-11.3 |
+| Quy tắc đóng băng streak (M16) | ~~M16~~ **Đã chốt 09/10/2026** | Một lần miễn phí mỗi tuần (tuần bắt đầu thứ Hai), tự áp dụng, gắn với tuần của ngày bị bỏ lỡ. Khiên mua bằng xu để sau. FR-11.4 |
+| Cách ghi XP (M16) | ~~M16~~ **Đã chốt 09/10/2026** | Event `AFTER_COMMIT` + `REQUIRES_NEW`, lỗi chỉ log (chấp nhận hiếm khi mất XP) thay vì ghi cùng transaction nghiệp vụ. FR-11.8 |
 
 
 ---
 
-## 9. ĐỊNH HƯỚNG MỞ RỘNG DÀI HẠN (v2+ — SAU M14)
+## 9. ĐỊNH HƯỚNG MỞ RỘNG DÀI HẠN (v2+ — SAU M16)
 
-Tham khảo từ [parroto.app](https://parroto.app/vi) (28/08/2026). Đây là **roadmap thật sự**, không phải danh sách loại bỏ — vẫn muốn làm, nhưng **sau khi nền tảng (M1–M14) đã vững**, vì mỗi nhóm dưới đây đòi hỏi kỹ thuật/hạ tầng riêng khá nặng, nên cần Backend đã chắc mới bắt đầu để tránh vỡ kiến trúc giữa chừng. Thứ tự trong bảng là gợi ý độ ưu tiên/độ khó tăng dần khi quay lại:
+Tham khảo từ [parroto.app](https://parroto.app/vi) (28/08/2026). Đây là **roadmap thật sự**, không phải danh sách loại bỏ — vẫn muốn làm, nhưng **sau khi nền tảng (M1–M16) đã vững**, vì mỗi nhóm dưới đây đòi hỏi kỹ thuật/hạ tầng riêng khá nặng, nên cần Backend đã chắc mới bắt đầu để tránh vỡ kiến trúc giữa chừng. Thứ tự trong bảng là gợi ý độ ưu tiên/độ khó tăng dần khi quay lại:
 
 | Nhóm | Ghi chú kỹ thuật khi triển khai |
 |---|---|
 | ~~Admin Content Management (status Draft/Published/Archived)~~ | **ĐÃ LÀM ở M14 (FR-10)**. Phần còn lại nếu cần: lịch hẹn công bố, lịch sử thay đổi trạng thái |
 | User Profile mở rộng (statistics, achievements) | Mở rộng tự nhiên từ entity `User`, ghép cùng Gamification |
-| Gamification (XP, streak, leaderboard, achievement) | Cần thêm entity `Achievement`, `UserAchievement`; leaderboard nên cache Redis (sorted set) |
+| Gamification (XP, streak, leaderboard, achievement) | **XP, level, streak, đóng băng: ĐÃ LÀM ở M16 (FR-11).** Còn lại cho M17: leaderboard (Redis sorted set, cần `FLUSHALL`/xây lại khi đổi cách tính), `Achievement`/`UserAchievement`. Về sau: xu thưởng khi học và cửa hàng khiên chống mất streak (thêm cột `coins`, `purchased_shields` ở migration V13; logic streak chỉ cần thêm một nguồn che ngày bỏ lỡ sau đóng băng miễn phí). Backfill XP cũ nếu muốn người dùng cũ không bắt đầu từ 0 |
 | Learning Profile & Personalized Path | Cần đủ dữ liệu tích lũy từ Progress/Vocab để gợi ý có ý nghĩa — nên làm sau khi có user thật dùng thử |
 | Notification hệ thống | Cần Spring Scheduler + tích hợp email/push, thêm hạ tầng gửi thư |
 | Exam Preparation (IELTS/TOEIC/TOEFL) | Entity `Exam → ExamPart → Question`, chủ yếu là CRUD nội dung lớn + Timer/Auto-save |
@@ -679,7 +758,7 @@ Tham khảo từ [parroto.app](https://parroto.app/vi) (28/08/2026). Đây là *
 
 ## 10. FRONTEND DESIGN SYSTEM (chốt tại M9)
 
-Tài liệu tham chiếu bắt buộc khi code thêm trang mới — giữ đúng convention dưới đây để trang mới không lệch hẳn với 10 trang hiện có.
+Tài liệu tham chiếu bắt buộc khi code thêm trang mới — giữ đúng convention dưới đây để trang mới không lệch hẳn với các trang hiện có.
 
 ### 10.1. Bảng màu (Duolingo-inspired)
 
@@ -755,6 +834,7 @@ Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) bỏ 
 - Nếu `getUser()` trả `null` (khách chưa đăng nhập): trang có đủ 2 khung `#app-sidebar-container` + `#app-topbar-container` (như `topic-detail.html`) → `renderGuestShell()`: **vẫn hiện sidebar đầy đủ** để khách thấy các chức năng. Mục công khai (Topics) là link thường; mục cần tài khoản (Chat, My Words, Dictation, Progress) là nút có biểu tượng ổ khoá, bấm vào mở modal đăng nhập kèm `redirectTo` = trang đích (xem 10.6). Có thẻ "Unlock everything" cuối sidebar, không hiện mục Admin. Trang không có đủ 2 khung (ví dụ landing page) → `renderGuestNavBar()`: topbar đơn giản như cũ, nút "Log In".
 - Nếu đã đăng nhập → sidebar trái (`#appSidebar`, có thể thu gọn còn icon qua nút mũi tên, trạng thái lưu `localStorage` key `linguistai_sidebar_collapsed`) + topbar riêng (theme toggle, avatar, logout). Trên mobile, sidebar biến thành drawer trượt ra (mở qua hamburger trên topbar).
 - **Lưu ý xung đột:** `chat.html` có sidebar riêng thứ 2 (danh sách Conversation, `#conversationsSidebar`) — đây KHÔNG phải sidebar điều hướng chung, chỉ nội dung riêng của trang Chat, có hamburger mở/đóng độc lập nằm trong Chat Header (khác hamburger mở sidebar điều hướng chung nằm trên topbar).
+- **Đồng hồ (M16):** topbar của người đã đăng nhập có `<div id="topbarClock">` do `clock.js` (`initClock`) điền: hiện `HH:MM` theo `getUser().timezone` (không có thì theo trình duyệt), tooltip "Your day resets in Xh Ym (múi giờ)", cập nhật mỗi 15 giây và đọc lại múi giờ mỗi lần tick. Khách không có đồng hồ. Tài khoản đăng nhập trước M16 chưa có `timezone` trong cache `localStorage` cho tới khi đăng nhập lại hoặc lưu múi giờ ở `profile.html`.
 
 ### 10.6. Modal Login/Register dùng chung (`authModal.js`)
 
@@ -762,6 +842,7 @@ Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) bỏ 
 - Mở modal: gắn `data-open-login`/`data-open-register` vào bất kỳ `<button>` nào (authModal.js tự quét toàn trang), hoặc dispatch `window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'login' }))` từ nơi khác (navbar khách dùng cách này).
 - **`redirectTo` (M12):** event `open-auth-modal` nhận `detail` là chuỗi (`'login'`/`'register'`) **hoặc** `{ mode, redirectTo }`. Có `redirectTo` thì đăng nhập thành công sẽ chuyển tới đó thay vì `chat.html` (mặc định). Điểm đến chỉ sống trong lúc modal đang mở: đóng modal (✕/Esc/bấm nền) thì bị xoá, mỗi lần mở đều đặt lại — mở không kèm `redirectTo` luôn về `chat.html`. Chỉ nhận tên trang `.html` tương đối kèm query (regex `SAFE_REDIRECT`), giá trị khác (URL tuyệt đối, `//host`) bị bỏ qua để chặn open redirect. Dùng ở `topic-detail.html` (thẻ Quiz/Dictation, nút lưu từ) và sidebar khách.
 - `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal qua query param) — **không** dùng `?auth=login` cho hành động logout chủ động (chỉ về `index.html` trơn).
+- **Múi giờ lúc đăng ký (M16):** form Sign Up gửi múi giờ trình duyệt (`Intl.DateTimeFormat().resolvedOptions().timeZone`). Server chặn tên không nằm trong danh sách IANA, nên nếu nhận `Invalid timezone` thì `authModal.js` tự đăng ký lại không kèm `timezone` (server dùng mặc định) thay vì chặn đăng ký.
 
 ### 10.7. Module JS dùng chung khác
 
@@ -774,7 +855,8 @@ Trang PUBLIC (khách xem được, như `topics.html`/`topic-detail.html`) bỏ 
 | `chat.js` | `connectChat()`/`subscribeConversation()`/`sendChatMessage()`/`unsubscribeConversation()` — STOMP over SockJS, tách riêng khỏi `chat.html` |
 | `footer.js` | `initFooter()` — footer dùng chung cho mọi trang app (trừ `index.html`) |
 | `theme.js` | Dark/light mode, xem mục 10.3 |
-| `api.js` | Engine `request()` gắn `err.status` vào lỗi (M14) để trang phân biệt `404` ("không còn tồn tại") với lỗi khác. Hàm Admin dùng endpoint `/api/admin/**` (`adminGetTopics`, `adminGetTopic`, `adminGetFlashcards`, `adminGetQuizzes`, `adminChange{Topic|Quiz|Dictation}Status`), KHÔNG dùng lại API public vì API public giờ ẩn bản nháp |
+| `api.js` | Engine `request()` gắn `err.status` vào lỗi (M14) để trang phân biệt `404` ("không còn tồn tại") với lỗi khác. Hàm Admin dùng endpoint `/api/admin/**` (`adminGetTopics`, `adminGetTopic`, `adminGetFlashcards`, `adminGetQuizzes`, `adminChange{Topic|Quiz|Dictation}Status`), KHÔNG dùng lại API public vì API public giờ ẩn bản nháp. **M16:** `register(email, username, password, timezone)` (tham số cuối tuỳ chọn), `getMyStats()`, `updateTimezone(timezone)` (gọi `setUser` để cache khớp server). |
+| `clock.js` | `initClock(container)` (M16): đồng hồ theo múi giờ người dùng cho topbar, trả hàm dừng timer |
 
 ### 10.8. Skeleton loading
 
@@ -787,11 +869,18 @@ Mọi khu vực nội dung chính chờ API phải có skeleton (khung `div.skel
 - Accessibility nâng cao (skip link, `focus-visible` toàn diện, `aria-hidden` cho icon trang trí) mới chỉ áp dụng đầy đủ cho `index.html` (qua audit Impeccable) — các trang còn lại (kể cả `vocabulary.html`, `dictation.html`) chưa rà theo cùng chuẩn, để dành đợt polish sau nếu cần. (Các component M12 `createSelect`/`topicPicker` đã có ARIA combobox/listbox + bàn phím.)
 - Dictation: thẻ `<audio>` không gửi được header `ngrok-skip-browser-warning` như `fetch` (đã test phát được qua ngrok trên trình duyệt desktop); `.m4a` chưa kiểm chứng trên Safari — nếu lỗi, bỏ M4A khỏi whitelist `FileStorageServiceImpl.detectAudioExtension`.
 - Dictation backend: nếu transaction rollback sau khi `storeAudio` đã ghi file thì file mới thành mồ côi (cùng giới hạn đã biết với `updateTopicImage` ở M7, tần suất rất thấp); file văn bản UTF-16 (bắt đầu `FF FE`) lọt qua nhận dạng MP3 frame-sync (chỉ Admin upload, chỉ phục vụ như audio nên rủi ro thấp).
-- `progress.html`: thẻ Topic đã archive vẫn bấm được, vào `topic-detail.html` sẽ thấy "This topic is no longer available" (xử lý bằng `error.status === 404`). Cải tiến để dành: thêm cờ `topicAvailable` vào `UserProgressResponse` để thẻ xám đi và gắn nhãn "Archived" ngay trên danh sách.
-- `progress.html` còn dựng thẻ bằng `innerHTML` (tên Topic do Admin nhập), chưa chuyển sang `el()`. `topics.html` cũng còn dựng thẻ Topic bằng `innerHTML`.
-- Không có test tự động cho Controller và FE; các luồng đó kiểm bằng bộ Postman và kiểm tay.
-- Chưa có unit test cho `JsonAccessDeniedHandler`/`JsonAuthenticationEntryPoint`; chưa có mutation check cho quy tắc "câu hỏi cuối" (`<= 1` → `<= 0`).
-- Race condition khi hai Admin xoá hai câu hỏi cuối của cùng Quiz `PUBLISHED` (xem FR-10.7).
+- Không có test tự động cho phần lớn Controller và cho FE (kiểm bằng Postman và kiểm tay). Riêng quy tắc phân quyền route đã có `SecurityMatrixIntegrationTest`.
+- Gamification (M16): chưa backfill XP cho dữ liệu cũ; ngưỡng "đạt" quiz nằm ở hai nơi (FR-11.10); mất XP của lần đó nếu listener lỗi; chưa có leaderboard/achievement (M17); chưa có xu/khiên mua được.
+- `clock.js`: trên màn hình rất hẹp topbar có thể chật (nút menu, đồng hồ, theme, avatar, logout); chưa có chế độ ẩn chữ giờ ở màn nhỏ.
+- `toLocaleDateString()`/`toLocaleTimeString()` ở `progress.html` hiển thị theo múi giờ trình duyệt, trong khi streak tính theo múi giờ đã lưu; nếu hai múi giờ khác nhau, ngày hiển thị có thể lệch với ngày tính streak.
+- Còn dựng bằng `innerHTML` dữ liệu server ở các trang chưa rà (`topic-detail.html`, `quiz.html`, `chat.html`...): chưa kiểm kê; `progress.html`, `topics.html`, `admin.html` (Manage Questions), `vocabulary.html` đã chuyển sang `el()`.
+
+### 10.10. Thẻ XP & streak ở `progress.html` (M16)
+- Thẻ XP: level, tổng XP, thanh tiến độ trong level (level L trải từ `100·(L−1)²` đến `100·L²` XP), dòng "X XP to level L+1".
+- Thẻ streak **hai trạng thái**: đỏ (`text-error`, nền `error-container`) khi `activeToday` và streak > 0; xám (`on-surface-variant`) khi chưa bắt đầu hoặc hôm nay chưa học. Dòng gợi ý đổi theo trạng thái.
+- Khiên băng bằng SVG tự vẽ (hằng số tĩnh `SHIELD_OK` / `SHIELD_BROKEN`, không chứa dữ liệu server nên được phép dùng `innerHTML`): còn đóng băng thì khiên nguyên màu `secondary` kèm "Streak freeze ready…"; đã dùng thì khiên vỡ đôi màu xám kèm "…used this week. It renews on Monday".
+- Lỗi tải: dòng đỏ inline `#gamificationError` kèm `error.message`, không dùng toast.
+- `profile.html`: mục Timezone (`<select>` lấy từ `Intl.supportedValuesOf('timeZone')`, có danh sách dự phòng, nút "Use my browser's timezone" và "Save timezone").
 
 ---
 
