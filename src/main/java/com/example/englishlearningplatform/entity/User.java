@@ -30,12 +30,11 @@ public class User {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(nullable = false, length = 64)
+    private String timezone = "Asia/Ho_Chi_Minh";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
-
-    // ── Getters & Setters ──────────────────────────────────────────────
-    // (Nếu bạn dùng Lombok, có thể thay toàn bộ phần dưới bằng @Getter @Setter.
-    // Ở đây viết tay để bạn thấy rõ từng dòng đang làm gì.)
 
     public Long getId() {
         return id;
@@ -83,6 +82,14 @@ public class User {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 
     public Instant getCreatedAt() {

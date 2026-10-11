@@ -13,7 +13,7 @@ import reactor.netty.http.client.HttpClient;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
-@EnableConfigurationProperties(AiProperties.class)
+@EnableConfigurationProperties({ AiProperties.class, GamificationProperties.class })
 public class AiWebClientConfig {
 
     @Bean

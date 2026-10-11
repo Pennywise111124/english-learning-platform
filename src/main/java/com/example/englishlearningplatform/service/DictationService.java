@@ -33,6 +33,7 @@ import com.example.englishlearningplatform.entity.Level;
 import com.example.englishlearningplatform.entity.Topic;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
+import com.example.englishlearningplatform.event.LearningActivityEvent;
 import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.DictationLessonRepository;
@@ -111,6 +112,9 @@ public class DictationService {
         result.setCreatedAt(clock.instant());
 
         DictationResult saved = resultRepository.save(result);
+
+        eventPublisher.publishEvent(LearningActivityEvent.dictationSubmitted(
+                user.getId(), lesson.getId(), cmp.accuracy(), saved.getCreatedAt()));
 
         return new DictationSubmitResponse(
                 saved.getId(),

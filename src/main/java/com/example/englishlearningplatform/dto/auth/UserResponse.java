@@ -8,6 +8,7 @@ public class UserResponse {
     private String email;
     private String role;
     private String avatarUrl;
+    private String timezone;
 
     public static UserResponse from(User user) {
         UserResponse dto = new UserResponse();
@@ -16,6 +17,7 @@ public class UserResponse {
         dto.email = user.getEmail();
         dto.role = user.getRole().name();
         dto.avatarUrl = user.getAvatarUrl();
+        dto.timezone = user.getTimezone();
         return dto;
     }
 
@@ -37,5 +39,9 @@ public class UserResponse {
 
     public String getAvatarUrl() {
         return avatarUrl;
+    }
+
+    public String getTimezone() {
+        return timezone;
     }
 }

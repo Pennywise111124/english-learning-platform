@@ -11,6 +11,7 @@ import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.repository.RefreshTokenRepository;
 import com.example.englishlearningplatform.repository.UserRepository;
 import com.example.englishlearningplatform.security.JwtUtil;
+import com.example.englishlearningplatform.util.TimezoneUtils;
 
 import java.time.Instant;
 
@@ -48,6 +49,7 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPasswordHash(encodedPassword);
         user.setRole(Role.USER);
+        user.setTimezone(TimezoneUtils.normalizeOrDefault(request.getTimezone()));
 
         userRepository.save(user);
     }

@@ -9,6 +9,7 @@ import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.repository.RefreshTokenRepository;
 import com.example.englishlearningplatform.repository.UserRepository;
 import com.example.englishlearningplatform.security.JwtUtil;
+import com.example.englishlearningplatform.util.TimezoneUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -114,6 +115,59 @@ class AuthServiceTest {
         assertEquals(ENCODED_PASSWORD, savedUser.getPasswordHash());
         assertNotEquals(RAW_PASSWORD, savedUser.getPasswordHash());
         assertEquals(Role.USER, savedUser.getRole());
+    }
+
+    @Test
+    void register_withoutTimezone_savesDefaultTimezone() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(USERNAME);
+        request.setEmail(EMAIL);
+        request.setPassword(RAW_PASSWORD);
+
+        when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
+
+        authService.register(request);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals(TimezoneUtils.DEFAULT, captor.getValue().getTimezone());
+    }
+
+    @Test
+    void register_withValidTimezone_savesThatTimezone() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(USERNAME);
+        request.setEmail(EMAIL);
+        request.setPassword(RAW_PASSWORD);
+        request.setTimezone("  Asia/Tokyo ");
+
+        when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD);
+
+        authService.register(request);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals("Asia/Tokyo", captor.getValue().getTimezone());
+    }
+
+    @Test
+    void register_withInvalidTimezone_throwsIllegalArgumentAndDoesNotSave() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(USERNAME);
+        request.setEmail(EMAIL);
+        request.setPassword(RAW_PASSWORD);
+        request.setTimezone("Mars/Base");
+
+        when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> authService.register(request));
+
+        verify(userRepository, never()).save(any());
     }
 
     // ------------------------------------------------------------------

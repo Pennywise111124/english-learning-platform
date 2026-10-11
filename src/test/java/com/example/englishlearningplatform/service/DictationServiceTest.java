@@ -35,6 +35,7 @@ import com.example.englishlearningplatform.dto.common.PageResponse;
 import com.example.englishlearningplatform.dto.dictation.*;
 import com.example.englishlearningplatform.entity.*;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
+import com.example.englishlearningplatform.event.LearningActivityEvent;
 import com.example.englishlearningplatform.exception.InvalidFileException;
 import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
@@ -233,6 +234,54 @@ class DictationServiceTest {
                 () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("?!...")));
 
         verify(resultRepository, never()).save(any());
+    }
+
+    @Test
+    void submit_happyPath_publishesDictationSubmittedEvent() {
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        DictationLesson lesson = createLesson(LESSON_ID, "/uploads/dictation/audio.mp3", "I like cats");
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED)).thenReturn(Optional.of(lesson));
+        when(clock.instant()).thenReturn(FIXED_NOW);
+        when(resultRepository.save(any(DictationResult.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        dictationService.submit(LESSON_ID, new DictationSubmitRequest("I LIKE dogs"));
+
+        ArgumentCaptor<LearningActivityEvent> captor = ArgumentCaptor.forClass(LearningActivityEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        verifyNoMoreInteractions(eventPublisher);
+
+        LearningActivityEvent event = captor.getValue();
+        assertEquals(LearningActivityEvent.Kind.DICTATION_SUBMITTED, event.kind());
+        assertEquals(1L, event.userId());
+        assertEquals(LESSON_ID, event.refId());
+        assertEquals(66.7, event.metric(), 0.0001);
+        assertEquals(FIXED_NOW, event.occurredAt());
+    }
+
+    @Test
+    void submit_whenInvalidOrNotFound_doesNotPublishEvent() {
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("I like cats")));
+
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void submit_whenInputHasNoWords_doesNotPublishEvent() {
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        DictationLesson lesson = createLesson(LESSON_ID, "/uploads/dictation/audio.mp3", "I like cats");
+        when(lessonRepository.findByIdAndStatusAndTopic_Status(LESSON_ID, ContentStatus.PUBLISHED,
+                ContentStatus.PUBLISHED)).thenReturn(Optional.of(lesson));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> dictationService.submit(LESSON_ID, new DictationSubmitRequest("?!...")));
+
+        verifyNoInteractions(eventPublisher);
     }
 
     // ------------------------------------------------------------------

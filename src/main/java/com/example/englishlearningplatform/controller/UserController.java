@@ -5,7 +5,9 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,9 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.englishlearningplatform.dto.auth.ChangePasswordRequest;
+import com.example.englishlearningplatform.dto.auth.UpdateTimezoneRequest;
 import com.example.englishlearningplatform.dto.auth.UserResponse;
 import com.example.englishlearningplatform.dto.common.PageResponse;
 import com.example.englishlearningplatform.dto.quiz.QuizAttemptResponse;
+import com.example.englishlearningplatform.dto.stats.UserStatsResponse;
+import com.example.englishlearningplatform.service.GamificationService;
 import com.example.englishlearningplatform.service.QuizAttemptService;
 import com.example.englishlearningplatform.service.UserService;
 import com.example.englishlearningplatform.util.PaginationUtils;
@@ -27,10 +32,13 @@ public class UserController {
 
     private final UserService userService;
     private final QuizAttemptService quizAttemptService;
+    private final GamificationService gamificationService;
 
-    public UserController(UserService userService, QuizAttemptService quizAttemptService) {
+    public UserController(UserService userService, QuizAttemptService quizAttemptService,
+            GamificationService gamificationService) {
         this.userService = userService;
         this.quizAttemptService = quizAttemptService;
+        this.gamificationService = gamificationService;
     }
 
     @GetMapping
@@ -56,5 +64,15 @@ public class UserController {
         PaginationUtils.validate(page, size);
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(PageResponse.from(quizAttemptService.getMyRecentAttempts(pageable)));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<UserStatsResponse> getMyStats(Authentication authentication) {
+        return ResponseEntity.ok(gamificationService.getStats(authentication.getName()));
+    }
+
+    @PatchMapping("/timezone")
+    public ResponseEntity<UserResponse> updateMyTimezone(@Valid @RequestBody UpdateTimezoneRequest request) {
+        return ResponseEntity.ok(userService.updateMyTimezone(request));
     }
 }

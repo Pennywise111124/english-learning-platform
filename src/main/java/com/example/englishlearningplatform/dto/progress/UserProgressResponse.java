@@ -1,18 +1,19 @@
 package com.example.englishlearningplatform.dto.progress;
 
+import java.time.Instant;
+
+import com.example.englishlearningplatform.entity.ContentStatus;
 import com.example.englishlearningplatform.entity.ProgressStatus;
 import com.example.englishlearningplatform.entity.UserProgress;
 
-// Khớp shape mảng đã chốt ở FE_Handoff_Brief.md — LƯU Ý: brief ghi field tên
-// "topicId"/"topicTitle" (không phải nested object "topic": {...}) — cần lấy
-// topic.getTitle() ra rồi gán phẳng vào field riêng, không trả thẳng entity Topic lồng bên trong
 public class UserProgressResponse {
 
     private Long topicId;
     private String topicTitle;
     private ProgressStatus status;
     private int progressPercent;
-    private java.time.Instant updatedAt;
+    private Instant updatedAt;
+    private boolean topicAvailable;
 
     public static UserProgressResponse from(UserProgress progress) {
         UserProgressResponse dto = new UserProgressResponse();
@@ -21,6 +22,7 @@ public class UserProgressResponse {
         dto.status = progress.getStatus();
         dto.progressPercent = progress.getProgressPercent();
         dto.updatedAt = progress.getUpdatedAt();
+        dto.topicAvailable = progress.getTopic().getStatus() == ContentStatus.PUBLISHED;
         return dto;
     }
 
@@ -40,7 +42,11 @@ public class UserProgressResponse {
         return progressPercent;
     }
 
-    public java.time.Instant getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isTopicAvailable() {
+        return topicAvailable;
     }
 }

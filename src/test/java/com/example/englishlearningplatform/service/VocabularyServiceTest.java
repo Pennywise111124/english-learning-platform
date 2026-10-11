@@ -7,6 +7,7 @@ import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.entity.UserVocabulary;
 import com.example.englishlearningplatform.entity.VocabularyStatus;
+import com.example.englishlearningplatform.event.LearningActivityEvent;
 import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.FlashcardRepository;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +41,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,21 +51,18 @@ class VocabularyServiceTest {
 
     @Mock
     private UserVocabularyRepository vocabularyRepository;
-
     @Mock
     private FlashcardRepository flashcardRepository;
-
     @Mock
     private UserRepository userRepository;
-
     @Mock
     private Clock clock;
-
     @Mock
     private SecurityContext securityContext;
-
     @Mock
     private Authentication authentication;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private VocabularyService vocabularyService;
@@ -243,6 +243,47 @@ class VocabularyServiceTest {
 
         assertTrue(exception.getMessage().contains("Vocabulary not found"));
         verify(vocabularyRepository, never()).save(any());
+    }
+
+    @Test
+    void review_remembered_publishesVocabReviewedEventWithMetricOne() {
+        stubSuccessfulReview();
+
+        vocabularyService.review(100L, true);
+
+        verify(eventPublisher).publishEvent(
+                LearningActivityEvent.vocabReviewed(testUser.getId(), 100L, true, FIXED_NOW));
+    }
+
+    @Test
+    void review_forgotten_publishesVocabReviewedEventWithMetricZero() {
+        stubSuccessfulReview();
+
+        vocabularyService.review(100L, false);
+
+        verify(eventPublisher).publishEvent(
+                LearningActivityEvent.vocabReviewed(testUser.getId(), 100L, false, FIXED_NOW));
+    }
+
+    @Test
+    void review_whenNotOwner_doesNotPublishEvent() {
+        mockSecurityUser(testUser);
+        when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Optional.of(testUser));
+        when(vocabularyRepository.findByIdAndUser_Id(100L, testUser.getId())).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> vocabularyService.review(100L, true));
+
+        verifyNoInteractions(eventPublisher);
+    }
+
+    private void stubSuccessfulReview() {
+        mockSecurityUser(testUser);
+        when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Optional.of(testUser));
+        vocab.setFlashcard(testFlashcard);
+        vocab.setStatus(VocabularyStatus.NEW);
+        when(vocabularyRepository.findByIdAndUser_Id(100L, testUser.getId())).thenReturn(Optional.of(vocab));
+        when(clock.instant()).thenReturn(FIXED_NOW);
+        when(vocabularyRepository.save(any(UserVocabulary.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test

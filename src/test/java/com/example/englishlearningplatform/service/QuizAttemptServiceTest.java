@@ -5,6 +5,7 @@ import com.example.englishlearningplatform.dto.quiz.SubmitQuizRequest;
 import com.example.englishlearningplatform.dto.quiz.QuizAttemptResponse;
 import com.example.englishlearningplatform.dto.quiz.QuizResultResponse;
 import com.example.englishlearningplatform.entity.*;
+import com.example.englishlearningplatform.event.LearningActivityEvent;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.*;
 
@@ -16,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -48,6 +50,8 @@ class QuizAttemptServiceTest {
     private UserProgressRepository userProgressRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private QuizAttemptService quizAttemptService;
@@ -298,6 +302,58 @@ class QuizAttemptServiceTest {
         assertEquals(1, savedAttempt.getCorrectAnswers());
         assertEquals(1, savedAttempt.getTotalQuestions());
         assertNotNull(savedAttempt.getCompletedAt());
+    }
+
+    @Test
+    void submitQuiz_success_publishesExactlyOneQuizSubmittedEvent() {
+        mockSuccessfulUserAndQuiz();
+        when(quizQuestionRepository.findByQuizId(QUIZ_ID)).thenReturn(List.of(question1, question2));
+
+        SubmitQuizRequest request = new SubmitQuizRequest();
+        request.setAnswers(List.of(
+                createAnswerItem(1001L, "Hanoi"),
+                createAnswerItem(1002L, "Cat")));
+
+        quizAttemptService.submitQuiz(QUIZ_ID, request);
+
+        ArgumentCaptor<LearningActivityEvent> eventCaptor = ArgumentCaptor.forClass(LearningActivityEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        verifyNoMoreInteractions(eventPublisher);
+
+        ArgumentCaptor<QuizAttempt> attemptCaptor = ArgumentCaptor.forClass(QuizAttempt.class);
+        verify(quizAttemptRepository).save(attemptCaptor.capture());
+
+        LearningActivityEvent event = eventCaptor.getValue();
+        assertEquals(LearningActivityEvent.Kind.QUIZ_SUBMITTED, event.kind());
+        assertEquals(1L, event.userId());
+        assertEquals(QUIZ_ID, event.refId());
+        assertEquals(100.0, event.metric(), 0.0001); // điểm, không phải số câu đúng (2)
+        assertEquals(attemptCaptor.getValue().getCompletedAt(), event.occurredAt());
+    }
+
+    @Test
+    void submitQuiz_whenQuizNotPublished_doesNotPublishEvent() {
+        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(quizRepository.findByIdAndStatusAndTopic_Status(QUIZ_ID, ContentStatus.PUBLISHED, ContentStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> quizAttemptService.submitQuiz(QUIZ_ID, new SubmitQuizRequest()));
+
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void submitQuiz_whenAnswerInvalid_doesNotPublishEvent() {
+        mockSuccessfulUserAndQuiz();
+        when(quizQuestionRepository.findByQuizId(QUIZ_ID)).thenReturn(List.of(question1));
+
+        SubmitQuizRequest request = new SubmitQuizRequest();
+        request.setAnswers(List.of(createAnswerItem(1001L, "Hue")));
+
+        assertThrows(IllegalArgumentException.class, () -> quizAttemptService.submitQuiz(QUIZ_ID, request));
+
+        verifyNoInteractions(eventPublisher);
     }
 
     // ------------------------------------------------------------------

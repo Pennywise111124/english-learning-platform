@@ -18,6 +18,9 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
+    @Size(max = 64, message = "Timezone must be at most 64 characters")
+    private String timezone;
+
     public String getUsername() {
         return username;
     }
@@ -40,5 +43,13 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 }

@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +23,7 @@ import com.example.englishlearningplatform.entity.Flashcard;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.entity.UserVocabulary;
 import com.example.englishlearningplatform.entity.VocabularyStatus;
+import com.example.englishlearningplatform.event.LearningActivityEvent;
 import com.example.englishlearningplatform.exception.ResourceConflictException;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.FlashcardRepository;
@@ -37,15 +39,18 @@ public class VocabularyService {
     private final FlashcardRepository flashcardRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public VocabularyService(UserVocabularyRepository vocabularyRepository,
             FlashcardRepository flashcardRepository,
             UserRepository userRepository,
-            Clock clock) {
+            Clock clock,
+            ApplicationEventPublisher eventPublisher) {
         this.vocabularyRepository = vocabularyRepository;
         this.flashcardRepository = flashcardRepository;
         this.userRepository = userRepository;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -115,6 +120,10 @@ public class VocabularyService {
         applyReview(vocab, remembered, clock.instant());
 
         UserVocabulary updatedVocab = vocabularyRepository.save(vocab);
+
+        eventPublisher.publishEvent(LearningActivityEvent.vocabReviewed(
+                currentUser.getId(), id, remembered, vocab.getLastReviewedAt()));
+
         return VocabularyResponse.from(updatedVocab);
     }
 

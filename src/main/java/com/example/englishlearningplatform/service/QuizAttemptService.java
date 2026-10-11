@@ -1,5 +1,6 @@
 package com.example.englishlearningplatform.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -8,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.englishlearningplatform.dto.quiz.*;
 import com.example.englishlearningplatform.entity.*;
+import com.example.englishlearningplatform.event.LearningActivityEvent;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.*;
 
@@ -28,17 +30,20 @@ public class QuizAttemptService {
     private final QuizAttemptRepository quizAttemptRepository;
     private final UserProgressRepository userProgressRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public QuizAttemptService(QuizRepository quizRepository,
             QuizQuestionRepository quizQuestionRepository,
             QuizAttemptRepository quizAttemptRepository,
             UserProgressRepository userProgressRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.userProgressRepository = userProgressRepository;
         this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -101,6 +106,9 @@ public class QuizAttemptService {
         QuizAttempt savedAttempt = quizAttemptRepository.save(attempt);
 
         updateProgressAfterAttempt(user, quiz);
+
+        eventPublisher.publishEvent(LearningActivityEvent.quizSubmitted(
+                user.getId(), quizId, savedAttempt.getScore(), savedAttempt.getCompletedAt()));
 
         return new QuizResultResponse(savedAttempt.getScore(),
                 savedAttempt.getCorrectAnswers(),

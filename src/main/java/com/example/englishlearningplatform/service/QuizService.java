@@ -159,7 +159,11 @@ public class QuizService {
         QuizQuestion question = quizQuestionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found with id: " + questionId));
 
-        Quiz quiz = question.getQuiz();
+        Long quizId = question.getQuiz().getId();
+
+        Quiz quiz = quizRepository.findByIdForUpdate(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
+
         if (quiz.getStatus() == ContentStatus.PUBLISHED
                 && quizQuestionRepository.countByQuizId(quiz.getId()) <= 1) {
             throw new ResourceConflictException(
@@ -171,7 +175,7 @@ public class QuizService {
 
     @Transactional
     public QuizSummaryResponse changeStatus(Long quizId, ContentStatus status) {
-        Quiz quiz = quizRepository.findById(quizId)
+        Quiz quiz = quizRepository.findByIdForUpdate(quizId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with id: " + quizId));
 
         long questionCount = quizQuestionRepository.countByQuizId(quizId);

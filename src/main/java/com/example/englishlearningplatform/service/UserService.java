@@ -8,11 +8,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.englishlearningplatform.dto.auth.ChangePasswordRequest;
+import com.example.englishlearningplatform.dto.auth.UpdateTimezoneRequest;
 import com.example.englishlearningplatform.dto.auth.UserResponse;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.event.FileDeletionEvent;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.UserRepository;
+import com.example.englishlearningplatform.util.TimezoneUtils;
 
 @Service
 public class UserService {
@@ -49,6 +51,13 @@ public class UserService {
         }
 
         return UserResponse.from(updatedUser);
+    }
+
+    @Transactional
+    public UserResponse updateMyTimezone(UpdateTimezoneRequest request) {
+        User user = getCurrentUser();
+        user.setTimezone(TimezoneUtils.normalizeOrDefault(request.getTimezone()));
+        return UserResponse.from(userRepository.save(user));
     }
 
     @Transactional

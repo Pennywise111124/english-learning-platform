@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -129,7 +131,7 @@ class QuizServiceTest {
 
     @Test
     void changeStatus_whenNotFound_throws404() {
-        when(quizRepository.findById(QUIZ_ID)).thenReturn(Optional.empty());
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> quizService.changeStatus(QUIZ_ID, ContentStatus.PUBLISHED));
@@ -140,39 +142,38 @@ class QuizServiceTest {
     @Test
     void changeStatus_publishQuizWithNoQuestions_throwsConflict() {
         testQuiz.setStatus(ContentStatus.DRAFT);
-        when(quizRepository.findById(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
-        // ASSUMPTION: tên query đếm câu hỏi (QuizSummaryResponse có questionCount nên
-        // nhiều khả năng đã có)
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
         when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(0L);
 
         assertThrows(ResourceConflictException.class,
                 () -> quizService.changeStatus(QUIZ_ID, ContentStatus.PUBLISHED));
 
         verify(quizRepository, never()).save(any());
-        assertEquals(ContentStatus.DRAFT, testQuiz.getStatus()); // entity không bị đổi trước khi kiểm tra
+        assertEquals(ContentStatus.DRAFT, testQuiz.getStatus());
     }
 
     @Test
     void changeStatus_publishQuizWithQuestions_succeeds() {
         testQuiz.setStatus(ContentStatus.DRAFT);
-        when(quizRepository.findById(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
         when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(3L);
         when(quizRepository.save(any(Quiz.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        quizService.changeStatus(QUIZ_ID, ContentStatus.PUBLISHED);
+        QuizSummaryResponse result = quizService.changeStatus(QUIZ_ID, ContentStatus.PUBLISHED);
 
         ArgumentCaptor<Quiz> captor = ArgumentCaptor.forClass(Quiz.class);
         verify(quizRepository).save(captor.capture());
         assertEquals(ContentStatus.PUBLISHED, captor.getValue().getStatus());
-        assertEquals("Present Simple Quiz", captor.getValue().getTitle()); // chỉ đổi status
+        assertEquals("Present Simple Quiz", captor.getValue().getTitle());
+
+        assertEquals(ContentStatus.PUBLISHED, result.getStatus());
+        assertEquals(3L, result.getQuestionCount());
     }
 
     @Test
     void changeStatus_archiveQuizWithNoQuestions_succeeds() {
         testQuiz.setStatus(ContentStatus.PUBLISHED);
-        when(quizRepository.findById(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
-        // lenient: kịch bản "quiz rỗng" được nêu rõ, nhưng không bắt service phải gọi
-        // đếm khi không publish
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
         lenient().when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(0L);
         when(quizRepository.save(any(Quiz.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -181,6 +182,31 @@ class QuizServiceTest {
         ArgumentCaptor<Quiz> captor = ArgumentCaptor.forClass(Quiz.class);
         verify(quizRepository).save(captor.capture());
         assertEquals(ContentStatus.ARCHIVED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void changeStatus_publishQuizWithExactlyOneQuestion_succeeds() {
+        testQuiz.setStatus(ContentStatus.DRAFT);
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
+        when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(1L);
+        when(quizRepository.save(any(Quiz.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        QuizSummaryResponse result = quizService.changeStatus(QUIZ_ID, ContentStatus.PUBLISHED);
+
+        assertEquals(ContentStatus.PUBLISHED, result.getStatus());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ContentStatus.class, names = { "DRAFT", "ARCHIVED" })
+    void changeStatus_toNonPublishedWithNoQuestions_succeeds(ContentStatus target) {
+        testQuiz.setStatus(ContentStatus.PUBLISHED);
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
+        lenient().when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(0L);
+        when(quizRepository.save(any(Quiz.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        QuizSummaryResponse result = quizService.changeStatus(QUIZ_ID, target);
+
+        assertEquals(target, result.getStatus());
     }
 
     // ------------------------------------------------------------------
@@ -272,6 +298,7 @@ class QuizServiceTest {
         testQuiz.setStatus(ContentStatus.PUBLISHED);
         QuizQuestion question = questionOf(testQuiz);
         when(quizQuestionRepository.findById(500L)).thenReturn(Optional.of(question));
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
         when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(1L);
 
         assertThrows(ResourceConflictException.class, () -> quizService.deleteQuestion(500L));
@@ -284,6 +311,7 @@ class QuizServiceTest {
         testQuiz.setStatus(ContentStatus.PUBLISHED);
         QuizQuestion question = questionOf(testQuiz);
         when(quizQuestionRepository.findById(500L)).thenReturn(Optional.of(question));
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
         when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(2L);
 
         quizService.deleteQuestion(500L);
@@ -297,10 +325,50 @@ class QuizServiceTest {
         testQuiz.setStatus(status);
         QuizQuestion question = questionOf(testQuiz);
         when(quizQuestionRepository.findById(500L)).thenReturn(Optional.of(question));
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
         lenient().when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(1L);
 
         quizService.deleteQuestion(500L);
 
         verify(quizQuestionRepository).delete(question);
+    }
+
+    @Test
+    void deleteQuestion_locksQuizBeforeCounting() {
+        testQuiz.setStatus(ContentStatus.PUBLISHED);
+        QuizQuestion question = questionOf(testQuiz);
+        when(quizQuestionRepository.findById(500L)).thenReturn(Optional.of(question));
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
+        when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(2L);
+
+        quizService.deleteQuestion(500L);
+
+        InOrder order = inOrder(quizRepository, quizQuestionRepository);
+        order.verify(quizRepository).findByIdForUpdate(QUIZ_ID);
+        order.verify(quizQuestionRepository).countByQuizId(QUIZ_ID);
+    }
+
+    @Test
+    void changeStatus_locksQuizBeforeCounting() {
+        testQuiz.setStatus(ContentStatus.DRAFT);
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.of(testQuiz));
+        when(quizQuestionRepository.countByQuizId(QUIZ_ID)).thenReturn(1L);
+        when(quizRepository.save(any(Quiz.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        quizService.changeStatus(QUIZ_ID, ContentStatus.PUBLISHED);
+
+        InOrder order = inOrder(quizRepository, quizQuestionRepository);
+        order.verify(quizRepository).findByIdForUpdate(QUIZ_ID);
+        order.verify(quizQuestionRepository).countByQuizId(QUIZ_ID);
+    }
+
+    @Test
+    void deleteQuestion_whenQuizMissingAfterLookup_throws404() {
+        QuizQuestion question = questionOf(testQuiz);
+        when(quizQuestionRepository.findById(500L)).thenReturn(Optional.of(question));
+        when(quizRepository.findByIdForUpdate(QUIZ_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> quizService.deleteQuestion(500L));
+        verify(quizQuestionRepository, never()).delete(any());
     }
 }
