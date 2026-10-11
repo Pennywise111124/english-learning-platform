@@ -101,7 +101,8 @@ class SecurityMatrixIntegrationTest extends PostgresIntegrationTestBase {
                 Arguments.of("GET", "/api/dictation/lessons"),
                 Arguments.of("GET", "/api/topics/999999/dictation"),
                 Arguments.of("GET", "/api/users/me/stats"),
-                Arguments.of("PATCH", "/api/users/me/timezone"));
+                Arguments.of("PATCH", "/api/users/me/timezone"),
+                Arguments.of("GET", "/api/leaderboard/weekly"));
     }
 
     static Stream<Arguments> publicRoutes() {

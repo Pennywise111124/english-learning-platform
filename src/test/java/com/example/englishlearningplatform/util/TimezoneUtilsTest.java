@@ -3,6 +3,8 @@ package com.example.englishlearningplatform.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.ZoneId;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -37,5 +39,20 @@ class TimezoneUtilsTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> TimezoneUtils.normalizeOrDefault(input));
         assertEquals("Invalid timezone", ex.getMessage());
+    }
+
+    @Test
+    void zoneOrDefault_validZone_returnsThatZone() {
+        assertEquals(ZoneId.of("Asia/Tokyo"), TimezoneUtils.zoneOrDefault("Asia/Tokyo"));
+    }
+
+    @Test
+    void zoneOrDefault_unknownZone_returnsDefault() {
+        assertEquals(ZoneId.of(TimezoneUtils.DEFAULT), TimezoneUtils.zoneOrDefault("Mars/Base"));
+    }
+
+    @Test
+    void zoneOrDefault_null_returnsDefault() {
+        assertEquals(ZoneId.of(TimezoneUtils.DEFAULT), TimezoneUtils.zoneOrDefault(null));
     }
 }

@@ -1,5 +1,6 @@
 package com.example.englishlearningplatform.util;
 
+import java.time.DateTimeException;
 import java.time.ZoneId;
 
 public final class TimezoneUtils {
@@ -20,5 +21,13 @@ public final class TimezoneUtils {
             throw new IllegalArgumentException("Invalid timezone");
         }
         return trimmed;
+    }
+
+    public static ZoneId zoneOrDefault(String timezone) {
+        try {
+            return ZoneId.of(timezone);
+        } catch (DateTimeException | NullPointerException e) {
+            return ZoneId.of(DEFAULT);
+        }
     }
 }
