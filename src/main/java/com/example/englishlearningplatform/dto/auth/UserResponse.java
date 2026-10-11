@@ -9,6 +9,7 @@ public class UserResponse {
     private String role;
     private String avatarUrl;
     private String timezone;
+    private boolean leaderboardVisible;
 
     public static UserResponse from(User user) {
         UserResponse dto = new UserResponse();
@@ -18,6 +19,7 @@ public class UserResponse {
         dto.role = user.getRole().name();
         dto.avatarUrl = user.getAvatarUrl();
         dto.timezone = user.getTimezone();
+        dto.leaderboardVisible = user.isLeaderboardVisible();
         return dto;
     }
 
@@ -43,5 +45,9 @@ public class UserResponse {
 
     public String getTimezone() {
         return timezone;
+    }
+
+    public boolean isLeaderboardVisible() {
+        return leaderboardVisible;
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.englishlearningplatform.dto.auth.ChangePasswordRequest;
+import com.example.englishlearningplatform.dto.auth.UpdateLeaderboardVisibilityRequest;
 import com.example.englishlearningplatform.dto.auth.UpdateTimezoneRequest;
 import com.example.englishlearningplatform.dto.auth.UserResponse;
 import com.example.englishlearningplatform.dto.common.PageResponse;
@@ -74,5 +75,11 @@ public class UserController {
     @PatchMapping("/timezone")
     public ResponseEntity<UserResponse> updateMyTimezone(@Valid @RequestBody UpdateTimezoneRequest request) {
         return ResponseEntity.ok(userService.updateMyTimezone(request));
+    }
+
+    @PatchMapping("/leaderboard-visibility")
+    public ResponseEntity<UserResponse> updateMyLeaderboardVisibility(
+            @Valid @RequestBody UpdateLeaderboardVisibilityRequest request) {
+        return ResponseEntity.ok(userService.updateMyLeaderboardVisibility(request));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.englishlearningplatform.dto.auth.ChangePasswordRequest;
+import com.example.englishlearningplatform.dto.auth.UpdateLeaderboardVisibilityRequest;
 import com.example.englishlearningplatform.dto.auth.UpdateTimezoneRequest;
 import com.example.englishlearningplatform.dto.auth.UserResponse;
 import com.example.englishlearningplatform.entity.User;
@@ -57,6 +58,13 @@ public class UserService {
     public UserResponse updateMyTimezone(UpdateTimezoneRequest request) {
         User user = getCurrentUser();
         user.setTimezone(TimezoneUtils.normalizeOrDefault(request.getTimezone()));
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse updateMyLeaderboardVisibility(UpdateLeaderboardVisibilityRequest request) {
+        User user = getCurrentUser();
+        user.setLeaderboardVisible(request.getVisible());
         return UserResponse.from(userRepository.save(user));
     }
 

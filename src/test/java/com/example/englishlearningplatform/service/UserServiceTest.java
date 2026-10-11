@@ -1,7 +1,9 @@
 package com.example.englishlearningplatform.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -23,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.example.englishlearningplatform.dto.auth.UpdateLeaderboardVisibilityRequest;
 import com.example.englishlearningplatform.dto.auth.UpdateTimezoneRequest;
 import com.example.englishlearningplatform.dto.auth.UserResponse;
 import com.example.englishlearningplatform.entity.Role;
@@ -87,5 +90,37 @@ class UserServiceTest {
 
         verify(userRepository, never()).save(any());
         assertEquals(before, user.getTimezone());
+    }
+
+    private UpdateLeaderboardVisibilityRequest visibilityRequest(Boolean visible) {
+        UpdateLeaderboardVisibilityRequest r = new UpdateLeaderboardVisibilityRequest();
+        r.setVisible(visible);
+        return r;
+    }
+
+    @Test
+    void updateMyLeaderboardVisibility_false_savesFalseAndReturnsIt() {
+        user.setLeaderboardVisible(true);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserResponse response = userService.updateMyLeaderboardVisibility(visibilityRequest(false));
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertFalse(captor.getValue().isLeaderboardVisible());
+        assertFalse(response.isLeaderboardVisible());
+    }
+
+    @Test
+    void updateMyLeaderboardVisibility_true_savesTrueAndReturnsIt() {
+        user.setLeaderboardVisible(false);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserResponse response = userService.updateMyLeaderboardVisibility(visibilityRequest(true));
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertTrue(captor.getValue().isLeaderboardVisible());
+        assertTrue(response.isLeaderboardVisible());
     }
 }
