@@ -18,12 +18,10 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    // Lưu ý: đây là HASH, không phải mật khẩu gốc. Không bao giờ trả trường này
-    // ra ngoài response (dùng DTO riêng, không serialize trực tiếp Entity).
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING) // BẮT BUỘC — theo nguyên tắc đã chốt trong Requirements
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role = Role.USER;
 
@@ -32,6 +30,9 @@ public class User {
 
     @Column(nullable = false, length = 64)
     private String timezone = "Asia/Ho_Chi_Minh";
+
+    @Column(name = "leaderboard_visible", nullable = false)
+    private boolean leaderboardVisible = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -90,6 +91,14 @@ public class User {
 
     public void setTimezone(String timezone) {
         this.timezone = timezone;
+    }
+
+    public boolean isLeaderboardVisible() {
+        return leaderboardVisible;
+    }
+
+    public void setLeaderboardVisible(boolean leaderboardVisible) {
+        this.leaderboardVisible = leaderboardVisible;
     }
 
     public Instant getCreatedAt() {
