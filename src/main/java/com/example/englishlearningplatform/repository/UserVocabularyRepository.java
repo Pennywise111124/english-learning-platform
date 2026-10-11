@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.englishlearningplatform.entity.UserVocabulary;
+import com.example.englishlearningplatform.entity.VocabularyStatus;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,8 +29,9 @@ public interface UserVocabularyRepository extends JpaRepository<UserVocabulary, 
     @EntityGraph(attributePaths = "flashcard")
     Page<UserVocabulary> findByUser_Id(Long userId, Pageable pageable);
 
-    // Chặn xoá Flashcard/Topic đã có người lưu (retrofit ở mục 6)
     boolean existsByFlashcard_Id(Long flashcardId);
 
     boolean existsByFlashcard_Topic_Id(Long topicId);
+
+    long countByUser_IdAndStatus(Long userId, VocabularyStatus status);
 }

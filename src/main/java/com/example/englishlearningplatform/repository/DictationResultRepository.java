@@ -27,4 +27,7 @@ public interface DictationResultRepository extends JpaRepository<DictationResult
         boolean existsByLesson_Id(Long lessonId);
 
         boolean existsByLesson_Topic_Id(Long topicId);
+
+        @Query("SELECT COUNT(DISTINCT r.lesson.id) FROM DictationResult r WHERE r.user.id = :userId")
+        long countDistinctLessonsByUserId(@Param("userId") Long userId);
 }

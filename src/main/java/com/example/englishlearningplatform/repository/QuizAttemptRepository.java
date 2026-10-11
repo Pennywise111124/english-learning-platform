@@ -28,4 +28,9 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
                         @Param("topicId") Long topicId,
                         @Param("minScore") int minScore,
                         @Param("status") ContentStatus status);
+
+        @Query("SELECT COUNT(DISTINCT qa.quiz.id) FROM QuizAttempt qa "
+                        + "WHERE qa.user.id = :userId AND qa.score >= :minScore")
+        long countDistinctPassedQuizzes(@Param("userId") Long userId,
+                        @Param("minScore") int minScore);
 }
