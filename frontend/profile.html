@@ -90,6 +90,22 @@
 
                     <!-- Divider -->
                     <div class="border-t-2 border-outline-variant"></div>
+                    
+                    <!-- Timezone Section -->
+                    <div>
+                        <h2 class="font-headline-md text-headline-md text-on-surface mb-stack-sm">Timezone</h2>
+                        <p class="font-body-md text-on-surface-variant mb-stack-sm">Used to decide when your day starts for streaks.</p>
+                        <div class="flex flex-col gap-stack-sm">
+                            <select id="timezoneSelect" class="w-full bg-surface-container-low border-2 border-outline-variant rounded-2xl px-4 py-3 font-body-md text-on-background focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"></select>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <button id="detectTimezoneBtn" type="button" class="flex-1 border-2 border-outline-variant text-on-surface font-label-md rounded-2xl py-3 hover:bg-surface-container-low transition-colors">Use my browser's timezone</button>
+                                <button id="saveTimezoneBtn" type="button" class="btn-3d flex-1 bg-primary border-primary-shadow text-on-primary font-label-md rounded-2xl py-3 hover:brightness-105 transition-all">Save timezone</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="border-t-2 border-outline-variant"></div>
 
                     <!-- Change Password Section -->
                     <div>
@@ -150,6 +166,52 @@
         checkAuth();
         initNavBar('');
         initFooter();
+        
+        const FALLBACK_ZONES = ['Asia/Ho_Chi_Minh', 'Asia/Bangkok', 'Asia/Tokyo', 'Asia/Seoul', 'Asia/Singapore',
+            'Asia/Kolkata', 'Europe/London', 'Europe/Paris', 'America/New_York', 'America/Chicago',
+            'America/Los_Angeles', 'Australia/Sydney', 'UTC'];
+
+        function listTimezones() {
+            let zones = FALLBACK_ZONES;
+            try {
+                const fromBrowser = Intl.supportedValuesOf('timeZone');
+                if (fromBrowser.length) zones = fromBrowser;
+            } catch { /* trình duyệt cũ: dùng danh sách dự phòng */ }
+            return zones.includes('UTC') ? zones : [...zones, 'UTC'];
+        }
+
+        function setupTimezone(current) {
+            const select = document.getElementById('timezoneSelect');
+            const zones = listTimezones();
+            const all = zones.includes(current) ? zones : [current, ...zones];
+            select.replaceChildren(...all.map(z => {
+                const option = document.createElement('option');
+                option.value = z;
+                option.textContent = z;
+                return option;
+            }));
+            select.value = current;
+        }
+
+        document.getElementById('detectTimezoneBtn').addEventListener('click', () => {
+            const select = document.getElementById('timezoneSelect');
+            const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (detected && [...select.options].some(o => o.value === detected)) {
+                select.value = detected;
+            } else {
+                showToast('Could not detect a supported timezone', 'error');
+            }
+        });
+
+        document.getElementById('saveTimezoneBtn').addEventListener('click', async () => {
+            try {
+                const updated = await api.updateTimezone(document.getElementById('timezoneSelect').value);
+                showToast(`Timezone saved: ${updated.timezone}`, 'success');
+            } catch (error) {
+                console.error('[saveTimezone]', error);
+                showToast(error.message || 'Failed to save timezone', 'error');
+            }
+        });
 
         async function loadProfile() {
             try {
@@ -158,6 +220,7 @@
                 document.getElementById('email').value = profile.email;
                 document.getElementById('role').textContent = profile.role;
                 document.getElementById('avatarImage').src = imageSrc(profile.avatarUrl);
+                setupTimezone(profile.timezone); 
             } catch (error) {
                 showToast('Failed to load profile', 'error');
                 document.getElementById('username').placeholder = 'Failed to load';

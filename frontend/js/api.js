@@ -84,9 +84,10 @@ export async function login(username, password) {
   return request('/api/auth/login', { method: 'POST', body: { username, password } });
 }
 
-export async function register(email, username, password) {
-  await request('/api/auth/register', { method: 'POST', body: { username, email, password } });
-  // Backend trả 200 rỗng, không tự login — giữ nguyên hành vi cũ để register.html không cần sửa
+export async function register(email, username, password, timezone) {
+  const body = { username, email, password };
+  if (timezone) body.timezone = timezone; 
+  await request('/api/auth/register', { method: 'POST', body });
   return { message: 'Registration successful! Please login.' };
 }
 
@@ -220,6 +221,16 @@ export async function changePassword(currentPassword, newPassword) {
 
 export async function getMyRecentQuizAttempts(page = 0, size = 5) {
   return request('/api/users/me/quiz-attempts', { params: { page, size } });
+}
+
+export async function getMyStats() {
+  return request('/api/users/me/stats');
+}
+
+export async function updateTimezone(timezone) {
+  const updatedUser = await request('/api/users/me/timezone', { method: 'PATCH', body: { timezone } });
+  setUser(updatedUser); // giữ cache localStorage khớp với server
+  return updatedUser;
 }
 
 // ─── Admin — Topics ───────────────────────────────────────────────────────────

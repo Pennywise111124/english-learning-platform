@@ -80,7 +80,7 @@
         import { imageSrc } from './js/config.js';
         import { initAuthModal } from './js/authModal.js';
         import { initFooter } from './js/footer.js';
-        import { createSelect, LEVEL_FILTER_OPTIONS } from './js/ui.js';
+        import { createSelect, LEVEL_FILTER_OPTIONS, el } from './js/ui.js';
 
         initNavBar('topics');
         initAuthModal();
@@ -140,20 +140,26 @@
                 };
 
                 data.content.forEach(topic => {
-                    const card = document.createElement('div');
-                    card.className = 'topic-card bg-surface-container-lowest border-2 border-outline-variant rounded-xl overflow-hidden hover:border-primary hover:-translate-y-1 cursor-pointer transition-all';
-                    card.onclick = () => window.location.href = `topic-detail.html?id=${topic.id}`;
+                    const card = el('div', 'topic-card bg-surface-container-lowest border-2 border-outline-variant rounded-xl overflow-hidden hover:border-primary hover:-translate-y-1 cursor-pointer transition-all');
+                    card.onclick = () => { window.location.href = `topic-detail.html?id=${encodeURIComponent(topic.id)}`; };
 
-                    card.innerHTML = `
-                        <img src="${imageSrc(topic.imageUrl)}" alt="${topic.title}" class="w-full h-48 object-cover" loading="lazy"/>
-                        <div class="p-6">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-headline-md text-headline-md text-on-surface flex-1">${topic.title}</h3>
-                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm ${badgeColors[topic.level]} ml-2 whitespace-nowrap">${topic.level}</span>
-                            </div>
-                            <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">${topic.description ?? ''}</p>
-                        </div>
-                    `;
+                    const img = document.createElement('img');
+                    img.src = imageSrc(topic.imageUrl);
+                    img.alt = topic.title;
+                    img.className = 'w-full h-48 object-cover';
+                    img.loading = 'lazy';
+                    card.appendChild(img);
+
+                    const body = el('div', 'p-6');
+                    const head = el('div', 'flex items-center justify-between mb-3');
+                    head.appendChild(el('h3', 'font-headline-md text-headline-md text-on-surface flex-1', topic.title));
+                    head.appendChild(el('span',
+                        `px-3 py-1 rounded-full font-label-sm text-label-sm ${badgeColors[topic.level] || ''} ml-2 whitespace-nowrap`,
+                        topic.level));
+                    body.appendChild(head);
+                    body.appendChild(el('p', 'font-body-md text-body-md text-on-surface-variant line-clamp-2', topic.description ?? ''));
+
+                    card.appendChild(body);
                     grid.appendChild(card);
                 });
 

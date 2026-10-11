@@ -72,6 +72,15 @@ let pendingRedirect = null;   // nơi sẽ đến sau khi đăng nhập; chỉ c
 // Chỉ nhận tên trang .html tương đối (kèm query): chặn URL tuyệt đối hoặc "//host" để không bị lợi dụng chuyển hướng ra ngoài
 const SAFE_REDIRECT = /^[A-Za-z0-9_-]+\.html(\?[A-Za-z0-9_%=&.-]*)?$/;
 
+// Múi giờ của trình duyệt, vd "Asia/Ho_Chi_Minh". Rỗng nếu trình duyệt không cung cấp.
+function detectTimezone() {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 // Tham số có thể là 'login' | 'register' | { mode, redirectTo } (event 'open-auth-modal' cũ vẫn dùng chuỗi)
 function normalizeOpenArgs(arg) {
     if (typeof arg === 'object' && arg !== null) {
@@ -132,7 +141,16 @@ export function initAuthModal() {
     errorEl.classList.add('hidden');
 
     try {
-      await api.register(email, username, password);
+      const tz = detectTimezone();
+      try {
+        await api.register(email, username, password, tz);
+      } catch (err) {
+        if (tz && err.message === 'Invalid timezone') {
+          await api.register(email, username, password); // tên múi giờ lạ: để server dùng mặc định
+        } else {
+          throw err;
+        }
+      }
       registerForm.reset();
       switchAuthTab('login');
       authSuccessMessage.classList.remove('hidden');

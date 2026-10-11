@@ -7,6 +7,7 @@
 import { getUser, clearAuth } from './auth.js';
 import { imageSrc } from './config.js';
 import { getTheme, toggleTheme } from './theme.js';
+import { initClock } from './clock.js';
 
 const SIDEBAR_COLLAPSED_KEY = 'linguistai_sidebar_collapsed';
 const SIDEBAR_WIDTH_EXPANDED = 256; // px
@@ -194,6 +195,7 @@ function renderTopbar(avatarUrl) {
       </button>
       <div class="flex-grow"></div>
       <div class="flex items-center gap-2">
+        <div id="topbarClock"></div>
         <button id="themeToggleBtn" class="text-on-surface-variant hover:bg-surface-container-high rounded-full p-2 flex items-center justify-center transition-colors" title="Toggle dark mode">
           <span class="material-symbols-outlined">${currentTheme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
         </button>
@@ -212,6 +214,7 @@ function renderTopbar(avatarUrl) {
 
   document.getElementById('appSidebarMobileToggle').addEventListener('click', openMobileNavDrawer);
   bindThemeToggle();
+  initClock(document.getElementById('topbarClock'));
 
   document.getElementById('navbarLogoutBtn').addEventListener('click', () => {
     if (confirm('Are you sure you want to logout?')) {
