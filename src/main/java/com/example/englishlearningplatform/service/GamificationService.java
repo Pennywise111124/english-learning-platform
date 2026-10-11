@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.englishlearningplatform.config.GamificationProperties;
+import com.example.englishlearningplatform.config.QuizProperties;
 import com.example.englishlearningplatform.dto.stats.UserStatsResponse;
 import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.entity.UserStats;
@@ -35,17 +36,20 @@ public class GamificationService {
     private final UserStatsRepository userStatsRepository;
     private final XpEventRepository xpEventRepository;
     private final GamificationProperties props;
+    private final QuizProperties quizProperties;
     private final Clock clock;
 
     public GamificationService(UserRepository userRepository,
             UserStatsRepository userStatsRepository,
             XpEventRepository xpEventRepository,
             GamificationProperties props,
+            QuizProperties quizProperties,
             Clock clock) {
         this.userRepository = userRepository;
         this.userStatsRepository = userStatsRepository;
         this.xpEventRepository = xpEventRepository;
         this.props = props;
+        this.quizProperties = quizProperties;
         this.clock = clock;
     }
 
@@ -91,7 +95,7 @@ public class GamificationService {
                         break;
                     }
                 }
-                if (e.metric() >= props.quizPassScore()
+                if (e.metric() >= quizProperties.passScore()
                         && grant(userId, XpType.QUIZ_PASS, props.xpQuizPass(), day, "QPASS:" + ref, now)) {
                     total += props.xpQuizPass();
                 }

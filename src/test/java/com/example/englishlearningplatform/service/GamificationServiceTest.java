@@ -38,7 +38,7 @@ import com.example.englishlearningplatform.repository.XpEventRepository;
         "app.gamification.xp-quiz-pass=10",
         "app.gamification.xp-vocab-review=2",
         "app.gamification.xp-dictation-max=10",
-        "app.gamification.quiz-pass-score=70",
+        "app.quiz.pass-score=70",
         "app.gamification.quiz-participation-daily-limit=3" })
 @Transactional(propagation = Propagation.NOT_SUPPORTED) // commit thật: record() chạy REQUIRES_NEW
 class GamificationServiceTest extends PostgresIntegrationTestBase {

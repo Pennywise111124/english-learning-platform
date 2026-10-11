@@ -8,10 +8,9 @@ import jakarta.validation.constraints.Positive;
 @Validated
 @ConfigurationProperties(prefix = "app.gamification")
 public record GamificationProperties(
-                @Positive int xpQuizParticipation,
-                @Positive int xpQuizPass,
-                @Positive int xpVocabReview,
-                @Positive int xpDictationMax,
-                @Positive int quizPassScore,
-                @Positive int quizParticipationDailyLimit) {
+        @Positive int xpQuizParticipation,
+        @Positive int xpQuizPass,
+        @Positive int xpVocabReview,
+        @Positive int xpDictationMax,
+        @Positive int quizParticipationDailyLimit) {
 }

@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.englishlearningplatform.config.QuizProperties;
 import com.example.englishlearningplatform.dto.quiz.*;
 import com.example.englishlearningplatform.entity.*;
 import com.example.englishlearningplatform.event.LearningActivityEvent;
@@ -23,27 +24,28 @@ import java.util.stream.Collectors;
 @Service
 public class QuizAttemptService {
 
-    private static final int PASS_SCORE_THRESHOLD = 70;
-
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final UserProgressRepository userProgressRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final QuizProperties quizProperties;
 
     public QuizAttemptService(QuizRepository quizRepository,
             QuizQuestionRepository quizQuestionRepository,
             QuizAttemptRepository quizAttemptRepository,
             UserProgressRepository userProgressRepository,
             UserRepository userRepository,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            QuizProperties quizProperties) {
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.userProgressRepository = userProgressRepository;
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
+        this.quizProperties = quizProperties;
     }
 
     @Transactional
@@ -120,7 +122,7 @@ public class QuizAttemptService {
         Topic topic = quiz.getTopic();
 
         long achievedCount = quizAttemptRepository.countAchievedQuizzesInTopic(
-                user.getId(), topic.getId(), PASS_SCORE_THRESHOLD, ContentStatus.PUBLISHED);
+                user.getId(), topic.getId(), quizProperties.passScore(), ContentStatus.PUBLISHED);
 
         long totalQuizCount = quizRepository.countByTopic_IdAndStatus(topic.getId(), ContentStatus.PUBLISHED);
 

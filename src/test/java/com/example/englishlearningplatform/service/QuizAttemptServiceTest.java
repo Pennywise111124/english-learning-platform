@@ -2,6 +2,7 @@ package com.example.englishlearningplatform.service;
 
 import com.example.englishlearningplatform.dto.quiz.SubmitAnswerItem;
 import com.example.englishlearningplatform.dto.quiz.SubmitQuizRequest;
+import com.example.englishlearningplatform.config.QuizProperties;
 import com.example.englishlearningplatform.dto.quiz.QuizAttemptResponse;
 import com.example.englishlearningplatform.dto.quiz.QuizResultResponse;
 import com.example.englishlearningplatform.entity.*;
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -53,7 +53,6 @@ class QuizAttemptServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
     private QuizAttemptService quizAttemptService;
 
     private User testUser;
@@ -64,10 +63,14 @@ class QuizAttemptServiceTest {
 
     private static final String TEST_USERNAME = "testuser";
     private static final Long QUIZ_ID = 100L;
-    private static final int PASSING_SCORE = 70;
+    private static final int PASSING_SCORE = 80;
 
     @BeforeEach
     void setUp() {
+        quizAttemptService = new QuizAttemptService(quizRepository, quizQuestionRepository,
+                quizAttemptRepository, userProgressRepository, userRepository,
+                eventPublisher, new QuizProperties(PASSING_SCORE));
+
         Authentication authentication = new UsernamePasswordAuthenticationToken(TEST_USERNAME, null);
         SecurityContext securityContext = mock(SecurityContext.class);
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
@@ -354,6 +357,17 @@ class QuizAttemptServiceTest {
         assertThrows(IllegalArgumentException.class, () -> quizAttemptService.submitQuiz(QUIZ_ID, request));
 
         verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void submitQuiz_shouldUseConfiguredPassScoreWhenCountingAchievedQuizzes() {
+        mockSuccessfulUserAndQuiz();
+        when(quizQuestionRepository.findByQuizId(QUIZ_ID)).thenReturn(List.of(question1));
+
+        quizAttemptService.submitQuiz(QUIZ_ID, new SubmitQuizRequest());
+
+        verify(quizAttemptRepository).countAchievedQuizzesInTopic(
+                eq(1L), eq(10L), eq(PASSING_SCORE), eq(ContentStatus.PUBLISHED));
     }
 
     // ------------------------------------------------------------------

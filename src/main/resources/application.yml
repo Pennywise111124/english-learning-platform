@@ -58,12 +58,13 @@ app:
     topic-list-ttl-minutes: 10
     topic-detail-ttl-minutes: 30
     flashcard-list-ttl-minutes: 30 
+  quiz:
+    pass-score: 70
   gamification:
     xp-quiz-participation: 10
     xp-quiz-pass: 10
     xp-vocab-review: 2
     xp-dictation-max: 10
-    quiz-pass-score: 70
     quiz-participation-daily-limit: 3
 
 logging:

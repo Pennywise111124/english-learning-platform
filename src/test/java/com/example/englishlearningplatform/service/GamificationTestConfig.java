@@ -10,9 +10,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 import com.example.englishlearningplatform.config.GamificationProperties;
+import com.example.englishlearningplatform.config.QuizProperties;
 
 @TestConfiguration
-@EnableConfigurationProperties(GamificationProperties.class)
+@EnableConfigurationProperties({ GamificationProperties.class, QuizProperties.class })
 class GamificationTestConfig {
 
     static final Instant NOW = Instant.parse("2026-10-09T10:00:00Z");
