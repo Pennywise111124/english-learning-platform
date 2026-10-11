@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import com.example.englishlearningplatform.entity.User;
 import com.example.englishlearningplatform.entity.UserStats;
 import com.example.englishlearningplatform.entity.XpType;
 import com.example.englishlearningplatform.event.LearningActivityEvent;
+import com.example.englishlearningplatform.event.XpAwardedEvent;
 import com.example.englishlearningplatform.exception.ResourceNotFoundException;
 import com.example.englishlearningplatform.repository.UserRepository;
 import com.example.englishlearningplatform.repository.UserStatsRepository;
@@ -37,6 +39,7 @@ public class GamificationService {
     private final XpEventRepository xpEventRepository;
     private final GamificationProperties props;
     private final QuizProperties quizProperties;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public GamificationService(UserRepository userRepository,
@@ -44,12 +47,14 @@ public class GamificationService {
             XpEventRepository xpEventRepository,
             GamificationProperties props,
             QuizProperties quizProperties,
+            ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.userRepository = userRepository;
         this.userStatsRepository = userStatsRepository;
         this.xpEventRepository = xpEventRepository;
         this.props = props;
         this.quizProperties = quizProperties;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -79,6 +84,8 @@ public class GamificationService {
         stats.setUpdatedAt(now);
 
         userStatsRepository.save(stats);
+
+        eventPublisher.publishEvent(new XpAwardedEvent(user.getId()));
     }
 
     private int awardXp(LearningActivityEvent e, LocalDate day, Instant now) {
