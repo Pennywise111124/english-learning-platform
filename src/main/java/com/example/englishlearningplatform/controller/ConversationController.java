@@ -2,6 +2,7 @@ package com.example.englishlearningplatform.controller;
 
 import com.example.englishlearningplatform.dto.chat.*;
 import com.example.englishlearningplatform.dto.common.PageResponse;
+import com.example.englishlearningplatform.ratelimit.RateLimitService;
 import com.example.englishlearningplatform.service.ChatService;
 import com.example.englishlearningplatform.util.PaginationUtils;
 
@@ -22,9 +23,11 @@ import java.util.List;
 public class ConversationController {
 
     private final ChatService chatService;
+    private final RateLimitService rateLimitService;
 
-    public ConversationController(ChatService chatService) {
+    public ConversationController(ChatService chatService, RateLimitService rateLimitService) {
         this.chatService = chatService;
+        this.rateLimitService = rateLimitService;
     }
 
     @PostMapping
@@ -63,6 +66,7 @@ public class ConversationController {
             Authentication authentication,
             @PathVariable Long id,
             @Valid @RequestBody SendMessageRequest request) {
+        rateLimitService.checkChat(authentication.getName());
         return ResponseEntity.ok(chatService.sendMessage(authentication.getName(), id, request));
     }
 }

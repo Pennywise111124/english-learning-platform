@@ -37,6 +37,8 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import com.example.englishlearningplatform.entity.Role;
+import com.example.englishlearningplatform.ratelimit.RateLimitDecision;
+import com.example.englishlearningplatform.ratelimit.RateLimiter;
 import com.example.englishlearningplatform.repository.PostgresIntegrationTestBase;
 import com.example.englishlearningplatform.repository.UserRepository;
 
@@ -57,6 +59,12 @@ class SecurityMatrixIntegrationTest extends PostgresIntegrationTestBase {
         @Primary
         CacheManager testCacheManager() {
             return new ConcurrentMapCacheManager("topics", "topicDetails", "flashcardsByTopic");
+        }
+
+        @Bean
+        @Primary
+        RateLimiter alwaysAllowRateLimiter() {
+            return (key, limit, window) -> RateLimitDecision.allow();
         }
     }
 

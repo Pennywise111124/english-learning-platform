@@ -14,6 +14,8 @@ import com.example.englishlearningplatform.ai.AiProviderException;
 import com.example.englishlearningplatform.dto.chat.ChatStreamEvent;
 import com.example.englishlearningplatform.dto.chat.SendMessageRequest;
 import com.example.englishlearningplatform.exception.ErrorResponse;
+import com.example.englishlearningplatform.exception.RateLimitExceededException;
+import com.example.englishlearningplatform.ratelimit.RateLimitService;
 import com.example.englishlearningplatform.service.ChatService;
 
 @Controller
@@ -23,20 +25,29 @@ public class ChatWebSocketController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final RateLimitService rateLimitService;
 
-    public ChatWebSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate) {
+    public ChatWebSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate,
+            RateLimitService rateLimitService) {
         this.chatService = chatService;
         this.messagingTemplate = messagingTemplate;
+        this.rateLimitService = rateLimitService;
     }
 
-    // Client gửi tới: /app/chat.sendMessage/{conversationId}
-    // Client nhận reply tại: /topic/conversations/{conversationId}
     @MessageMapping("/chat.sendMessage/{conversationId}")
     public void sendMessage(@DestinationVariable Long conversationId,
             @Payload SendMessageRequest request,
             Principal principal) {
 
         String username = principal.getName();
+
+        try {
+            rateLimitService.checkChat(username);
+        } catch (RateLimitExceededException ex) {
+            messagingTemplate.convertAndSendToUser(username, "/queue/errors",
+                    new ErrorResponse(ex.getMessage(), 429));
+            return;
+        }
 
         chatService.sendMessageStream(username, conversationId, request)
                 .subscribe(
