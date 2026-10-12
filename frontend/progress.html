@@ -75,6 +75,15 @@
         </section>
 
         <p id="gamificationError" class="hidden text-center text-error font-body-md"></p>
+        
+        <section>
+            <h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary">emoji_events</span>
+                Achievements
+            </h2>
+            <div id="achievementGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <p id="achievementError" class="hidden text-center text-error font-body-md"></p>
+        </section>
 
         <!-- Stats Summary -->
         <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -235,6 +244,38 @@
                 el2.classList.remove('hidden');
             }
         }
+        
+        async function loadAchievements() {
+            const grid = document.getElementById('achievementGrid');
+            grid.replaceChildren(...Array.from({ length: 5 }, () => el('div', 'skeleton h-24 w-full rounded-xl')));
+            try {
+                const list = await api.getAchievements();
+                grid.replaceChildren(...list.map(a => {
+                    const card = el('div', 'flex items-start gap-3 rounded-xl border-2 p-4 '
+                        + (a.unlocked ? 'bg-surface-container-lowest border-tertiary' : 'bg-surface-container-low border-outline-variant opacity-70'));
+                    const box = el('div', 'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 '
+                        + (a.unlocked ? 'bg-tertiary-fixed' : 'bg-surface-container-high'));
+                    const icon = el('span', 'material-symbols-outlined '
+                        + (a.unlocked ? 'text-tertiary' : 'text-on-surface-variant'), a.unlocked ? 'emoji_events' : 'lock');
+                    icon.setAttribute('aria-hidden', 'true');
+                    box.append(icon);
+
+                    const text = el('div', 'flex-1 min-w-0');
+                    text.append(el('p', 'font-label-md text-label-md font-bold text-on-surface', a.title));
+                    text.append(el('p', 'font-body-sm text-body-sm text-on-surface-variant', a.description));
+                    text.append(el('p', 'font-label-sm text-label-sm mt-1 ' + (a.unlocked ? 'text-tertiary font-bold' : 'text-on-surface-variant'),
+                        a.unlocked ? 'Unlocked ' + new Date(a.awardedAt).toLocaleDateString() : 'Locked'));
+                    card.append(box, text);
+                    return card;
+                }));
+            } catch (error) {
+                console.error('[loadAchievements]', error);
+                grid.replaceChildren();
+                const err = document.getElementById('achievementError');
+                err.textContent = 'Failed to load achievements: ' + error.message;
+                err.classList.remove('hidden');
+            }
+        }
 
         async function loadProgress() {
             renderProgressSkeletons();
@@ -351,6 +392,7 @@
 
         loadGamification();
         loadProgress();
+        loadAchievements();
         loadQuizHistory();
     </script>
 </body>

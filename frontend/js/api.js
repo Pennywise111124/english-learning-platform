@@ -37,6 +37,10 @@ function buildQuery(params) {
   return `?${new URLSearchParams(entries).toString()}`;
 }
 
+function notifyActivity() {
+  window.dispatchEvent(new CustomEvent('learning-activity'));
+}
+
 async function request(path, { method = 'GET', body, isMultipart = false, params } = {}, _isRetry = false) {
   const token = getToken();
   const headers = { 'ngrok-skip-browser-warning': 'true' };
@@ -117,9 +121,10 @@ export async function getQuizDetail(quizId) {
   return request(`/api/quizzes/${quizId}`);
 }
 
-// answers PHẢI có dạng [{ questionId, answer }] — khớp SubmitAnswerItem của Backend
 export async function submitQuiz(quizId, answers) {
-  return request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: { answers } });
+  const result = await request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: { answers } });
+  notifyActivity();
+  return result;
 }
 
 export async function getQuizAttempts(quizId, page = 0, size = 20) {
@@ -143,7 +148,9 @@ export async function getAllVocabulary(page = 0, size = 20) {
 }
 
 export async function reviewVocabulary(id, remembered) {
-  return request(`/api/vocabulary/${id}/review`, { method: 'PATCH', body: { remembered } });
+  const result = await request(`/api/vocabulary/${id}/review`, { method: 'PATCH', body: { remembered } });
+  notifyActivity();
+  return result;
 }
 
 export async function getVocabularyToday(page = 0, size = 20) {
@@ -165,7 +172,9 @@ export async function getDictationLessons(topicId) {
 }
 
 export async function submitDictation(lessonId, userInput) {
-  return request(`/api/dictation/${lessonId}/submit`, { method: 'POST', body: { userInput } });
+  const result = await request(`/api/dictation/${lessonId}/submit`, { method: 'POST', body: { userInput } });
+  notifyActivity();
+  return result;
 }
 
 export async function getDictationResults(lessonId, page = 0, size = 20) {
@@ -229,6 +238,26 @@ export async function getMyStats() {
 
 export async function updateTimezone(timezone) {
   const updatedUser = await request('/api/users/me/timezone', { method: 'PATCH', body: { timezone } });
+  setUser(updatedUser); // giữ cache localStorage khớp với server
+  return updatedUser;
+}
+
+// ─── Leaderboard & Achievements (M17) ────────────────────────────────────────
+
+export async function getWeeklyLeaderboard() {
+  return request('/api/leaderboard/weekly');
+}
+
+export async function getAchievements() {
+  return request('/api/users/me/achievements');
+}
+
+export async function dismissAchievement(code) {
+  return request(`/api/users/me/achievements/${encodeURIComponent(code)}/dismiss`, { method: 'POST' });
+}
+
+export async function updateLeaderboardVisibility(visible) {
+  const updatedUser = await request('/api/users/me/leaderboard-visibility', { method: 'PATCH', body: { visible } });
   setUser(updatedUser); // giữ cache localStorage khớp với server
   return updatedUser;
 }

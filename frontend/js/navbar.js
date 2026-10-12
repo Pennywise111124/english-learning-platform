@@ -8,6 +8,7 @@ import { getUser, clearAuth } from './auth.js';
 import { imageSrc } from './config.js';
 import { getTheme, toggleTheme } from './theme.js';
 import { initClock } from './clock.js';
+import { initAchievementPopups } from './achievements.js';
 
 const SIDEBAR_COLLAPSED_KEY = 'linguistai_sidebar_collapsed';
 const SIDEBAR_WIDTH_EXPANDED = 256; // px
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { id: 'topics', label: 'Topics', href: 'topics.html', icon: 'style', public: true },
   { id: 'vocabulary', label: 'My Words', href: 'vocabulary.html', icon: 'bookmark', public: false },
   { id: 'dictation', label: 'Dictation', href: 'dictation.html', icon: 'headphones', public: false },
+  { id: 'leaderboard', label: 'Leaderboard', href: 'leaderboard.html', icon: 'leaderboard', public: false },
   { id: 'progress', label: 'Progress', href: 'progress.html', icon: 'monitoring', public: false }
 ];
 const ADMIN_NAV_ITEM = { id: 'admin', label: 'Admin', href: 'admin.html', icon: 'admin_panel_settings', public: false };
@@ -48,6 +50,8 @@ export function initNavBar(activePage = '') {
   applySidebarWidth(isCollapsed);
 
   window.addEventListener('resize', () => applySidebarWidth(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'));
+  
+  initAchievementPopups();
 }
 
 function renderGuestShell(activePage) {
