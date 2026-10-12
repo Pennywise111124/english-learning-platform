@@ -8,6 +8,7 @@
 import * as api from './api.js';
 import { saveAuth } from './auth.js';
 import { showToast } from './toast.js';
+import { formatRetryAfter } from './ui.js';
 
 const MODAL_HTML = `
   <div id="authModal" class="hidden fixed inset-0 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -117,12 +118,19 @@ export function initAuthModal() {
     const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
     const destination = pendingRedirect || 'chat.html'; 
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
     try {
       const response = await api.login(username, password);
       saveAuth(response);
       window.location.href = destination; 
     } catch (error) {
-      showToast(error.message || 'Login failed. Please try again.', 'error');
+      if (error.status === 429) {
+        showToast(`Too many login attempts. Try again in ${formatRetryAfter(error.retryAfter)}.`, 'error');
+        submitBtn.disabled = true;
+        setTimeout(() => { submitBtn.disabled = false; }, Math.min((error.retryAfter || 5), 60) * 1000);
+      } else {
+        showToast(error.message || 'Login failed. Please try again.', 'error');
+      }
     }
   });
 
@@ -155,7 +163,11 @@ export function initAuthModal() {
       switchAuthTab('login');
       authSuccessMessage.classList.remove('hidden');
     } catch (error) {
-      showToast(error.message || 'Registration failed. Please try again.', 'error');
+      if (error.status === 429) {
+        showToast(`Too many sign-up attempts. Try again in ${formatRetryAfter(error.retryAfter)}.`, 'error');
+      } else {
+        showToast(error.message || 'Registration failed. Please try again.', 'error');
+      }
     }
   });
 

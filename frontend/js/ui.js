@@ -528,3 +528,11 @@ export function buildStatusSelect({ current, label, onChange, onError = () => {}
     paintTrigger();
     return trigger;
 }
+
+export function formatRetryAfter(seconds) {
+    if (!seconds) return 'a moment';
+    const plural = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'}`;
+    if (seconds < 60) return plural(seconds, 'second');
+    if (seconds < 3600) return plural(Math.ceil(seconds / 60), 'minute');
+    return plural(Math.ceil(seconds / 3600), 'hour');
+}

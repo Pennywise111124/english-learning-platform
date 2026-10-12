@@ -74,8 +74,10 @@ async function request(path, { method = 'GET', body, isMultipart = false, params
     try { const j = await res.json(); msg = j.message || msg; } catch { /* ignore */ }
     const err = new Error(msg);
     err.status = res.status;
+    const retryAfter = Number(res.headers.get('Retry-After'));
+    err.retryAfter = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null;  // thêm dòng này
     throw err;
-  }
+}
 
   // DELETE và vài mutation admin trả 200 nhưng không có body
   const text = await res.text();
