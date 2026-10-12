@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -17,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -88,6 +91,11 @@ class GlobalExceptionHandlerTest {
             throw new IllegalArgumentException("bad input");
         }
 
+        @GetMapping("/t/rate-limit/{seconds}")
+        String rateLimit(@PathVariable("seconds") long seconds) {
+            throw new RateLimitExceededException(seconds);
+        }
+
         // ── Body / upload ──
         @PostMapping("/t/body")
         String body(@Valid @RequestBody BodyDto dto) {
@@ -125,6 +133,11 @@ class GlobalExceptionHandlerTest {
         logAppender = new ListAppender<>();
         logAppender.start();
         handlerLogger.addAppender(logAppender);
+    }
+
+    @AfterEach
+    void detachLogAppender() {
+        handlerLogger.detachAppender(logAppender);
     }
 
     private ResultActions assertError(ResultActions result, int status) throws Exception {
@@ -246,8 +259,23 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message", is("bad input")));
     }
 
-    @AfterEach
-    void detachLogAppender() {
-        handlerLogger.detachAppender(logAppender);
+    @Test
+    void rateLimitExceeded_returns429_withRetryAfterHeaderAndStandardBody() throws Exception {
+        assertError(mockMvc.perform(get("/t/rate-limit/30")), 429)
+                .andExpect(header().string("Retry-After", "30"))
+                .andExpect(jsonPath("$.*", hasSize(3)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 0, -5 })
+    void rateLimitExceeded_retryAfterBelowOne_isClampedToOne(long seconds) throws Exception {
+        assertError(mockMvc.perform(get("/t/rate-limit/" + seconds)), 429)
+                .andExpect(header().string("Retry-After", "1"));
+    }
+
+    @Test
+    void rateLimitExceeded_hasFixedMessage() throws Exception {
+        assertError(mockMvc.perform(get("/t/rate-limit/30")), 429)
+                .andExpect(jsonPath("$.message", is("Too many requests. Please try again later")));
     }
 }

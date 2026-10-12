@@ -31,6 +31,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      timeout: 500ms
+      connect-timeout: 500ms
 
   cache:
     type: redis
@@ -66,6 +68,11 @@ app:
     xp-vocab-review: 2
     xp-dictation-max: 10
     quiz-participation-daily-limit: 3
+  rate-limit:                
+    login-per-minute: 10
+    register-per-hour: 5
+    chat-per-minute: 20
+    trusted-proxy: false  
 
 logging:
   level:
