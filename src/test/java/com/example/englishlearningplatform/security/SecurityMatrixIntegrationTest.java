@@ -105,6 +105,7 @@ class SecurityMatrixIntegrationTest extends PostgresIntegrationTestBase {
                 Arguments.of("GET", "/api/users/me/progress"),
                 Arguments.of("GET", "/api/vocabulary/today"),
                 Arguments.of("GET", "/api/conversations"),
+                Arguments.of("DELETE", "/api/conversations/999999"),
                 Arguments.of("GET", "/api/quizzes/999999"),
                 Arguments.of("GET", "/api/dictation/lessons"),
                 Arguments.of("GET", "/api/topics/999999/dictation"),

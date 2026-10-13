@@ -23,5 +23,7 @@ public interface ChatService {
 
     Flux<ChatStreamEvent> sendMessageStream(String username, Long conversationId, SendMessageRequest request);
 
+    void deleteConversation(String username, Long conversationId);
+
     boolean isOwner(String username, Long conversationId);
 }

@@ -20,6 +20,7 @@ import reactor.core.publisher.Flux;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,19 +81,12 @@ public class ChatServiceImpl implements ChatService {
     public MessageResponse sendMessage(String username, Long conversationId, SendMessageRequest request) {
         Conversation conversation = loadOwnedConversation(username, conversationId);
 
-        // FR-2.6: lưu Message của User NGAY, độc lập với việc gọi AI có thành công
-        // hay không. messageRepository.save() tự mở/commit transaction riêng
-        // (SimpleJpaRepository đã @Transactional sẵn theo từng lệnh gọi), nên
-        // method này KHÔNG đánh @Transactional bao trùm toàn bộ.
         Message userMessage = Message.ofUser(conversation, request.content());
         messageRepository.save(userMessage);
 
         List<Message> history = messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
         List<AiChatMessage> context = toAiContext(history, aiProperties.getContextMessageLimit());
 
-        // Nếu lỗi, AiClientImpl ném AiProviderException (unchecked) — bay thẳng
-        // lên GlobalExceptionHandler (503). userMessage ở trên đã lưu, KHÔNG
-        // rollback — đúng FR-2.6.
         AiChatResult result = aiClient.chat(context);
 
         Message aiMessage = Message.ofAi(conversation, result.reply(), result.correction(), result.explanation());
@@ -137,6 +131,14 @@ public class ChatServiceImpl implements ChatService {
                         yield new ChatStreamEvent.Done(toMessageResponse(aiMessage));
                     }
                 });
+    }
+
+    @Override
+    @Transactional
+    public void deleteConversation(String username, Long conversationId) {
+        Conversation conversation = loadOwnedConversation(username, conversationId);
+        messageRepository.deleteByConversation(conversation);
+        conversationRepository.delete(conversation);
     }
 
     @Override

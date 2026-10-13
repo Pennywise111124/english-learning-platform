@@ -69,4 +69,12 @@ public class ConversationController {
         rateLimitService.checkChat(authentication.getName());
         return ResponseEntity.ok(chatService.sendMessage(authentication.getName(), id, request));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteConversation(
+            Authentication authentication,
+            @PathVariable Long id) {
+        chatService.deleteConversation(authentication.getName(), id);
+        return ResponseEntity.noContent().build();
+    }
 }

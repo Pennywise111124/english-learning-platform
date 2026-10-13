@@ -381,6 +381,36 @@ class ChatServiceImplTest {
     }
 
     // ------------------------------------------------------------------
+    // deleteConversation()
+    // ------------------------------------------------------------------
+
+    @Test
+    void deleteConversation_whenOwner_shouldDeleteMessagesBeforeConversation() {
+        when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(testUser));
+        when(conversationRepository.findByIdAndUser(CONVERSATION_ID, testUser))
+                .thenReturn(Optional.of(testConversation));
+
+        chatService.deleteConversation(USERNAME, CONVERSATION_ID);
+
+        InOrder inOrder = inOrder(messageRepository, conversationRepository);
+        inOrder.verify(messageRepository).deleteByConversation(testConversation);
+        inOrder.verify(conversationRepository).delete(testConversation);
+    }
+
+    @Test
+    void deleteConversation_whenNotOwner_shouldThrowAndDeleteNothing() {
+        when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(testUser));
+        when(conversationRepository.findByIdAndUser(CONVERSATION_ID, testUser))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> chatService.deleteConversation(USERNAME, CONVERSATION_ID));
+
+        verify(messageRepository, never()).deleteByConversation(any());
+        verify(conversationRepository, never()).delete(any());
+    }
+
+    // ------------------------------------------------------------------
     // isOwner()
     // ------------------------------------------------------------------
 

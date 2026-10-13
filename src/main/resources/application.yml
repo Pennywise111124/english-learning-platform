@@ -72,7 +72,7 @@ app:
     login-per-minute: 10
     register-per-hour: 5
     chat-per-minute: 20
-    trusted-proxy: false  
+    trusted-proxy: ${RATE_LIMIT_TRUSTED_PROXY:false}
 
 logging:
   level:
