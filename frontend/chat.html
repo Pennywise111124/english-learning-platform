@@ -323,19 +323,36 @@
                 }
 
                 data.content.forEach(conv => {
-                    const btn = document.createElement('button');
-                    btn.dataset.convId = conv.id;
-                    btn.className = 'w-full min-w-0 text-left px-3 py-3 rounded-xl hover:bg-surface-container-low transition-colors mb-1 flex flex-col items-start gap-1 border-l-4 border-transparent sidebar-item';
-                    btn.innerHTML = `
-                        <span class="block w-full max-w-full truncate font-label-md text-label-md text-on-surface pr-2">${displayTitle(conv.title)}</span>
-                        <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">schedule</span>
-                            ${new Date(conv.updatedAt).toLocaleDateString()}
-                        </span>
-                    `;
-                    btn.onclick = () => loadConversation(conv.id);
-                    list.appendChild(btn);
-                });
+                  const item = document.createElement('div');
+                  item.dataset.convId = conv.id;
+                  item.className = 'group w-full min-w-0 flex items-center gap-1 rounded-xl hover:bg-surface-container-low transition-colors mb-1 border-l-4 border-transparent sidebar-item';
+
+                  const open = document.createElement('button');
+                  open.type = 'button';
+                  open.className = 'flex-1 min-w-0 text-left px-3 py-3 flex flex-col items-start gap-1';
+                  const title = document.createElement('span');
+                  title.className = 'block w-full max-w-full truncate font-label-md text-label-md text-on-surface pr-2';
+                  title.textContent = displayTitle(conv.title);
+                  const when = document.createElement('span');
+                  when.className = 'font-label-sm text-label-sm text-on-surface-variant';
+                  when.textContent = new Date(conv.updatedAt).toLocaleDateString();
+                  open.append(title, when);
+                  open.addEventListener('click', () => loadConversation(conv.id));
+
+                  const del = document.createElement('button');
+                  del.type = 'button';
+                  del.className = 'flex-shrink-0 p-2 mr-1 rounded-full text-on-surface-variant hover:text-error hover:bg-error-container opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity';
+                  del.setAttribute('aria-label', 'Delete conversation: ' + displayTitle(conv.title));
+                  const icon = document.createElement('span');
+                  icon.className = 'material-symbols-outlined text-[20px]';
+                  icon.textContent = 'delete';
+                  icon.setAttribute('aria-hidden', 'true');
+                  del.append(icon);
+                  del.addEventListener('click', () => handleDeleteConversation(conv));
+
+                  item.append(open, del);
+                  list.appendChild(item);
+              });
 
                 highlightSidebar(currentConversationId);
             } catch (error) {
@@ -378,6 +395,18 @@
                 });
             } catch (error) {
                 console.error('Failed to load conversation:', error);
+            }
+        }
+        
+        async function handleDeleteConversation(conv) {
+            if (!confirm(`Delete "${displayTitle(conv.title)}"? This cannot be undone.`)) return;
+            try {
+                await api.deleteConversation(conv.id);
+                if (currentConversationId === conv.id) showBlankComposeState();
+                await loadConversations();
+            } catch (error) {
+                console.error('[deleteConversation]', error);
+                handleWsError({ message: error.message || 'Failed to delete conversation' });
             }
         }
 

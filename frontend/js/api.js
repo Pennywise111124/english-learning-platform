@@ -212,6 +212,10 @@ export async function sendMessage(conversationId, content) {
   return request(`/api/conversations/${conversationId}/messages`, { method: 'POST', body: { content } });
 }
 
+export async function deleteConversation(id) {
+  return request(`/api/conversations/${id}`, { method: 'DELETE' });
+}
+
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
 export async function getProfile() {

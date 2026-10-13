@@ -177,10 +177,18 @@
   scroll-behavior: smooth;
 }
 
-.chat-messages::-webkit-scrollbar        { width: 4px; }
-.chat-messages::-webkit-scrollbar-track  { background: transparent; }
-.chat-messages::-webkit-scrollbar-thumb  { background: #B2F296; border-radius: 2px; }
-.chat-messages::-webkit-scrollbar-thumb:hover { background: #58CC02; }
+.chat-messages, #conversationsList { scrollbar-width: thin; scrollbar-color: #B2F296 transparent; }
+
+.chat-messages::-webkit-scrollbar,
+#conversationsList::-webkit-scrollbar { width: 8px; }
+.chat-messages::-webkit-scrollbar:hover,
+#conversationsList::-webkit-scrollbar:hover { width: 14px; }
+.chat-messages::-webkit-scrollbar-track,
+#conversationsList::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb,
+#conversationsList::-webkit-scrollbar-thumb { background: #B2F296; border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
+.chat-messages::-webkit-scrollbar-thumb:hover,
+#conversationsList::-webkit-scrollbar-thumb:hover { background: #58CC02; background-clip: content-box; }
 
 /* ── Flashcard 3D flip ─────────────────────────────────────── */
 .flashcard-wrapper {
