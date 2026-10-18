@@ -1,5 +1,7 @@
 package com.example.englishlearningplatform.dto.quiz;
 
+import java.time.Instant;
+
 import com.example.englishlearningplatform.entity.QuizAttempt;
 
 // GET /api/quizzes/{id}/attempts — dùng trong PageResponse<QuizAttemptResponse>
@@ -9,7 +11,7 @@ public class QuizAttemptResponse {
     private int score;
     private int correctAnswers;
     private int totalQuestions;
-    private java.time.Instant completedAt;
+    private Instant completedAt;
 
     public static QuizAttemptResponse from(QuizAttempt attempt) {
         QuizAttemptResponse dto = new QuizAttemptResponse();
@@ -37,7 +39,7 @@ public class QuizAttemptResponse {
         return totalQuestions;
     }
 
-    public java.time.Instant getCompletedAt() {
+    public Instant getCompletedAt() {
         return completedAt;
     }
 }

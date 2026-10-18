@@ -2,25 +2,37 @@ package com.example.englishlearningplatform.dto.quiz;
 
 import com.example.englishlearningplatform.entity.QuizQuestion;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 import java.util.List;
 
-@Getter
-@AllArgsConstructor
 public class AdminQuizQuestionResponse {
 
-    private final Long id;
-    private final String question;
-    private final List<String> options;
-    private final String correctAnswer;
+    private Long id;
+    private String question;
+    private List<String> options;
+    private String correctAnswer;
 
     public static AdminQuizQuestionResponse from(QuizQuestion question) {
-        return new AdminQuizQuestionResponse(
-                question.getId(),
-                question.getQuestion(),
-                question.getOptions(),
-                question.getCorrectAnswer());
+        AdminQuizQuestionResponse dto = new AdminQuizQuestionResponse();
+        dto.id = question.getId();
+        dto.question = question.getQuestion();
+        dto.options = question.getOptions();
+        dto.correctAnswer = question.getCorrectAnswer();
+        return dto;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getQuestion() {
+        return question;
+    }
+
+    public List<String> getOptions() {
+        return options;
+    }
+
+    public String getCorrectAnswer() {
+        return correctAnswer;
     }
 }
