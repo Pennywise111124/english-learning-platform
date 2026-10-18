@@ -1,5 +1,5 @@
 # FRONTEND — TÀI LIỆU TRA CỨU NHANH KHI CODE THÊM TRANG
-*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination), M11 (Vocabulary/SRS), M12 (Dictation), M13 (hardening: lỗi 401/403 có body, 413), M14 (trạng thái nội dung Draft/Published/Archived), M15 (cờ `topicAvailable`, bỏ `innerHTML` ở progress/topics) và M16 (XP, streak, múi giờ, đồng hồ). File này dùng khi build tiếp trang mới ở M17+, tra nhanh contract API + quy ước design system. Cập nhật lần gần nhất: 10/10/2026, sau M16.)*
+*(Trước đây là brief build UI bằng mock data cho M1-M8 — nay Frontend đã nối Backend thật + redesign hoàn chỉnh ở M9, tiếp tục nối thêm M10 (Search/Filter/Pagination), M11 (Vocabulary/SRS), M12 (Dictation), M13 (hardening: lỗi 401/403 có body, 413), M14 (trạng thái nội dung Draft/Published/Archived), M15 (cờ `topicAvailable`, bỏ `innerHTML` ở progress/topics), M16 (XP, streak, múi giờ, đồng hồ), M17 (bảng xếp hạng tuần, achievement, popup thông báo) và M18 (rate limiting 429, xoá conversation, thanh cuộn chat). File này dùng khi build tiếp trang mới ở M19+, tra nhanh contract API + quy ước design system. Cập nhật lần gần nhất: 13/10/2026, sau M18.)*
 
 **Repo:** `github.com/Pennywise111124/english-learning-platform`, nhánh `main`
 **Vai trò:** code trong thư mục `frontend/`. Không động vào Backend Java (thư mục gốc, ngoài `frontend/`).
@@ -12,34 +12,37 @@
 - Gọi REST qua `js/api.js` (đã có sẵn `request()` engine — tự gắn JWT, tự refresh token khi 401, tự gắn header `ngrok-skip-browser-warning` cho môi trường dev qua tunnel). **Không tự viết `fetch()` riêng trong từng trang** — luôn thêm hàm mới vào `api.js` rồi import.
 - WebSocket qua `js/chat.js` (SockJS + STOMP) — chỉ dùng cho trang Chat, không dùng lại pattern này cho trang khác trừ khi thật sự cần realtime.
 - `localStorage` dùng cho: JWT (`linguistai_token`/`linguistai_refresh_token`), user cache (`linguistai_user`, từ M16 có thêm `timezone`; `clock.js` đọc múi giờ từ cache này mỗi lần tick, nên `api.updateTimezone` phải cập nhật lại cache), theme (`linguistai_theme`), trạng thái sidebar thu gọn (`linguistai_sidebar_collapsed`). `sessionStorage` (M12) chỉ dùng cho Topic Admin đang làm việc (`linguistai_admin_topic`).
+- **Hard refresh sau khi sửa FE** (Ctrl+Shift+R, hoặc DevTools → Network → "Disable cache"): trình duyệt cache JS/CSS/HTML, nên bản cũ có thể chạy tiếp và làm tưởng code mới bị lỗi (đã gặp ở lỗi "Not sent" của chat). Khi sửa trên máy Linux: chỉ `git add frontend/`; `js/config.js` chứa URL ngrok tạm, đừng commit nếu chỉ đổi URL.
 
 ## 2. Cấu trúc thư mục hiện tại
 
 ```
 frontend/
 ├── index.html (landing page công khai — có footer riêng, không dùng footer.js)
-├── chat.html (yêu cầu đăng nhập)
+├── chat.html (yêu cầu đăng nhập; M18: nút xoá conversation, tin bị chặn 429 hiện "Not sent", thanh cuộn to khi rê vào thanh)
 ├── topics.html (PUBLIC — khách xem được; M10: nối thật Search/Level/Sort; M12: khách thấy sidebar; M14: chỉ hiện Topic PUBLISHED, hai ô lọc dùng createSelect; M15: thẻ Topic dựng bằng el(), không còn innerHTML)
 ├── topic-detail.html (PUBLIC — khách xem được; M11: thêm nút Save flashcard; M12: thêm thẻ Dictation, thẻ Quiz/Dictation/nút Save của khách mở modal đăng nhập kèm redirectTo)
 ├── quiz.html (yêu cầu đăng nhập — checkAuth() ngay đầu)
-├── progress.html (yêu cầu đăng nhập; M15: thẻ Topic đã archive/nháp bị làm mờ + nhãn "Unavailable", không bấm được, dựng bằng el(); M16: thẻ XP/level và thẻ streak hai trạng thái kèm khiên băng, xem mục 7)
-├── profile.html (yêu cầu đăng nhập; M16: mục chọn múi giờ)
+├── progress.html (yêu cầu đăng nhập; M15: thẻ Topic đã archive/nháp bị làm mờ + nhãn "Unavailable", không bấm được, dựng bằng el(); M16: thẻ XP/level và thẻ streak hai trạng thái kèm khiên băng, xem mục 7; M17: lưới 5 achievement)
+├── leaderboard.html (yêu cầu đăng nhập — mới ở M17: bảng xếp hạng tuần, thẻ hạng của mình, xem mục 7)
+├── profile.html (yêu cầu đăng nhập; M16: mục chọn múi giờ; M17: công tắc hiện/ẩn tên trên bảng xếp hạng)
 ├── vocabulary.html (yêu cầu đăng nhập — mới hoàn toàn ở M11, tab "Due Today"/"All Words")
 ├── dictation.html (yêu cầu đăng nhập — mới hoàn toàn ở M12: danh mục bài có tìm kiếm/lọc/phân trang + màn luyện tập; bộ lọc lưu trên URL, mở trực tiếp được bằng ?topicId=)
 ├── admin.html (yêu cầu đăng nhập + role ADMIN — checkAdmin(); M12: tab Dictation, ô "Working topic" dùng chung, tab Topics có tìm kiếm/lọc/phân trang; M14: cột/ô đổi trạng thái Draft/Published/Archived ở Topics, Quizzes, Dictation, bộ lọc Status, mọi lệnh đọc dùng endpoint /api/admin/**)
 ├── test-websocket.html (công cụ test riêng, không tính vào bộ chính)
 ├── js/
-│ ├── api.js (fetch engine + toàn bộ hàm gọi API — xem mục 4)
+│ ├── api.js (fetch engine + toàn bộ hàm gọi API — xem mục 4; M18: lỗi có thêm err.retryAfter)
 │ ├── auth.js (JWT storage, checkAuth()/checkAdmin(), getUser()/setUser())
 │ ├── config.js (API_BASE_URL — SỬA DUY NHẤT Ở ĐÂY khi đổi domain Backend; imageSrc(path), audioSrc(path) — M12)
-│ ├── navbar.js (sidebar trái thu gọn được + topbar — trang đã đăng nhập; khách vẫn thấy sidebar, mục cần tài khoản có ổ khoá và mở modal đăng nhập kèm redirectTo — M12; M16: topbar người đã đăng nhập có <div id="topbarClock">)
+│ ├── navbar.js (sidebar trái thu gọn được + topbar — trang đã đăng nhập; khách vẫn thấy sidebar, mục cần tài khoản có ổ khoá và mở modal đăng nhập kèm redirectTo — M12; M16: topbar người đã đăng nhập có <div id="topbarClock">; M17: mục Leaderboard, gọi initAchievementPopups() cho người đã đăng nhập)
 │ ├── footer.js (initFooter() — dùng chung mọi trang app, TRỪ index.html)
 │ ├── authModal.js (modal Login/Sign Up dùng chung — thay login.html/register.html cũ, đã bỏ hẳn; M12: nhận detail { mode, redirectTo }; M16: gửi múi giờ trình duyệt lúc đăng ký)
 │ ├── toast.js (showToast(message, type))
-│ ├── ui.js (M12 — el(), buildLevelBadge, buildPagerButton/buildPageInfo, createSelect, createFilterBar, createSearchBox; M14 — buildStatusBadge, buildStatusSelect, STATUS_FILTER_OPTIONS)
+│ ├── ui.js (M12 — el(), buildLevelBadge, buildPagerButton/buildPageInfo, createSelect, createFilterBar, createSearchBox; M14 — buildStatusBadge, buildStatusSelect, STATUS_FILTER_OPTIONS; M18 — formatRetryAfter)
 │ ├── topicPicker.js (M12 — combobox chọn Topic có tìm kiếm; M14 — tham số source: 'public' gọi GET /api/topics, 'admin' gọi GET /api/admin/topics)
 │ ├── theme.js (dark/light mode)
 │ ├── clock.js (M16 — initClock(container): đồng hồ HH:MM theo múi giờ người dùng cho topbar; trả hàm dừng timer)
+│ ├── achievements.js (M17 — initAchievementPopups(), refreshAchievements(): popup "Achievement unlocked" ở app shell)
 │ ├── chat.js (STOMP/SockJS, chỉ chat.html dùng)
 │ └── tailwind-config.js (design token — xem mục 7)
 └── css/
@@ -55,14 +58,14 @@ frontend/
 - `api.js` tự động: gắn `Authorization: Bearer <token>`, tự gọi `/api/auth/refresh` khi gặp `401` rồi thử lại request gốc 1 lần, nếu vẫn thất bại mới `clearAuth()` + redirect `index.html?auth=login`. (401 và 403 đều có body {message, status, timestamp} từ M13.)
 - Route bị chặn bởi `checkAuth()`/`checkAdmin()` khi chưa đăng nhập → redirect `index.html?auth=login` (tự mở modal Login qua query param). Logout chủ động → redirect `index.html` **trơn**, không kèm query param.
 
-## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M16)
+## 4. Danh sách API Endpoint thật (xác nhận qua Swagger `/swagger-ui.html`, tính đến M18)
 
 ### Auth
 
 ```
-POST /api/auth/register {username, email, password, timezone?} → 200, không có body
+POST /api/auth/register {username, email, password, timezone?} → 200, không có body. Giới hạn 5 lần/giờ/IP, vượt → 429 (M18)
 timezone (M16, không bắt buộc): tên IANA như "Asia/Tokyo"; thiếu/rỗng → "Asia/Ho_Chi_Minh". Tên không nằm trong danh sách IANA hoặc không có dấu "/" (ví dụ "+05:00", "EST", "GMT+7") → 400 "Invalid timezone". Riêng "UTC" hợp lệ.
-POST /api/auth/login {username, password} → {accessToken, refreshToken, user}
+POST /api/auth/login {username, password} → {accessToken, refreshToken, user}. Giới hạn 10 lần/phút/IP, vượt → 429 (M18)
 POST /api/auth/refresh {refreshToken} → {accessToken}
 ```
 
@@ -76,7 +79,20 @@ GET /api/users/me/progress → mảng UserProgress (mục 6), mỗi phần tử 
 GET /api/users/me/quiz-attempts?page=&size= → PageResponse<QuizAttempt> — TỔNG HỢP mọi Quiz
 GET /api/users/me/stats → UserStats (mục 6) — M16
 PATCH /api/users/me/timezone {timezone} → User object (có timezone mới); 400 "Invalid timezone" nếu tên không hợp lệ — M16
+PATCH /api/users/me/leaderboard-visibility {visible: boolean} → User object (có leaderboardVisible); thiếu hoặc sai kiểu → 400 — M17
+GET /api/users/me/achievements → mảng 5 phần tử theo thứ tự cố định: { code, title, description, unlocked, awardedAt (null nếu chưa mở), dismissed } — M17
+POST /api/users/me/achievements/{code}/dismiss → 204, gọi lại vẫn 204 (idempotent). Mã lạ hoặc chưa mở khoá → 404 — M17
 ```
+
+### Leaderboard — cần JWT (M17)
+
+```
+GET /api/leaderboard/weekly → { weekStart, weekEnd, entries: [{ rank, username, xp, me }], me: { rank, xp, visible } }
+Tuần thứ Hai → Chủ nhật, theo múi giờ của NGƯỜI XEM (weekStart/weekEnd dạng "2026-10-12"). Top 20, hoà XP thì user_id nhỏ hơn đứng trước.
+entries chỉ gồm người có leaderboardVisible = true và có XP trong tuần. me.rank = null khi me.xp = 0.
+Người đã ẩn: không có trong entries nhưng me.rank vẫn là số, me.visible = false.
+```
+Hàm trong api.js: getWeeklyLeaderboard(), getAchievements(), dismissAchievement(code), updateLeaderboardVisibility(visible) (gọi setUser nên cache khớp server).
 
 ### Topics — **PUBLIC**, không cần JWT
 
@@ -139,11 +155,12 @@ POST /api/conversations (không cần body) → Conversation
 GET /api/conversations?page=&size= → PageResponse<Conversation>
 GET /api/conversations/{id} → Conversation
 GET /api/conversations/{id}/messages → mảng Message (không phân trang)
-POST /api/conversations/{id}/messages {content} → Message (đây là USER message vừa lưu — KHÔNG phải câu trả lời AI, câu trả lời AI luôn qua WebSocket, xem mục 5)
+POST /api/conversations/{id}/messages {content} → Message (đây là USER message vừa lưu — KHÔNG phải câu trả lời AI, câu trả lời AI luôn qua WebSocket, xem mục 5). Giới hạn 20 tin/phút/người dùng (chung bộ đếm với WebSocket), vượt → 429 và tin KHÔNG được lưu — M18
+DELETE /api/conversations/{id} → 204. Xoá luôn toàn bộ message. Không phải chủ hoặc không tồn tại → 404 — M18
 ```
 
 ### WS `/ws/chat` (STOMP qua SockJS)
-Không đổi từ M6 — chi tiết đầy đủ trong `js/chat.js` (đã code sẵn, dùng lại `connectChat()`/`subscribeConversation()`/`sendChatMessage()`/`unsubscribeConversation()`, không viết lại từ đầu).
+Không đổi từ M6 — chi tiết đầy đủ trong `js/chat.js`. M18: khi vượt hạn mức, kênh /user/queue/errors nhận { message: "Too many requests. Please try again later", status: 429, timestamp } (KHÔNG có retryAfter); không có phản hồi AI và tin không được lưu. chat.html dùng status === 429 để đánh dấu tin "Not sent".
 
 ### Admin — cần JWT + role ADMIN
 
@@ -181,6 +198,7 @@ DELETE topic/quiz/dictation/flashcard → 409 nếu đã có dữ liệu cá nh�
 ```
 
 Hàm trong api.js: adminGetTopics({keyword, level, sort, status, page, size}), adminGetTopic(id), adminGetFlashcards(topicId), adminGetQuizzes(topicId), adminChangeTopicStatus(id, status), adminChangeQuizStatus(id, status), adminChangeDictationStatus(id, status).
+Hàm theo dõi hoạt động (M17): submitQuiz, reviewVocabulary, submitDictation phát CustomEvent('learning-activity') trên window sau khi thành công; achievements.js nghe sự kiện này để làm mới popup. Hành động mới sinh XP/achievement cần phát cùng sự kiện này.
 Hàm gamification/profile trong api.js (M16): register(email, username, password, timezone) (tham số cuối tuỳ chọn; authModal tự thử lại không kèm timezone nếu server báo "Invalid timezone"), getMyStats(), updateTimezone(timezone) (gọi setUser nên cache khớp server).
 KHÔNG dùng getTopicDetail/getFlashcards/getQuizzesByTopic (API public) trong trang Admin: chúng ẩn bản nháp.
 adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
@@ -188,7 +206,7 @@ adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 ## 5. Quy ước chung
 
 - **Pagination:** `page` (mặc định 0), `size` (mặc định 20, tối đa 100 — vượt quá trả `400`, không tự cắt). Response `{content, totalPages, totalElements, page, size}`.
-- **Lỗi:** luôn `{message, status, timestamp}`, kể cả `401` (thiếu/sai JWT), `403` (sai role), `413` (upload vượt dung lượng, trước đây là 400), `405`, `415`, `500` (message cố định "Internal server error"). Hiện `message` qua `showToast()` (hành động tức thời) hoặc inline text tại khối nội dung (khi cả 1 khu vực load thất bại — không dùng toast vì tự biến mất sau 3s). `request()` trong `api.js` gắn `error.status` (số HTTP) vào Error để phân biệt `404` với lỗi khác.
+- **Lỗi:** luôn `{message, status, timestamp}`, kể cả `401` (thiếu/sai JWT), `403` (sai role), `413` (upload vượt dung lượng), `405`, `415`, `429` (vượt hạn mức, M18), `500` (message cố định "Internal server error"). Hiện `message` qua `showToast()` (hành động tức thời) hoặc inline text tại khối nội dung (khi cả 1 khu vực load thất bại — không dùng toast vì tự biến mất sau 3s). `request()` trong `api.js` gắn `error.status` (số HTTP) và `error.retryAfter` (giây, từ header `Retry-After`, `null` nếu không có) vào Error.
 - **Ownership sai** → luôn `404`, không `403` (không tiết lộ resource có tồn tại hay không).
 - **Chat:** câu trả lời AI KHÔNG đến qua response của `POST /api/conversations/{id}/messages` — luôn qua kênh WebSocket. Đừng nhầm request REST đó với luồng nhận trả lời.
 - **Upload file (ảnh, audio):** multipart, part tên `file`. Lỗi: `400` (sai định dạng, thiếu part, không phải multipart), `413` (file vượt dung lượng cho phép), `405`/`415` cho sai method/Content-Type. Backend nhận dạng định dạng bằng nội dung file, không tin Content-Type hay đuôi file. `mediaUrl`/`imageUrl` là đường dẫn TƯƠNG ĐỐI — luôn qua `audioSrc()`/`imageSrc()` (`config.js`) trước khi gán vào `<audio>`/`<img>`.
@@ -197,15 +215,19 @@ adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 - **Trạng thái nội dung (M14):** khách/người học chỉ thấy nội dung PUBLISHED; nội dung khác là `404`. Trang người học gặp `404` ở chi tiết Topic phải hiện "This topic is no longer available", không phải "Failed to load". Admin luôn dùng endpoint `/api/admin/**` để đọc.
 - **Múi giờ và "ngày" (M16):** streak/XP chia ngày theo `user.timezone` do server tính; mọi timestamp server trả vẫn là UTC (`Instant`). FE chỉ hiển thị. Lưu ý `toLocaleDateString()` ở `progress.html` dùng múi giờ trình duyệt nên có thể lệch ngày với ngày tính streak nếu hai múi giờ khác nhau.
 - **XP không có API ghi:** FE không bao giờ gửi XP hay streak. Server tự cộng sau khi nộp quiz/ôn từ "đã nhớ"/nộp dictation; sau các thao tác đó chỉ cần gọi lại `getMyStats()` nếu trang cần số mới. XP có thể trễ một chút so với response của thao tác (cộng sau commit) và hiếm khi mất nếu server lỗi.
+- **Rate limiting (M18):** login 10/phút/IP, đăng ký 5/giờ/IP, chat 20 tin/phút/người dùng. Xử lý `error.status === 429`: hiện "Try again in ..." bằng `formatRetryAfter(error.retryAfter)` (ui.js). `Retry-After` chỉ đọc được ở trình duyệt vì BE expose header qua CORS; nếu `retryAfter` là `null` thì hiện "a moment". Kênh WebSocket không có `retryAfter`, chỉ có `status: 429`. Form đăng ký tự thử lại không kèm `timezone` khi gặp "Invalid timezone" sẽ tốn hai lượt hạn mức.
+- **Achievement (M17):** FE không gửi gì để nhận achievement, server tự cấp ngay trước khi trả response của hành động. Popup chỉ cần gọi `getAchievements()` sau hành động (đã làm tự động qua sự kiện `learning-activity`). "Đã đóng" lưu ở server (`dismissed`), nên đóng ở thiết bị này thì thiết bị khác cũng không hiện lại.
+- **Bảng xếp hạng (M17):** tuần theo múi giờ của người xem; `me.rank` có thể là số dù `me.visible = false`. `leaderboardVisible` nằm trong User object và cache `linguistai_user` (cập nhật qua `updateLeaderboardVisibility`).
 
 ## 6. Shape dữ liệu thật (xác nhận qua Swagger, không phải bản nháp)
 
 ```json
 // User object — trả về lồng trong AuthResponse.user (login), hoặc trực tiếp (GET /api/users/me, upload avatar).
 // Riêng register KHÔNG trả object này (response rỗng, 200 không có body)
-{ "id": 1, "username": "john", "email": "john@mail.com", "role": "USER", "avatarUrl": "/uploads/avatars/<uuid>.jpg", "timezone": "Asia/Ho_Chi_Minh" }
+{ "id": 1, "username": "john", "email": "john@mail.com", "role": "USER", "avatarUrl": "/uploads/avatars/<uuid>.jpg", "timezone": "Asia/Ho_Chi_Minh", "leaderboardVisible": true }
 // avatarUrl là đường dẫn TƯƠNG ĐỐI — luôn qua imageSrc() (config.js) trước khi gán vào <img src>, không dùng thẳng
 // timezone (M16): luôn có giá trị; tài khoản cũ nhận "Asia/Ho_Chi_Minh" từ migration. Cache localStorage của phiên đăng nhập trước M16 chưa có field này cho tới khi đăng nhập lại.
+// leaderboardVisible (M17): luôn có giá trị, mặc định true. Cache localStorage cũ chưa có field này cho tới khi đăng nhập lại hoặc bật/tắt công tắc ở profile.html.
 
 // Topic
 { "id": 1, "title": "Travel", "description": "...", "level": "BEGINNER", "imageUrl": "/uploads/topics/<uuid>.jpg", "status": "PUBLISHED" }
@@ -243,6 +265,20 @@ adminGetTopics không còn dùng chung GET /api/topics (đã đổi ở M14).
 // currentStreak đã tính "hiển thị": nếu quá hạn thì trả 0 dù longestStreak vẫn giữ. activeToday = hôm nay (theo múi giờ người dùng) đã có hoạt động.
 // freezeAvailable: tuần hiện tại (bắt đầu thứ Hai) chưa dùng đóng băng. Đóng băng tự áp dụng, che đúng một ngày bỏ lỡ.
 // Người dùng chưa có hoạt động nào: toàn 0, level 1, xpToNextLevel 100, freezeAvailable true.
+
+// LeaderboardResponse — GET /api/leaderboard/weekly (M17)
+{ "weekStart": "2026-10-12", "weekEnd": "2026-10-18",
+  "entries": [ { "rank": 1, "username": "alice", "xp": 120, "me": false },
+               { "rank": 2, "username": "john", "xp": 90, "me": true } ],
+  "me": { "rank": 2, "xp": 90, "visible": true } }
+// Rỗng: "entries": [], "me": { "rank": null, "xp": 0, "visible": true }
+
+// AchievementResponse — GET /api/users/me/achievements (M17), luôn đủ 5 phần tử
+{ "code": "XP_100", "title": "XP Collector", "description": "Earn 100 XP in total",
+  "unlocked": true, "awardedAt": "2026-10-12T07:32:01.382283Z", "dismissed": false }
+// Chưa mở khoá: "unlocked": false, "awardedAt": null, "dismissed": false
+// Mã hiện có: XP_100, STREAK_7, QUIZ_PASS_10, VOCAB_KNOWN_50, DICTATION_5. title/description do server trả, FE không hardcode.
+// Popup hiện cho mọi mục unlocked && !dismissed.
 
 // Conversation
 { "id": 1, "title": "Small talk practice", "createdAt": "...", "updatedAt": "..." }
@@ -326,7 +362,7 @@ Component dùng thư viện có palette riêng (VD: Tailwind Typography `prose`)
         import { initFooter } from './js/footer.js';
 
         checkAuth();
-        initNavBar('<activePage>');  // 'chat'|'topics'|'vocabulary'|'dictation'|'progress'|'admin'|''
+        initNavBar('<activePage>');  // 'chat'|'topics'|'vocabulary'|'dictation'|'leaderboard'|'progress'|'admin'|''
         initFooter();
         // ... logic riêng của trang
     </script>
@@ -351,6 +387,18 @@ Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào b�
 - Đồng hồ topbar (`clock.js`): cập nhật mỗi 15 giây, tooltip "Your day resets in Xh Ym". Chỉ người đã đăng nhập thấy.
 - Chọn múi giờ ở `profile.html`: `<select>` từ `Intl.supportedValuesOf('timeZone')` (có danh sách dự phòng), nút "Use my browser's timezone" và "Save timezone".
 
+**Leaderboard & achievement UI (M17):**
+- `leaderboard.html`: thẻ `#meCard` (hạng `#N` hoặc `—`, XP tuần; nếu `visible = false` thêm ghi chú kèm liên kết tới `profile.html`), danh sách `#entryList` (hạng 1–3 màu `text-tertiary`; dòng của mình `bg-primary-fixed` + `border-primary` + hậu tố "(you)"), rỗng "Nobody has earned XP this week yet. Be the first!", lỗi inline `#listError`. Dựng bằng `el()`, có skeleton.
+- Popup achievement (`achievements.js`): container `fixed bottom-4 right-4 z-[9998]`, `role="status"`, `aria-live="polite"`; thẻ viền `border-tertiary`, biểu tượng `emoji_events`, nút X có `aria-label`. Không tự tắt. Tạo bằng `initAchievementPopups()` (navbar gọi cho người đã đăng nhập); không cần gọi lại ở từng trang.
+- `progress.html`: section Achievements (`#achievementGrid`, `#achievementError`): đã mở viền `border-tertiary` + `emoji_events`, chưa mở nền xám + mờ + biểu tượng `lock`.
+- `profile.html`: checkbox `#leaderboardVisible`; đổi thất bại thì trả checkbox về trạng thái server.
+
+**Chat & rate limit UI (M18):**
+- Danh sách conversation: mỗi mục là `<div class="group">` chứa **hai nút riêng** (mở, xoá), không lồng nút trong nút; nút xoá luôn hiện trên mobile, chỉ hiện khi rê/focus trên desktop; xoá cần `confirm()`. Tiêu đề dựng bằng `textContent` (lấy từ tin người dùng gõ).
+- Tin bị chặn 429: `lastSent = { bubble, content }`; khi lỗi `status === 429` bong bóng mờ (`opacity-50`), có nhãn "Not sent", nội dung trả lại ô nhập nếu ô trống, `handleDone` đặt `lastSent = null`.
+- `authModal.js`: 429 ở login → toast + khoá nút Login tối đa 60 giây; 429 ở đăng ký → chỉ toast.
+- Thanh cuộn `.chat-messages` và `#conversationsList`: mảnh 8px, chỉ to 14px khi rê vào chính thanh (`::-webkit-scrollbar:hover`, `background-clip: content-box`); Firefox cố định `thin`.
+
 ## 8. Checklist khi thêm 1 trang mới
 
 1. Copy đúng khung `<head>` (script chống nháy + font + Tailwind CDN + `tailwind-config.js` + `style.css`) từ 1 trang gần nhất đã có (VD `progress.html`).
@@ -367,6 +415,9 @@ Nút mở modal: thêm attribute `data-open-login`/`data-open-register` vào b�
 12. Trang người học gọi API chi tiết một Topic/Quiz: xử lý `error.status === 404` thành thông báo "không còn tồn tại" thay vì lỗi chung.
 13. Trang cần số liệu XP/streak: gọi `api.getMyStats()` (cần JWT), có `try/catch` hiện lỗi inline. Không tự tính streak ở FE. Đổi múi giờ qua `api.updateTimezone` để cache `user.timezone` được cập nhật, đồng hồ topbar sẽ đổi ở lần tick kế.
 14. Id mới của M16 (gõ sai một id làm cả script module dừng im lặng): `progress.html` — `levelValue`, `xpValue`, `levelBar`, `levelHint`, `streakValue`, `streakIconBox`, `streakIcon`, `streakHint`, `freezeIcon`, `freezeHint`, `gamificationError`; `profile.html` — `timezoneSelect`, `detectTimezoneBtn`, `saveTimezoneBtn`; topbar — `topbarClock`.
+15. Hành động mới có thể sinh XP/achievement (nộp bài, hoàn thành bài học...): sau khi API thành công, trong hàm của `api.js` gọi `window.dispatchEvent(new CustomEvent('learning-activity'))` để popup achievement tự làm mới.
+16. Gọi API có thể bị giới hạn (đăng nhập, đăng ký, chat): xử lý `error.status === 429` bằng `formatRetryAfter(error.retryAfter)`; với chat qua WebSocket nhìn `status` trong payload của `/user/queue/errors`.
+17. Id mới của M17/M18 (gõ sai một id làm cả script module dừng im lặng): `leaderboard.html` — `weekRange`, `meCard`, `entryList`, `listError`; `progress.html` — `achievementGrid`, `achievementError`; `profile.html` — `leaderboardVisible`; `chat.html` — `conversationsList` (mục con dựng bằng JS).
 
 ---
 *Nguồn xác nhận cao nhất khi có sai lệch với file này: Swagger UI (`/swagger-ui.html`) cho API, `Requirements.md` mục 10 cho design system đầy đủ.*

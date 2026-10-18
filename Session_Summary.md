@@ -1,7 +1,7 @@
 # TÓM TẮT TOÀN BỘ QUÁ TRÌNH — Project "Nền tảng học tiếng Anh tích hợp AI"
 *(Dùng để tiếp tục ở cuộc trò chuyện mới)*
 
-**Ngày tóm tắt:** 10/10/2026 (cập nhật sau M16 — hardening 2 (M15) và Gamification XP/streak (M16) hoàn thành; toàn bộ M1–M16 xong, 511 test)
+**Ngày tóm tắt:** 13/10/2026 (cập nhật sau M18 — M17 bảng xếp hạng + achievement (kèm dọn nợ ngưỡng "đạt" quiz) và M18 rate limiting + xoá conversation hoàn thành; toàn bộ M1–M18 xong, 670 test)
 
 ---
 
@@ -22,12 +22,13 @@
   - **Cập nhật 03/10/2026:** ở M12 đọc đúng stack trace trong console để xác nhận nguyên nhân (`truncate()` ném `TypeError` vì `Topic.description = null` làm cả trang Admin báo "Failed to load topics"), và tự sửa lỗi stub Mockito lồng nhau (`UnfinishedStubbingException`) bằng cách tạo đối tượng mock ra biến riêng trước khi stub. Chủ động nêu ra 3 vấn đề trải nghiệm không có trong tài liệu: khó tìm bài Dictation khi số Topic tăng (dẫn tới danh mục có tìm kiếm/lọc), thiếu đường quay lại Topic từ trang Dictation, và khách không thấy được các chức năng của ứng dụng (dẫn tới sidebar cho khách + chuyển tới đúng nơi sau khi đăng nhập). Điểm cần lưu ý (cùng dạng "bỏ sót 1 bước trong chuỗi logic nhiều bước"): guard `requestId` ở `dictation.html` lần đầu thiếu dòng khai báo `const requestId = ++counter` và thiếu `return` trong nhánh `catch`, làm skeleton quay mãi — lỗi chỉ lộ khi chạy thật, nên mở lại trang ngay sau mỗi lần sửa.
   - **Cập nhật 07/10/2026 (M13–M14):** tự viết bộ test có kỷ luật test-first (thấy đỏ rồi mới sửa), tự thêm test ngoài gợi ý (cô lập theo user/topic, khoá không lộ thông tin, test chống `toUpperCase` theo locale `tr-TR`), tự chạy mutation check, tự chọn hướng tie-break `id DESC` bằng cách đọc code thật thay vì đoán theo scaffold, và tự chốt quyết định thiết kế bằng lý do rõ (chuyển trạng thái tự do vì archive nhầm phải khôi phục được; giữ message `Malformed or missing request body` vì là hợp đồng API). Điểm cần lưu ý (cùng dạng "bỏ sót chi tiết khi nối chuỗi/nhiều bước"): JPQL nối chuỗi thiếu khoảng trắng (`:minScore" + "AND`) làm cả context không dựng được; cộng nhẩm số test sai vài lần (nên so từng class trong log); lỡ chạy test khi file migration V11 chưa hoàn chỉnh (an toàn vì Testcontainers tạo DB mới, nhưng nếu chạy `spring-boot:run` sẽ ghi checksum vào DB thật). Chọn học BE nên phần FE do trợ lý sửa trực tiếp từ code người dùng gửi.
   - **Cập nhật 10/10/2026 (M15–M16):** tự code và tự chạy mutation check đầy đủ cho từng việc, gửi lại kết quả theo bảng nên review nhanh; tự viết `StreakCalculator` đúng quy tắc đóng băng theo tuần của ngày bị bỏ lỡ (biên Chủ nhật sang thứ Hai), tự thêm test ngoài gợi ý (`GamificationEventFlowTest` chứng minh cả hai chiều commit/rollback), tự sửa `promoteToAdmin` dùng `findByUsername`, chủ động đề xuất tính năng mới (đồng hồ topbar theo múi giờ, streak hai trạng thái đỏ/xám, khiên băng nguyên/vỡ, ý tưởng xu và khiên mua được cho sau này). Điểm cần lưu ý: (1) lần đầu viết test `@DataJpaTest` hai luồng quên `extends PostgresIntegrationTestBase` nên suýt ghi vào DB dev thật (được phát hiện ở bước review trước khi chạy); (2) một số mutation do trợ lý thiết kế sai (mutant tương đương, lỗi biên dịch, bảng Markdown vỡ vì ký tự `||`), nên cần đọc kết quả có phản biện thay vì tin bảng; (3) mutation nhắm test ở class khác thì phải chạy đúng class đó.
+  - **Cập nhật 13/10/2026 (M17–M18):** làm theo từng bước nhỏ có TODO (7 bước M17, 6 bước M18), mỗi bước có test-first, mutation check và dòng `Tests run:` gửi lại nên review nhanh; tự thêm test ngoài gợi ý (ca múi giờ Hà Nội/Los Angeles cho bảng xếp hạng, ca `trustedProxy = false` chứng minh không né được hạn mức bằng `X-Forwarded-For`, ca đếm đúng 4 message biến mất khỏi DB khi xoá conversation), tự phát hiện và chữa ca test chưa đủ mạnh (hoà XP vẫn xanh khi bỏ tie-break, phải ép kế hoạch truy vấn bằng `SET LOCAL enable_sort = off`), chủ động đề xuất xoá conversation, thanh cuộn chat và quyết định "thông báo achievement giữ nguyên tới khi bấm X" (dẫn tới lưu `dismissed_at` ở server). Điểm cần lưu ý: (1) mutation bỏ một đoạn khỏi chuỗi nối làm mất khoảng trắng (`:toGROUP`, `DESCLIMIT`) gây lỗi cú pháp, đỏ vì lý do sai; (2) test rollback phải publish đúng event mà listener đó nghe (`XpAwardedEvent`, không phải `LearningActivityEvent`); (3) khi hard refresh chưa làm thì lỗi FE "không đổi" thường chỉ là cache; (4) `run-backend.bat` chứa bí mật nên phải nằm trong `.gitignore`, luôn `git add src/ frontend/` thay vì `git add .`; (5) hay quên chạy lại mutation hoàn tác trước khi commit (kiểm bằng `git diff`).
 
 ---
 
-## 2. Tài liệu Requirements — hiện tại: **v1.10**
+## 2. Tài liệu Requirements — hiện tại: **v1.11**
 
-File chính: `Requirements.md` (phiên bản 1.10; tên cũ `Project1_Requirements_ChatbotHocTiengAnh_v1.x.md`) (bump từ v1.9 lên v1.10 ở đợt review 10/10/2026 sau M15+M16; trước đó bump v1.8 lên v1.9 (07/10/2026, sau M13+M14), bump v1.7 lên v1.8 (03/10/2026, sau M12) và v1.6 lên v1.7 (29/09/2026, sau M10+M11), xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
+File chính: `Requirements.md` (phiên bản 1.11; tên cũ `Project1_Requirements_ChatbotHocTiengAnh_v1.x.md`) (bump từ v1.10 lên v1.11 ở đợt review 13/10/2026 sau M17+M18; trước đó bump v1.9 lên v1.10 (10/10/2026, sau M15+M16), bump v1.8 lên v1.9 (07/10/2026, sau M13+M14), bump v1.7 lên v1.8 (03/10/2026, sau M12) và v1.6 lên v1.7 (29/09/2026, sau M10+M11), xem chi tiết cuối mục này). So với v1.2 gốc, các thay đổi đã áp dụng:
 - Mục 2.3 và mục 4: toàn bộ `LocalDateTime` → `Instant` cho timestamp (quyết định phát sinh khi code M1).
 - Mục 7 (Roadmap): M1, M2 đã đánh dấu hoàn thành.
 - Mục 8: 2 điểm mở đã chốt — Database (PostgreSQL), Refresh Token (có).
@@ -67,7 +68,9 @@ File chính: `Requirements.md` (phiên bản 1.10; tên cũ `Project1_Requiremen
 
 **Đã đồng bộ đầy đủ ở đợt review 10/10/2026 (sau M15+M16):** bump lên **v1.10**. **FR-11 mới** (XP, level, streak, đóng băng, múi giờ, kiến trúc ghi XP, giới hạn đã biết). FR-10.7 đổi từ "giới hạn đã biết" sang "ĐÃ VÁ" (`PESSIMISTIC_WRITE`), thêm FR-10.10 (`topicAvailable`). Mục 1.4: 12 bullet mới (test dùng `replace = NONE` bắt buộc kế thừa lớp cha Testcontainers; cách vá race bằng khoá bi quan và thứ tự khoá-trước-đọc-sau; `MockMvc` không có ERROR dispatch nên mutant `/error` tương đương; ma trận bảo mật quét mọi route admin; cách đọc mutation check; không thể khoá dòng chưa tồn tại; luồng `publishEvent` → `AFTER_COMMIT` → `REQUIRES_NEW`; ngày streak theo múi giờ người dùng; không ghi sổ cái 0 XP; `@ConfigurationProperties` cần `@Validated`). Mục 2.2 (ownership `XpEvent`/`UserStats`), 2.3 (ngoại lệ múi giờ), NFR-5 (511 test), mục 4 (`User.timezone`, `XpEvent`, `UserStats`, migration V12), mục 5 (`GET /me/stats`, `PATCH /me/timezone`, register có `timezone`, `topicAvailable`), mục 7 (M15, M16), mục 8 (6 hàng quyết định), mục 9 (Gamification một phần đã làm), mục 10 (đồng hồ, múi giờ lúc đăng ký, `clock.js`, mục 10.10 thẻ XP/streak, dọn backlog 10.9). `FE_Handoff_Brief.md` cũng đã cập nhật tới hết M16.
 
-**Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= 70`, MIME ảnh upload = JPEG/PNG only (5MB max), `Topic` sort mặc định = mới nhất, "lượt học" (popular) = số người học riêng biệt qua `UserProgress`, SRS = thang cố định 5 bậc 1/3/7/14/30 ngày (không SM-2), Dictation = audio **upload** (MP3/WAV/OGG/M4A, 10MB, magic bytes) thay vì URL external, so sánh bằng LCS mức từ với `accuracy = round1(100 × đúng / max(n_transcript, n_user))` và không bao giờ lộ transcript trước khi nộp. Từ M13/M14: mọi lỗi trả `{message, status, timestamp}` kể cả 401/403/413; `DataIntegrityViolationException` lạ giữ 500; nội dung có `status` (Topic/Quiz/DictationLesson, Flashcard thừa hưởng Topic), mới tạo luôn `DRAFT`, người học chỉ thấy trạng thái hiệu lực `PUBLISHED`, lịch sử cá nhân vẫn xem được sau archive, chuyển trạng thái tự do, publish Quiz cần ≥ 1 câu hỏi, publish Dictation cần audio, không xoá câu hỏi cuối của Quiz đang PUBLISHED. Từ M15/M16: race condition xoá câu hỏi cuối được vá bằng khoá bi quan (khoá Quiz trước, rồi đọc trạng thái và đếm); XP chỉ nhận qua event `AFTER_COMMIT` + `REQUIRES_NEW`, lỗi gamification không làm hỏng bài nộp; "ngày" của streak tính theo `users.timezone` (lưu trữ vẫn UTC); XP = 0 không ghi sổ cái nhưng vẫn giữ streak; đóng băng miễn phí mỗi tuần (tuần bắt đầu thứ Hai) gắn với tuần của ngày bị bỏ lỡ; XP/level/streak không có API ghi, chỉ server tự cộng.
+**Đã đồng bộ đầy đủ ở đợt review 13/10/2026 (sau M17+M18):** bump lên **v1.11**. **FR-12 mới** (bảng xếp hạng tuần: theo tuần của người xem, `GROUP BY` trên `xp_events`, top 20, tie-break `user_id`, ẩn tên bằng `leaderboard_visible`; achievement: 5 mã, đếm Quiz/bài Dictation khác nhau, không thu hồi, `dismissed_at` ở server). **FR-13 mới** (rate limiting: Redis Lua, fail open, `trusted-proxy`, `429` + `Retry-After`). FR-2.9 mới (xoá conversation). FR-5.4/FR-11.1/FR-11.10(b): ngưỡng "đạt" gom về `app.quiz.pass-score`. Mục 1.3 (Redis còn là bộ đếm, Testcontainers Redis), mục 1.4 (14 bullet mới), mục 2.1 (v1.4, M10–M18), mục 2.2 (ownership `UserAchievement`, bảng xếp hạng), mục 4 (`User.leaderboardVisible`, `UserAchievement`, V13), mục 5 (endpoint mới, mã `429`), mục 7 (M17, M18), mục 8 (8 hàng quyết định), mục 9, mục 10 (10.11–10.13), NFR-11, NFR-5 (670 test). `FE_Handoff_Brief.md` cũng đã cập nhật tới hết M18.
+
+**Quyết định đã chốt xuyên suốt:** Database = PostgreSQL, JWT = Access + Refresh Token, Timestamp = `Instant`/`TIMESTAMPTZ`, `QuizQuestion.options` = `@ElementCollection`, ngưỡng "đạt" 1 Quiz = `score >= app.quiz.pass-score`(mặc định 70, nguồn duy nhất, M17), MIME ảnh upload = JPEG/PNG only (5MB max), `Topic` sort mặc định = mới nhất, "lượt học" (popular) = số người học riêng biệt qua `UserProgress`, SRS = thang cố định 5 bậc 1/3/7/14/30 ngày (không SM-2), Dictation = audio **upload** (MP3/WAV/OGG/M4A, 10MB, magic bytes) thay vì URL external, so sánh bằng LCS mức từ với `accuracy = round1(100 × đúng / max(n_transcript, n_user))` và không bao giờ lộ transcript trước khi nộp. Từ M13/M14: mọi lỗi trả `{message, status, timestamp}` kể cả 401/403/413; `DataIntegrityViolationException` lạ giữ 500; nội dung có `status` (Topic/Quiz/DictationLesson, Flashcard thừa hưởng Topic), mới tạo luôn `DRAFT`, người học chỉ thấy trạng thái hiệu lực `PUBLISHED`, lịch sử cá nhân vẫn xem được sau archive, chuyển trạng thái tự do, publish Quiz cần ≥ 1 câu hỏi, publish Dictation cần audio, không xoá câu hỏi cuối của Quiz đang PUBLISHED. Từ M15/M16: race condition xoá câu hỏi cuối được vá bằng khoá bi quan (khoá Quiz trước, rồi đọc trạng thái và đếm); XP chỉ nhận qua event `AFTER_COMMIT` + `REQUIRES_NEW`, lỗi gamification không làm hỏng bài nộp; "ngày" của streak tính theo `users.timezone` (lưu trữ vẫn UTC); XP = 0 không ghi sổ cái nhưng vẫn giữ streak; đóng băng miễn phí mỗi tuần (tuần bắt đầu thứ Hai) gắn với tuần của ngày bị bỏ lỡ; XP/level/streak không có API ghi, chỉ server tự cộng. Từ M17/M18: bảng xếp hạng tuần tính bằng `GROUP BY` trên sổ cái (không Redis), tuần theo múi giờ người xem, người ẩn tên không chiếm hạng; achievement cấp qua `XpAwardedEvent` (`AFTER_COMMIT` + `REQUIRES_NEW`), đã cấp thì không thu hồi, "đã đóng" lưu ở server; rate limiting đặt ở Controller (không Filter), bộ đếm Redis nguyên tử bằng Lua, fail open khi Redis lỗi, chỉ tin `X-Forwarded-For` khi `trusted-proxy=true` (mặc định `false`, biến môi trường `RATE_LIMIT_TRUSTED_PROXY`); xoá conversation xoá message trước (V6 không cascade).
 
 ---
 
@@ -84,39 +87,42 @@ File chính: `Requirements.md` (phiên bản 1.10; tên cũ `Project1_Requiremen
 | **GitHub** — `github.com/Pennywise111124/english-learning-platform`, nhánh `main` | Repo chính |
 | **PostgreSQL + pgAdmin** | DB tên `english_learning_db` |
 | **Postman** | Test API thủ công |
-| **Docker Desktop + Testcontainers** (PostgreSQL 16) | Chạy integration test trên DB thật; bắt buộc đang chạy khi `mvnw test` (từ M13) |
-| **Redis (dev)** | Cache Topic/Flashcard; `FLUSHALL` một lần sau khi đổi hình dạng `TopicResponse` (M14) |
+| **Docker Desktop + Testcontainers** (PostgreSQL 16, Redis 7) | Chạy integration test trên DB và Redis thật; bắt buộc đang chạy khi `mvnw test` (từ M13). `RedisRateLimiterTest` dùng `GenericContainer("redis:7")` (M18) |
+| **Redis (dev)** | Cache Topic/Flashcard và bộ đếm rate limit (M18); `FLUSHALL` một lần sau khi đổi hình dạng `TopicResponse` (M14). Timeout 500ms để fail open không treo request |
 | **`mvnw test -Dtest=<Class>`** | Chạy riêng từng class khi làm mutation check (M15/M16); mutation nhắm test ở class nào thì phải chạy đúng class đó |
+| **Git hai máy** | Windows (Antigravity) chỉ sửa BE: `git add src/`; Linux chỉ sửa FE: `git add frontend/`; trước khi làm luôn `git pull --rebase origin main`. `run-backend.bat` (bí mật) và `ngrok.exe`, `uploads/`, `target/` nằm trong `.gitignore`. Đặt `RATE_LIMIT_TRUSTED_PROXY=true` trong `run-backend.bat` khi chạy qua ngrok |
 
 ---
 
 ## 4. Tech stack đã chốt
 
 - **Backend:** Java 21, Spring Boot 4.1.1, Maven, package `com.example.englishlearningplatform`
-- **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V12** (V8: thêm `Topic.createdAt` cho sort=newest — M10; V9: bảng `user_vocabulary` — M11; V10: bảng `dictation_lessons` (FK `topic_id` ON DELETE CASCADE) + `dictation_results` (không cascade) — M12; V11: cột `status` (CHECK 3 giá trị, bỏ DEFAULT) cho `topics`, `quizzes`, `dictation_lessons`, dòng cũ = PUBLISHED — M14; V12: cột `users.timezone` (CHECK không rỗng), bảng `xp_events` (sổ cái, UNIQUE `(user_id, dedupe_key)`, không cascade) và `user_stats` (1 dòng/người dùng), tạo sẵn dòng stats rỗng cho người dùng cũ — M16.)
+- **Database:** PostgreSQL, Flyway quản lý schema (`ddl-auto: validate`, không `update`), hiện tại đã có **V1 → V13** (V8: thêm `Topic.createdAt` cho sort=newest — M10; V9: bảng `user_vocabulary` — M11; V10: bảng `dictation_lessons` (FK `topic_id` ON DELETE CASCADE) + `dictation_results` (không cascade) — M12; V11: cột `status` (CHECK 3 giá trị, bỏ DEFAULT) cho `topics`, `quizzes`, `dictation_lessons`, dòng cũ = PUBLISHED — M14; V12: cột `users.timezone` (CHECK không rỗng), bảng `xp_events` (sổ cái, UNIQUE `(user_id, dedupe_key)`, không cascade) và `user_stats` (1 dòng/người dùng), tạo sẵn dòng stats rỗng cho người dùng cũ — M16; V13 (`V13__create_leaderboard_and_achievements.sql`): cột `users.leaderboard_visible BOOLEAN NOT NULL DEFAULT TRUE`, index `idx_xp_events_date_user (local_date, user_id)`, bảng `user_achievements` (UNIQUE `(user_id, code)`, `code` không CHECK, `dismissed_at` nullable, index một phần cho chưa đóng, FK không cascade) — M17.)
 - **Security:** Spring Security + JWT (Access + Refresh), BCrypt, `@Enumerated(EnumType.STRING)`, role-based (`hasRole("ADMIN")` cho `/api/admin/**`)
 - **Timestamp:** `Instant` (Entity) ↔ `TIMESTAMPTZ` (PostgreSQL) — xuyên suốt mọi entity
 - **Frontend:** HTML/JS thuần + Tailwind CSS qua CDN, `js/api.js` gọi API thật (không còn mock từ M9) — chi tiết đầy đủ xem mục 5
-- **AI Provider:** xKiro, model `qwen/qwen3.6-plus:free`, context N=10 message, response format JSON {reply, correction, explanation}
+- **AI Provider:** xKiro, model hiện cấu hình `qwen/qwen3.8-omni-flash:free` (chốt ban đầu `qwen/qwen3.6-plus:free`; đổi qua `app.ai.model`), context N=10 message, response format JSON {reply, correction, explanation}
 - **Cache:** Redis qua Spring Cache abstraction (`@Cacheable`/`RedisCacheManager`), evict bằng `@TransactionalEventListener(phase = AFTER_COMMIT)` + `CacheManager` thủ công (không dùng `@CacheEvict` trực tiếp trên method `@Transactional`, tránh race condition evict-trước-commit) — chốt tại M5
+- **Rate limiting (M18):** `RateLimiter` (giao diện) → `RedisRateLimiter` (fixed window, Lua script `INCR`+`EXPIRE` nguyên khối, tự chữa TTL mất) và `InMemoryRateLimiter` (chỉ ở `src/test`). `RateLimitService` gọi ở Controller: `rl:login:{ip}` 10/phút, `rl:register:{ip}` 5/giờ, `rl:chat:{username}` 20/phút (REST và WebSocket chung khoá). Fail open + `spring.data.redis.timeout/connect-timeout` 500ms. `429` + `Retry-After` (expose qua CORS). Cấu hình `app.rate-limit.*`, `trusted-proxy: ${RATE_LIMIT_TRUSTED_PROXY:false}`
+- **Leaderboard/Achievement (M17):** `LeaderboardService` (3 truy vấn native trên `xp_events`), `AchievementRules` (hàm thuần) + `AchievementService.evaluate` (`REQUIRES_NEW`) nghe `XpAwardedEvent` do `GamificationService.record` phát. Ngưỡng quiz: `QuizProperties` (`app.quiz.pass-score`, `@Min(1) @Max(100)`)
 - **File upload:** Local filesystem qua `app.upload.dir` (ngoài classpath), validate MIME header + nội dung ảnh thật qua `javax.imageio.ImageIO`, filename `UUID` theo format ảnh thật đọc được (không theo Content-Type/tên file client), serve qua `/uploads/**` (`WebMvcConfig` + `permitAll()`), dọn file cũ khi update/xoá qua `FileDeletionEvent`/`FileDeletionListener` — tái dùng đúng pattern `AFTER_COMMIT` đã chốt ở M5 cho cache — chốt tại M7
 - **Audio upload (Dictation, M12):** dùng chung `FileStorageService`, thêm `storeAudio(file, "dictation")`. Định dạng nhận dạng bằng **magic bytes** của 12 byte đầu (MP3: `ID3` hoặc frame sync `0xFF`+`(b1 & 0xE0)==0xE0`; WAV: `RIFF`…`WAVE`; OGG: `OggS`; M4A: `ftyp` ở byte 4-7), không tin `Content-Type`/đuôi file; đuôi file lưu lấy từ nội dung nhận dạng được. Giới hạn riêng `app.upload.audio-max-file-size-mb` = 10, `spring.servlet.multipart` nâng lên 10MB (ảnh vẫn 5MB ở tầng Service). Constructor `FileStorageServiceImpl` có 2 phiên bản (3 tham số cho test cũ, 4 tham số có `@Autowired`). Dọn file qua `FileDeletionEvent` như ảnh — chốt tại M12
 - **CORS:** cấu hình tường minh qua `CorsConfigurationSource` bean (không có mặc định) — `setAllowedOriginPatterns` (không phải `setAllowedOrigins`, bắt buộc khi kết hợp `allowCredentials(true)`), preflight `OPTIONS` permitAll riêng — chốt tại M9
 - **API Documentation:** springdoc-openapi 3.1.1, Swagger UI tại `/swagger-ui.html` — thêm tại M9, dùng làm nguồn đối chiếu contract thật khi có sai lệch với Requirements
-- **Testing:** JUnit 5 + Mockito + MockMvc + Testcontainers PostgreSQL 16, tổng **511 test** tính tới hết M16 (log `mvnw test` 10/10/2026; M14: 339 → M15: 426 → M16: 511). Lớp mới M15: `JsonAuthenticationEntryPointTest`/`JsonAccessDeniedHandlerTest` (17), `QuizServiceConcurrencyTest` (2), `SecurityMatrixIntegrationTest` (59), `UserProgressResponseTest` (3), thêm ca vào `QuizServiceTest` (lên 22). Lớp mới M16: `StreakCalculatorTest` (21), `LevelCalculatorTest` (8), `TimezoneUtilsTest` (14), `GamificationServiceTest` (13 + 2 getStats), `GamificationConcurrencyTest` (3), `GamificationEventFlowTest` (2), `GamificationListenerTest` (2), `UserServiceTest` (2), cộng test phát event ở `QuizAttemptServiceTest`/`VocabularyServiceTest`/`DictationServiceTest` và 3 ca timezone ở `AuthServiceTest`. **Cần Docker đang chạy.** Toàn bộ mutation check đã chạy xong cho M15 và M16. Còn thiếu: test tự động cho phần lớn Controller và FE. Khi cộng số test luôn so từng class trong log (lỗi cộng nhẩm đã lặp lại nhiều lần).
+- **Testing:** JUnit 5 + Mockito + MockMvc + Testcontainers (PostgreSQL 16, Redis 7), tổng **670 test** tính tới hết M18 (log `mvnw test` 13/10/2026; M16: 511 → dọn nợ ngưỡng quiz: 520 → M17: 594 → M18: 670). Lớp mới M17: `QuizPropertiesValidationTest`, `GamificationQuizPassScoreTest`, `AchievementRulesTest` (15), `AchievementRepositoryTest` (12), `AchievementServiceTest`, `AchievementListenerTest`, `AchievementFlowTest`, `LeaderboardServiceTest` (12, gồm ca hoà XP ép hash aggregate và ca múi giờ), ca mới ở `TimezoneUtilsTest`/`UserServiceTest`/`SecurityMatrixIntegrationTest`. Lớp mới M18: `RateLimitPropertiesValidationTest` (8), `ClientIpResolverTest` (17), `RedisRateLimiterTest` (8, Redis thật), `InMemoryRateLimiterTest` (8), `RateLimitServiceTest` (14), `RateLimitIntegrationTest`, `RateLimitUntrustedProxyIntegrationTest`, `ChatWebSocketControllerTest` (2), `ConversationDeleteIntegrationTest` (3), ca 429 ở `GlobalExceptionHandlerTest`. **Cần Docker đang chạy.** Toàn bộ mutation check đã chạy. Còn thiếu: test tự động cho phần lớn Controller và FE. Khi cộng số test luôn so từng class trong log.
 
 ---
 
-## 5. Tiến độ Frontend — HOÀN THÀNH, đã nối Backend thật + redesign UI (M9, cập nhật tới M16)
+## 5. Tiến độ Frontend — HOÀN THÀNH, đã nối Backend thật + redesign UI (M9, cập nhật tới M18)
 
-10 trang, đã bỏ hẳn `js/mockApi.js` — toàn bộ gọi API thật qua `js/api.js`. **Đổi kiến trúc trang so với giai đoạn mock:**
+11 trang, đã bỏ hẳn `js/mockApi.js` — toàn bộ gọi API thật qua `js/api.js`. **Đổi kiến trúc trang so với giai đoạn mock:**
 - **Bỏ hẳn** `login.html`/`register.html` — gộp vào modal chung (`authModal.js`), mở qua `index.html?auth=login` hoặc `data-open-login`/`data-open-register` attribute.
 - **Đổi hẳn** navbar ngang → **sidebar trái thu gọn được + topbar riêng** (`navbar.js` viết lại hoàn toàn, xem chi tiết Requirements mục 10.5).
 - Thêm mới: `topic-detail.html` vẫn giữ tên cũ, không đổi.
 
-**Các trang hiện tại:** 10 trang chính — `index.html`, `chat.html`, `topics.html`, `topic-detail.html`, `quiz.html`, `progress.html`, `profile.html`, `admin.html`, `vocabulary.html` (M11), `dictation.html` (M12) — cộng `test-websocket.html` (công cụ test riêng, không tính vào bộ chính thức).
+**Các trang hiện tại:** 11 trang chính — `index.html`, `chat.html`, `topics.html`, `topic-detail.html`, `quiz.html`, `progress.html`, `profile.html`, `admin.html`, `vocabulary.html` (M11), `dictation.html` (M12), `leaderboard.html` (M17) — cộng `test-websocket.html` (công cụ test riêng, không tính vào bộ chính thức).
 
-**Module JS dùng chung (mới, không có ở giai đoạn mock):** `config.js`, `toast.js`, `chat.js`, `footer.js`, `theme.js`, `authModal.js`, `ui.js` (M12), `topicPicker.js` (M12), `clock.js` (M16) — vai trò từng file xem Requirements mục 10.7.
+**Module JS dùng chung (mới, không có ở giai đoạn mock):** `config.js`, `toast.js`, `chat.js`, `footer.js`, `theme.js`, `authModal.js`, `ui.js` (M12), `topicPicker.js` (M12), `clock.js` (M16), `achievements.js` (M17) — vai trò từng file xem Requirements mục 10.7.
 
 **Redesign UI hoàn chỉnh (Duolingo-inspired):** đổi bảng màu, thêm component "nút 3D" (`btn-3d` + `border-*-shadow`), dark mode thật (CSS custom property, không phải chỉ khai báo `darkMode: "class"` suông như dự kiến ban đầu), skeleton loading toàn site, empty/error state chuẩn hoá. Chi tiết đầy đủ đã chuyển hẳn vào Requirements mục 10 (không lặp lại ở đây, tránh 2 nguồn dễ lệch nhau) — **khi cần chi tiết design system, luôn tham chiếu Requirements, không phải file này**.
 
@@ -132,11 +138,15 @@ File chính: `Requirements.md` (phiên bản 1.10; tên cũ `Project1_Requiremen
 
 **Cập nhật M16:** `progress.html` có hai thẻ mới trên đầu: **XP/level** (thanh tiến độ trong level) và **streak hai trạng thái** (đỏ khi hôm nay đã học, xám khi chưa) kèm **khiên băng** vẽ bằng SVG (nguyên màu xanh khi còn đóng băng tuần này, vỡ đôi màu xám khi đã dùng). `profile.html` có mục chọn múi giờ (`<select>` từ `Intl.supportedValuesOf`, nút dùng múi giờ trình duyệt). `authModal.js` gửi múi giờ trình duyệt lúc đăng ký và tự thử lại không kèm timezone nếu server báo `Invalid timezone`. File mới `js/clock.js` (`initClock`), `navbar.js` có `<div id="topbarClock">` trong topbar người đã đăng nhập: đồng hồ `HH:MM` theo múi giờ người dùng, tooltip "Your day resets in Xh Ym". `api.js` thêm `getMyStats`, `updateTimezone`, `register(..., timezone)`.
 
-`FE_Handoff_Brief.md` — **CẬP NHẬT 10/10/2026 (sau M16; bản gốc 29/09/2026):** đã được "hồi sinh" lại làm tài liệu tra cứu nhanh (khác hẳn vai trò brief-build-mock ban đầu ở M1-M8), đồng bộ đầy đủ endpoint + shape dữ liệu mới của M12 (khối Dictation, gồm các endpoint bổ sung và các component dùng chung `ui.js`/`topicPicker.js`), M10 (`GET /api/topics` đủ tham số) và M11 (khối Vocabulary/SRS, gồm cả 3 endpoint bổ sung ngoài phạm vi gốc). Từ giờ nên gửi kèm file này khi cần tra nhanh contract API mà không muốn đọc lại toàn bộ Requirements — Swagger UI (`/swagger-ui.html`) vẫn là nguồn xác nhận cao nhất khi có sai lệch. Từ M14 brief có thêm khối endpoint Admin đọc mọi trạng thái/PATCH status, trường status trong shape Topic/Quiz/Dictation, quy ước lỗi 401/403/413 có body. Từ M15/M16 brief có thêm `topicAvailable` trong shape UserProgress, shape `UserStats`, `timezone` trong `User`, hai endpoint mới và hàm `api.js` tương ứng, quy ước múi giờ/XP, và danh sách id mới cần gõ đúng.
+**Cập nhật M17:** trang mới `leaderboard.html` (mục "Leaderboard" trong sidebar, trước Progress; thẻ hạng của mình, top 20, dòng của mình nổi bật, ghi chú khi đang bị ẩn). `js/achievements.js`: popup "Achievement unlocked" ở app shell (`navbar.js` gọi `initAchievementPopups()` cho người đã đăng nhập), không tự tắt, nút X gọi API đóng (trạng thái lưu ở server). `api.js` phát `CustomEvent('learning-activity')` sau `submitQuiz`/`reviewVocabulary`/`submitDictation` để popup tự làm mới. `progress.html`: lưới 5 achievement. `profile.html`: công tắc ẩn/hiện tên trên bảng xếp hạng. Hàm mới: `getWeeklyLeaderboard`, `getAchievements`, `dismissAchievement`, `updateLeaderboardVisibility`.
+
+**Cập nhật M18:** `api.js` gắn `err.retryAfter` (từ header `Retry-After`, cần BE expose qua CORS), `ui.js` thêm `formatRetryAfter`. `authModal.js`: 429 ở đăng nhập hiện thời gian chờ và khoá nút tạm thời, ở đăng ký chỉ toast. `chat.html`: tin bị chặn 429 mờ đi, có nhãn "Not sent" và nội dung được trả lại ô nhập; nút xoá conversation (mỗi mục là `<div>` chứa hai nút riêng, dựng bằng `textContent`, hết `innerHTML` với tiêu đề); thanh cuộn chat chỉ to ra khi rê vào chính thanh (`style.css`). Hàm mới: `deleteConversation`. Lưu ý: sau khi sửa FE phải hard refresh (lỗi "Not sent" ban đầu chỉ là bản `chat.html` cũ trong cache).
+
+`FE_Handoff_Brief.md` — **CẬP NHẬT 13/10/2026 (sau M18; bản gốc 29/09/2026):** đã được "hồi sinh" lại làm tài liệu tra cứu nhanh (khác hẳn vai trò brief-build-mock ban đầu ở M1-M8), đồng bộ đầy đủ endpoint + shape dữ liệu mới của M12 (khối Dictation, gồm các endpoint bổ sung và các component dùng chung `ui.js`/`topicPicker.js`), M10 (`GET /api/topics` đủ tham số) và M11 (khối Vocabulary/SRS, gồm cả 3 endpoint bổ sung ngoài phạm vi gốc). Từ giờ nên gửi kèm file này khi cần tra nhanh contract API mà không muốn đọc lại toàn bộ Requirements — Swagger UI (`/swagger-ui.html`) vẫn là nguồn xác nhận cao nhất khi có sai lệch. Từ M14 brief có thêm khối endpoint Admin đọc mọi trạng thái/PATCH status, trường status trong shape Topic/Quiz/Dictation, quy ước lỗi 401/403/413 có body. Từ M15/M16 brief có thêm `topicAvailable` trong shape UserProgress, shape `UserStats`, `timezone` trong `User`, hai endpoint mới và hàm `api.js` tương ứng, quy ước múi giờ/XP, và danh sách id mới cần gõ đúng. Từ M17/M18 brief có thêm khối Leaderboard và Achievement (endpoint, shape, hàm api.js), leaderboardVisible trong User, mã 429 và err.retryAfter, DELETE /api/conversations/{id}, sự kiện learning-activity, mục 15–17 của checklist.
 
 ---
 
-## 6. Tiến độ Backend — cấu trúc project hiện tại (sau M16, 10/10/2026)
+## 6. Tiến độ Backend — cấu trúc project hiện tại (sau M18, 13/10/2026)
 
 ```
 src/main/java/com/example/englishlearningplatform/
@@ -144,19 +154,22 @@ src/main/java/com/example/englishlearningplatform/
 ├── ai/
 │ ├── {AiChatMessage, AiChatResult, AiClient, AiClientImpl, AiProviderException, AiStreamEvent}
 │ └── dto/{XkiroChatRequest, XkiroChatResponse, XkiroChatStreamChunk}
-├── config/{AiProperties, AiWebClientConfig, SecurityConfig, RedisConfig, WebSocketConfig, WebMvcConfig, TimeConfig} — TimeConfig mới thêm ở M11 (bean Clock, inject vào VocabularyService để unit test SRS với thời gian cố định); M12: DictationService cũng inject Clock. GamificationProperties (M16, record @Validated @Positive, prefix app.gamification, đăng ký ở AiWebClientConfig) và OpenApiConfig
+├── config/{AiProperties, AiWebClientConfig, SecurityConfig, RedisConfig, WebSocketConfig, WebMvcConfig, TimeConfig} — TimeConfig mới thêm ở M11 (bean Clock, inject vào VocabularyService để unit test SRS với thời gian cố định); M12: DictationService cũng inject Clock. GamificationProperties (M16, record @Validated @Positive, prefix app.gamification, đăng ký ở AiWebClientConfig) và OpenApiConfig; QuizProperties (M17, `app.quiz.pass-score`), RateLimitProperties (M18, `app.rate-limit.*`) — cả hai đăng ký ở `AiWebClientConfig`; SecurityConfig expose header `Retry-After` qua CORS (M18)
 ├── controller/
+│ ├── LeaderboardController (M17), AchievementController (M17); ConversationController thêm DELETE (M18) và checkChat; AuthController gọi checkLogin/checkRegister (M18); ChatWebSocketController tự bắt RateLimitExceededException (M18); UserController thêm PATCH /leaderboard-visibility (M17)
 │ ├── AuthController, ConversationController, ChatWebSocketController, ProgressController, UserController
 │ ├── TopicController, QuizController, VocabularyController (M11), DictationController (M12 — GET /api/topics/{id}/dictation, GET /api/dictation/lessons, submit, results)
 │ └── Admin*: AdminTopicController, AdminFlashcardController, AdminQuizController, AdminQuizQuestionController, AdminDictationController (M14: GET đọc mọi trạng thái + PATCH /status)
 │   (UserController mới thêm ở M7 — POST /api/users/me/avatar)
 ├── dto/
-│ ├── auth/{RegisterRequest, LoginRequest, AuthResponse, UserResponse, ChangePasswordRequest, UpdateTimezoneRequest}
+│ ├── auth/{RegisterRequest, LoginRequest, AuthResponse, UserResponse, ChangePasswordRequest, UpdateTimezoneRequest, UpdateLeaderboardVisibilityRequest}
 │ ├── stats/UserStatsResponse.java (M16)
 │ ├── chat/{ConversationDetailResponse, ConversationSummaryResponse, MessageResponse, SendMessageRequest, ChatStreamEvent}
 │ ├── common/{PageResponse, StatusChangeRequest}          (StatusChangeRequest mới M14)
 │ ├── dictation/{DictationLessonRequest, DictationSubmitRequest, DictationLessonResponse, AdminDictationLessonResponse, DictationWordResult, WordStatus, DictationSubmitResponse, DictationResultResponse, DictationCatalogItem, DictationSort, DictationProgress} — package mới hoàn toàn ở M12 (DTO response dùng `record`)
 │ ├── progress/UserProgressResponse.java (M15: topicAvailable)
+│ ├── leaderboard/{LeaderboardRow (projection), LeaderboardEntryResponse, LeaderboardResponse} — M17
+│ ├── achievement/AchievementResponse.java — M17
 │ ├── quiz/{QuizRequest, QuizSummaryResponse, QuizQuestionRequest, QuizQuestionPublicResponse, QuizDetailResponse, SubmitAnswerItem, SubmitQuizRequest, QuizResultResponse, QuizAttemptResponse}
 │ ├── topic/{TopicCreateRequest, TopicUpdateRequest, TopicResponse, TopicSort, FlashcardCreateRequest, FlashcardUpdateRequest, FlashcardResponse} — TopicSort mới thêm ở M10
 │ └── vocabulary/{ReviewRequest, VocabularyResponse} — package mới hoàn toàn ở M11
@@ -168,13 +181,15 @@ src/main/java/com/example/englishlearningplatform/
 │ ├── {DictationLesson, DictationResult} — mới hoàn toàn ở M12
 │ ├── {XpEvent, UserStats, XpType} — M16
 │ ├── {Conversation, Message, Sender}
+│ ├── {UserAchievement, AchievementCode} — M17 (User có thêm leaderboardVisible)
 │ └── ContentStatus (enum DRAFT/PUBLISHED/ARCHIVED — M14; Topic, Quiz, DictationLesson có field status)
 ├── event/
 │ ├── {TopicChangedEvent, TopicCacheEvictionListener} — (M14: evict thêm flashcardsByTopic)
 │ ├── {FlashcardChangedEvent, FlashcardCacheEvictionListener} — M5
 │ ├── {FileDeletionEvent, FileDeletionListener} — mới thêm ở M7 (dọn file ảnh cũ, cùng pattern AFTER_COMMIT với cache eviction); M12: còn dọn file audio Dictation (kể cả khi xoá cả Topic — TopicService.deleteTopic() publish 1 event cho mỗi audio)
-│ └── {LearningActivityEvent, GamificationListener} — M16 (listener AFTER_COMMIT, nuốt exception, chỉ log)
-├── exception/{GlobalExceptionHandler, ErrorResponse, ResourceNotFoundException, ResourceConflictException, InvalidFileException} — M11: thêm 2 handler (HttpMessageNotReadableException, MethodArgumentTypeMismatchException), vá lỗ hổng cũ từ M1-M7 (2 loại lỗi này trước đó rơi vào 500 thay vì 400); M12: thêm 3 handler cùng loại lỗ hổng (HttpRequestMethodNotSupportedException → 405, HttpMediaTypeNotSupportedException → 415, MultipartException → 400); M13: extends ResponseEntityExceptionHandler, ghi đè handleExceptionInternal / MethodArgumentNotValid / HttpMessageNotReadable / HandlerMethodValidation
+│ ├── {LearningActivityEvent, GamificationListener} — M16 (listener AFTER_COMMIT, nuốt exception, chỉ log)
+│ └── {XpAwardedEvent, AchievementListener} — M17 (listener AFTER_COMMIT, nuốt exception, chỉ log)
+├── exception/{GlobalExceptionHandler, ErrorResponse, ResourceNotFoundException, ResourceConflictException, InvalidFileException, RateLimitExceededException} — M11: thêm 2 handler (HttpMessageNotReadableException, MethodArgumentTypeMismatchException), vá lỗ hổng cũ từ M1-M7 (2 loại lỗi này trước đó rơi vào 500 thay vì 400); M12: thêm 3 handler cùng loại lỗ hổng (HttpRequestMethodNotSupportedException → 405, HttpMediaTypeNotSupportedException → 415, MultipartException → 400); M13: extends ResponseEntityExceptionHandler, ghi đè handleExceptionInternal / MethodArgumentNotValid / HttpMessageNotReadable / HandlerMethodValidation; M18: thêm RateLimitExceededException và handleRateLimitExceededException → 429
 ├── repository/
 │ ├── {UserRepository, RefreshTokenRepository}
 │ ├── {TopicRepository, TopicSpecifications, FlashcardRepository} — TopicSpecifications mới ở M10 (JpaSpecificationExecutor, gộp filter+sort search Topic); M14: TopicSpecifications (forLearners / forAdmin tách hai điểm vào)
@@ -182,40 +197,66 @@ src/main/java/com/example/englishlearningplatform/
 │ ├── UserVocabularyRepository — mới ở M11
 │ ├── {DictationLessonRepository, DictationResultRepository, DictationLessonSpecifications, DictationLessonStats} — mới ở M12 (Specification cho danh mục; DictationLessonStats là projection của truy vấn thống kê GROUP BY)
 │ ├── {UserStatsRepository (findByUserIdForUpdate PESSIMISTIC_WRITE, insertIfAbsent native), XpEventRepository (insertIfAbsent native ON CONFLICT DO NOTHING)} — M16
+│ ├── UserAchievementRepository (insertIfAbsent ON CONFLICT, dismiss idempotent) — M17; XpEventRepository thêm findWeeklyTop/sumXpBetween/countRankedAhead; QuizAttemptRepository/UserVocabularyRepository/DictationResultRepository thêm truy vấn đếm cho achievement; MessageRepository thêm deleteByConversation (M18)
 │ └── {ConversationRepository, MessageRepository}
 ├── security/{JwtUtil, JwtAuthenticationFilter, CustomUserDetailsService, StompAuthChannelInterceptor, StompErrorHandler, JsonAccessDeniedHandler, JsonAuthenticationEntryPoint} — (M13)
 ├── service/
 │ ├── AuthService, ChatService, ChatServiceImpl
 │ ├── {TopicService, FlashcardService} — cả 2 retrofit thêm check UserVocabularyRepository ở M11 (chặn xoá khi đã có User lưu từ); M12: TopicService retrofit thêm check DictationResult + dọn file audio
 │ ├── {QuizService, QuizAttemptService, UserProgressService} - QuizService ghi chú (M15: khoá bi quan), QuizAttemptService thêm publishEvent(LearningActivityEvent)
+│ ├── {AchievementRules (hàm thuần), AchievementService, LeaderboardService} — M17; ChatService/ChatServiceImpl thêm deleteConversation (@Transactional, xoá message trước, M18); GamificationService phát XpAwardedEvent, dùng QuizProperties
 │ ├── VocabularyService — mới hoàn toàn ở M11, VocabularyService thêm publishEvent(LearningActivityEvent)
 │ ├── {DictationService, DictationComparator} — mới hoàn toàn ở M12 (DictationComparator là class static pure function: tokenize + LCS mức từ, không phụ thuộc Spring), DictationService thêm publishEvent(LearningActivityEvent)
 │ ├── {GamificationService (record REQUIRES_NEW, getStats), StreakCalculator, LevelCalculator} — M16 (hai lớp sau là hàm thuần)
 │ └── {FileStorageService, FileStorageServiceImpl, UserService} — mới thêm ở M7; M12: `FileStorageService` thêm `storeAudio`; `FileStorageServiceImpl` thêm `detectAudioExtension` (static, nhận dạng bằng magic bytes)
-└── util/{PaginationUtils, TopicQueryParser, TimezoneUtils} - (TopicQueryParser: M14; TimezoneUtils: M16)
+├── ratelimit/{RateLimiter, RateLimitDecision, RedisRateLimiter, RateLimitService} — M18
+└── util/{PaginationUtils, TopicQueryParser, TimezoneUtils, ClientIpResolver} - (TimezoneUtils thêm zoneOrDefault ở M17; ClientIpResolver: M18, hàm thuần chỉ tin X-Forwarded-For khi trusted-proxy)
 
 src/main/resources/
 ├── application.yml — thêm mục `app.upload.*` + `spring.servlet.multipart.*` ở M7; M12: thêm `app.upload.audio-max-file-size-mb` (10), nâng multipart lên 10MB
-└── db/migration/ (V1 → V12 — V8 thêm cột Topic.createdAt ở M10, V9 tạo bảng user_vocabulary ở M11, V10 tạo dictation_lessons + dictation_results ở M12, V11 thêm cột status ở M14, V12 gamification ở M16)
+└── db/migration/ (V1 → V13 — V8 thêm cột Topic.createdAt ở M10, V9 tạo bảng user_vocabulary ở M11, V10 tạo dictation_lessons + dictation_results ở M12, V11 thêm cột status ở M14, V12 gamification ở M16, V13 leaderboard + achievement ở M17)
 
 frontend/ — trạng thái thật đã đổi hoàn toàn ở M9, xem mục 5 (không mô tả lại ở đây để tránh 2 nguồn lệch nhau)
 ```
 
 ```
-src/test/java/com/example/englishlearningplatform/ — nền M8, mở rộng M10→M16
+src/test/java/com/example/englishlearningplatform/ — nền M8, mở rộng M10→M18
+├── controller/     ChatWebSocketControllerTest (M18), ConversationDeleteIntegrationTest (M18)
 ├── service/        QuizAttemptServiceTest, UserProgressServiceTest, AuthServiceTest, TopicServiceTest, FlashcardServiceTest,
 │                   QuizServiceTest, QuizServiceConcurrencyTest (M15), VocabularyServiceTest, FileStorageServiceImplTest,
 │                   ChatServiceImplTest, DictationComparatorTest, DictationServiceTest, UserServiceTest (M16),
 │                   StreakCalculatorTest, LevelCalculatorTest, GamificationServiceTest, GamificationConcurrencyTest,
-│                   GamificationEventFlowTest, GamificationTestConfig (M16, @TestConfiguration package-private, Clock cố định 2026-10-09T10:00Z)
+│                   GamificationEventFlowTest, GamificationTestConfig (M16, @TestConfiguration package-private, Clock cố định 2026-10-09T10:00Z), AchievementRulesTest, AchievementServiceTest, AchievementFlowTest, GamificationQuizPassScoreTest, LeaderboardServiceTest (M17)
 ├── repository/     PostgresIntegrationTestBase, DictationRepositoryTest, TopicRepositoryTest, QuizRepositoryTest, QuizAttemptRepositoryTest
 ├── exception/      GlobalExceptionHandlerTest
 ├── security/       JwtUtilTest, JsonAuthenticationEntryPointTest, JsonAccessDeniedHandlerTest, SecurityMatrixIntegrationTest (M15)
-├── util/           TopicQueryParserTest, TimezoneUtilsTest (M16)
+├── ratelimit/      RedisRateLimiterTest (Redis thật), InMemoryRateLimiter (src/test, KHÔNG phải @Component) + InMemoryRateLimiterTest, RateLimitServiceTest, RateLimitIntegrationTest, RateLimitUntrustedProxyIntegrationTest (M18)
+├── config/         QuizPropertiesValidationTest (M17), RateLimitPropertiesValidationTest (M18)
+├── util/           TopicQueryParserTest, TimezoneUtilsTest (M16), ClientIpResolverTest (M18)
 ├── dto/            topic/TopicSortTest, progress/UserProgressResponseTest (M15)
-└── event/          TopicCacheEvictionListenerTest, FlashcardCacheEvictionListenerTest, GamificationListenerTest (M16)
+└── event/          TopicCacheEvictionListenerTest, FlashcardCacheEvictionListenerTest, GamificationListenerTest (M16), AchievementListenerTest
 ```
-Tổng cộng tới hết M16: 511 test case, toàn bộ PASSED (cần Docker).
+Tổng cộng tới hết M18: 670 test case, toàn bộ PASSED (cần Docker).
+
+### M18 — Rate limiting + xoá conversation: **HOÀN THÀNH 13/10/2026** (594 → 670 test)
+
+Thiết kế ở Requirements FR-13, FR-2.9. Trình tự 6 bước: cấu hình + `429` → `ClientIpResolver` (hàm thuần) → `RateLimiter` + Redis Lua + test Redis thật → `RateLimitService` (fail open) → gắn vào Controller + test tích hợp → Postman + FE.
+- **Đổi so với đề xuất ban đầu:** bỏ ý định dùng Filter cho login/register (phụ thuộc thứ tự với `JwtAuthenticationFilter`), gọi `RateLimitService` ở Controller; WebSocket tự bắt `RateLimitExceededException` vì STOMP không đi qua `GlobalExceptionHandler`.
+- **Test đáng chú ý:** `login_afterBlocked_...neverReachesBcrypt` (chặn trước BCrypt, đếm `passwordEncoder.matches`); `sendMessage_thirdRequest_is429_andMessageIsNotSaved` (chặn trước khi lưu tin, mutation C3 đỏ khi đặt sau service); `RateLimitUntrustedProxyIntegrationTest` (đổi `X-Forwarded-For` mỗi lần không né được hạn mức; mutation C7); `RedisRateLimiterTest` 50 luồng với hạn mức 10 đúng 10 qua; ca CORS kiểm `Access-Control-Expose-Headers` chứa `Retry-After` (mutation X1).
+- **Thí nghiệm R4:** thay Lua bằng hai lệnh Java `increment` + `expire` thì toàn bộ test vẫn xanh: test không mô phỏng được "chết giữa hai lệnh", bảo đảm nằm ở thiết kế (ghi ở Requirements 1.4).
+- **Phát sinh ngoài kế hoạch (người dùng đề xuất):** xoá conversation (nút xoá, `DELETE /api/conversations/{id}`; V6 không cascade nên xoá message trước, mutation D3 chứng minh bằng lỗi 500), thanh cuộn chat chỉ to khi rê vào thanh, hạn mức `trusted-proxy` qua biến môi trường.
+- **Mutation check:** H1–H3, P1, I1–I5, R1–R5, S1–S6, C1–C7, X1, D1–D3 đều đỏ đúng chỗ (C4 và C5 ban đầu đỏ vì lý do phụ: stub `lenient()` cho C4, C5 chấp nhận vì `register` bị 429).
+- **Kiểm tay Postman:** login sai 11 lần ra 429, hết `Retry-After` qua lại, đăng ký 6 lần ra 429, khoá `rl:*` có TTL, tắt Redis login vẫn chạy (không treo quá ~0,5 giây), chat REST/WS chung hạn mức, qua ngrok `trusted-proxy=true` tách riêng người dùng.
+- **Quyết định chốt:** Redis (không bộ nhớ) vì chạy nhiều instance sau deploy; fixed window; fail open; mặc định `trusted-proxy=false`.
+
+### M17 — Dọn nợ ngưỡng quiz + Bảng xếp hạng tuần + Achievement: **HOÀN THÀNH 12/10/2026** (511 → 594 test)
+
+Thiết kế ở Requirements FR-12.
+- **Dọn nợ (commit riêng):** ngưỡng "đạt" từ hai nơi về `QuizProperties` (`app.quiz.pass-score`); xoá `PASS_SCORE_THRESHOLD` và `app.gamification.quiz-pass-score`; test dùng 80 và 85 (khác 70) để hardcode lại 70 bị bắt; 511 → 520 test.
+- **7 bước:** V13 + entity → `AchievementRules` + test biên (mutation R1–R8) → repository + Testcontainers (A1–A8) → `AchievementService`, `XpAwardedEvent`, listener (S1–S6) → bảng xếp hạng (L1–L9) → `leaderboard_visible`, achievement API, dismiss (U1–U7) → Postman + FE.
+- **Phát hiện đáng nhớ:** (1) ca rollback publish `LearningActivityEvent` không kiểm được `AchievementListener`, phải publish thẳng `XpAwardedEvent` (S3); (2) bỏ `user_id ASC` khỏi `ORDER BY` vẫn xanh với hai người hoà XP vì Postgres tình cờ trả đúng, phải có 12 người hoà + chèn ngược + `SET LOCAL enable_sort = off` (L2); (3) mutation làm mất khoảng trắng chuỗi nối gây lỗi cú pháp (L1/L2 lần đầu); (4) thiếu ca múi giờ cho "tuần của ngày hôm nay của người xem" (thêm Hà Nội/Los Angeles/múi giờ hỏng, L8/L9).
+- **Kiểm tay Postman 12 ca đạt** (achievement 5 mục, dismiss idempotent, 404 cho chưa mở khoá/mã lạ, bảng xếp hạng, ẩn tên, `400` cho `{}` và `"abc"`, `401`).
+- **Quyết định chốt:** theo tuần, `GROUP BY` không Redis, top 20 + hạng của mình, hoà theo `user_id`, người ẩn không chiếm hạng; 5 achievement đếm Quiz/bài khác nhau, không thu hồi, `code` không CHECK; thông báo "giữ tới khi bấm X" lưu `dismissed_at` ở server.
 
 ### M16 — Gamification bước 1 (XP, level, streak, đóng băng, múi giờ): **HOÀN THÀNH 10/10/2026** (426 → 511 test)
 
@@ -432,22 +473,25 @@ JUnit 5 + Mockito, Unit test thuần (mock toàn bộ Repository/dependency), kh
 
 ---
 
-## 7. Trạng thái hiện tại — M1–M16 hoàn thành
+## 7. Trạng thái hiện tại — M1–M18 hoàn thành
 
-Toàn bộ lộ trình trong Requirements (MVP M1–M9, v1.1 M10–M12, hardening M13, trạng thái nội dung M14, hardening 2 M15, XP & streak M16) đã xong. Backend + Frontend nối thật, **511 test PASSED** (cần Docker).
+Toàn bộ lộ trình trong Requirements (MVP M1–M9, v1.1 M10–M12, hardening M13, trạng thái nội dung M14, hardening 2 M15, XP & streak M16, bảng xếp hạng + achievement M17, rate limiting + xoá conversation M18) đã xong. Backend + Frontend nối thật, **670 test PASSED** (cần Docker).
 
 **Việc còn treo, cố ý để dành sau (không phải nợ/sai sót):**
-- Gamification: chưa backfill XP cho dữ liệu cũ; ngưỡng "đạt" quiz nằm ở hai nơi (`QuizAttemptService.PASS_SCORE_THRESHOLD` và `app.gamification.quiz-pass-score`); mất XP của lần đó nếu listener lỗi; chưa có leaderboard, achievement, xu và khiên mua được.
-- `toLocaleDateString()` ở `progress.html` dùng múi giờ trình duyệt, có thể lệch ngày với ngày tính streak nếu hai múi giờ khác nhau. `clock.js` trên màn rất hẹp có thể chật topbar.
-- Còn dựng bằng `innerHTML` dữ liệu server ở các trang chưa kiểm kê (`topic-detail.html`, `quiz.html`, `chat.html`...).
-- Không có test tự động cho phần lớn Controller và cho FE (kiểm bằng Postman và kiểm tay); phân quyền route đã có `SecurityMatrixIntegrationTest`.
+- Gamification: chưa backfill XP/achievement cho dữ liệu cũ; mất XP hoặc lần cấp achievement của lần đó nếu listener lỗi (lần hoạt động kế tiếp đánh giá lại nên thường tự bù); chưa có bảng xếp hạng mọi thời đại, xu/khiên mua được, nút "đóng tất cả" popup; popup chỉ làm mới khi tải trang và sau 3 hành động nộp bài.
+- Rate limiting: fixed window có thể nhận gấp đôi ở ranh giới cửa sổ; chỉ lấy phần tử **đầu** của `X-Forwarded-For` (ngrok/proxy nối thêm vào cuối nên khi deploy phải cấu hình proxy ghi đè header hoặc dùng `server.forward-headers-strategy`); kênh WebSocket không gửi `retryAfter`; form đăng ký thử lại tốn hai lượt hạn mức; chưa có quota theo chi phí token AI.
+- Xoá conversation đúng lúc AI đang stream thì lưu tin AI lỗi khoá ngoại (rơi vào `/user/queue/errors`, hiếm).
+- `toLocaleDateString()` ở `progress.html` dùng múi giờ trình duyệt, có thể lệch ngày với ngày tính streak. `clock.js` trên màn rất hẹp có thể chật topbar.
+- Còn dựng bằng `innerHTML` dữ liệu server ở `topic-detail.html`, `quiz.html` và phần bong bóng tin nhắn của `chat.html` (có `escapeHtml`); danh sách conversation đã dùng `textContent`.
+- Không có test tự động cho phần lớn Controller và cho FE; phân quyền route có `SecurityMatrixIntegrationTest`.
 - Dictation: `<audio>` không gửi được header ngrok; `.m4a` chưa kiểm chứng trên Safari; file mồ côi hiếm gặp nếu rollback sau `storeAudio`; `1,000`/`U.S.A.`/`5` ≠ `five` là giới hạn đã chấp nhận.
 - Accessibility nâng cao mới rà đầy đủ cho `index.html`. `vocabulary.html`: state hai tab giữ riêng trong bộ nhớ trình duyệt.
-- Hạ tầng: dự án **chưa deploy**; chạy qua ngrok, upload local, Redis/Postgres dev, SockJS bị giới hạn qua tunnel. Chưa có rate limiting cho login và chat AI (backlog từ FR-2.6).
+- Hạ tầng: dự án **chưa deploy**; chạy qua ngrok, upload local, Redis/Postgres dev, SockJS bị giới hạn qua tunnel.
+- Bí mật: `run-backend.bat` (chứa `DB_PASSWORD`, `JWT_SECRET`, `XKIRO_API_KEY`) đã nằm trong `.gitignore`, chưa từng bị commit; các giá trị đã hiện trong cuộc trò chuyện nên nên đổi `XKIRO_API_KEY` khi tiện.
 
-**Thứ tự đã thống nhất:** E (M15, xong) → A (Gamification: M16 xong, **M17 leaderboard + achievement** (chưa bắt đầu)) → B (Notification nhắc ôn từ, Spring Scheduler gắn SRS) → C (Deploy thật: Docker, CI chạy `mvnw test`, domain, object storage) → D (AI nâng cao: giải thích lỗi Dictation, sinh quiz/flashcard nháp cho Admin duyệt, quota AI). Rate limiting tách thành mục riêng, cần chốt nơi lưu bộ đếm (bộ nhớ hay Redis), khoá theo user hay IP và hạn mức. Nếu mục tiêu là portfolio, cân nhắc đưa C lên trước.
+**Thứ tự đã thống nhất:** A (Gamification: M16, M17 xong) → rate limiting (M18 xong) → **B (Notification nhắc ôn từ, Spring Scheduler gắn SRS, cần chọn nơi gửi: email)** → **C (Deploy thật: Docker/compose, CI chạy `mvnw test` cần runner có Docker, domain, object storage thay upload local, cấu hình proxy ghi đè `X-Forwarded-For` và `RATE_LIMIT_TRUSTED_PROXY=true`)** → **D (AI nâng cao: giải thích lỗi Dictation, sinh quiz/flashcard nháp cho Admin duyệt (khớp trạng thái `DRAFT`), quota AI)**. Nếu mục tiêu là portfolio hoặc có người dùng thật sớm, nên đưa C lên trước B (C cũng gỡ các giới hạn của tunnel dev).
 
-**M17 (dự kiến), cần chốt trước khi code:** (1) leaderboard theo tuần hay mọi thời đại, và dùng Redis sorted set hay truy vấn `GROUP BY` trên `xp_events` (đã có index `(user_id, local_date DESC)`; xếp hạng theo tuần có thể cần thêm index theo `local_date`); (2) hiển thị tên người dùng khác (quyền riêng tư: chỉ username, có cho ẩn tên không); (3) bộ achievement ban đầu và điều kiện (ví dụ streak 7 ngày, 100 từ đã nhớ, 10 quiz đạt) và cách kiểm tra (kiểm tra trong `GamificationService.record` hay listener riêng); (4) có backfill XP cũ không.
+**Việc kế tiếp đề xuất (M19), cần chốt trước khi code:** chọn B hay C. Nếu B: kênh gửi (email SMTP hay push), tần suất và múi giờ người nhận (đã có `users.timezone`), chống gửi trùng (idempotency, giống `ON CONFLICT`), cách tắt thông báo. Nếu C: Dockerfile/compose cho Backend + Postgres + Redis, biến môi trường cho mọi bí mật, thay `ngrok` bằng domain, chạy `mvnw test` trong CI.
 
 ---
 
@@ -455,11 +499,11 @@ Toàn bộ lộ trình trong Requirements (MVP M1–M9, v1.1 M10–M12, hardenin
 
 **Bắt buộc:**
 1. File tóm tắt này (`Session_Summary.md`)
-2. `Requirements.md` (v1.10) (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
+2. `Requirements.md` (v1.11) (Requirements đầy đủ — mục 10 là Frontend Design System, bắt buộc đọc trước khi code thêm trang mới)
 
-**Tuỳ chọn, nên gửi nếu cần tra nhanh API:** `FE_Handoff_Brief.md` (đã cập nhật tới hết M16) — vẫn không bắt buộc như 2 file trên, dùng khi muốn tra contract nhanh mà không đọc lại toàn bộ Requirements; Swagger UI (`/swagger-ui.html`) là nguồn xác nhận cao nhất khi có sai lệch.
+**Tuỳ chọn, nên gửi nếu cần tra nhanh API:** `FE_Handoff_Brief.md` (đã cập nhật tới hết M18) — dùng khi muốn tra contract nhanh mà không đọc lại toàn bộ Requirements; Swagger UI (`/swagger-ui.html`) là nguồn xác nhận cao nhất khi có sai lệch.
 
-**Nếu đang code dở:** file `.java`/`.html`/`.js` đang dở + file nó phụ thuộc trực tiếp.
+**Nếu đang code dở:** file `.java`/`.html`/`.js` đang dở + file nó phụ thuộc trực tiếp. **Không gửi `run-backend.bat`** (chứa bí mật).
 
 **Câu mở đầu gợi ý cho cuộc trò chuyện mới:**
-> "Đây là tóm tắt project mình đang làm (đính kèm), M1–M16 đã xong (MVP, v1.1, hardening M13, trạng thái nội dung M14, hardening 2 M15, XP & streak M16). Giờ mình muốn làm [việc tiếp theo — M17 leaderboard/achievement, hoặc một mục trong backlog ở mục 7]. Mình sẽ gửi từng tài liệu một, bạn đọc kỹ rồi xác nhận đã hiểu giúp mình nhé."
+> "Đây là tóm tắt project mình đang làm (đính kèm), M1–M18 đã xong (MVP, v1.1, hardening M13, trạng thái nội dung M14, hardening 2 M15, XP & streak M16, bảng xếp hạng + achievement M17, rate limiting + xoá conversation M18, 670 test). Giờ mình muốn làm [việc tiếp theo — Notification, Deploy, hoặc một mục trong backlog ở mục 7]. Mình sẽ gửi từng tài liệu một, bạn đọc kỹ rồi xác nhận đã hiểu giúp mình nhé. Mình làm theo từng bước nhỏ có TODO, test-first và mutation check như M17/M18."
