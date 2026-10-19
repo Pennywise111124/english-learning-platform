@@ -257,8 +257,7 @@
                     <a href="#how-it-works" class="font-body-md text-body-md text-on-surface hover:text-primary transition-colors w-fit">How It Works</a>
                     <a href="topics.html" class="font-body-md text-body-md text-on-surface hover:text-primary transition-colors w-fit">Explore Topics</a>
                     <button data-open-register class="font-body-md text-body-md text-on-surface hover:text-primary transition-colors w-fit text-left">Get Started</button>
-                </di
-v>
+                </div>
 
                 <div class="flex flex-col gap-3">
                     <h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Company</h3>
@@ -295,44 +294,81 @@ v>
             `).join('');
         }
 
+        function buildTopicCard(topic) {
+            const badgeColors = {
+                'BEGINNER': 'badge-beginner',
+                'INTERMEDIATE': 'badge-intermediate',
+                'ADVANCED': 'badge-advanced'
+            };
+
+            const card = document.createElement('a');
+            card.href = `topic-detail.html?id=${encodeURIComponent(topic.id)}`;
+            card.className = 'topic-card block bg-surface-container-lowest border-2 border-outline-variant rounded-xl overflow-hidden hover:border-primary hover:-translate-y-1 transition-all focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2';
+
+            const img = document.createElement('img');
+            img.src = imageSrc(topic.imageUrl);
+            img.alt = topic.title;
+            img.className = 'w-full h-40 object-cover';
+            img.loading = 'lazy';
+
+            const body = document.createElement('div');
+            body.className = 'p-6';
+
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-3 gap-2';
+
+            const title = document.createElement('h3');
+            title.className = 'font-headline-md text-headline-md text-on-surface';
+            title.textContent = topic.title;
+
+            const badge = document.createElement('span');
+            badge.className = `px-3 py-1 rounded-full font-label-sm text-label-sm ${badgeColors[topic.level] ?? ''}`;
+            badge.textContent = topic.level;
+
+            const desc = document.createElement('p');
+            desc.className = 'font-body-md text-body-md text-on-surface-variant';
+            desc.textContent = topic.description ?? '';
+
+            header.append(title, badge);
+            body.append(header, desc);
+            card.append(img, body);
+            return card;
+        }
+
         async function loadTopics() {
+            const grid = document.getElementById('topicsGrid');
             renderTopicSkeletons();
             try {
                 const data = await api.getTopics({ page: 0, size: 6 });
-                const grid = document.getElementById('topicsGrid');
-                grid.innerHTML = '';
+                grid.replaceChildren();
 
-                const badgeColors = {
-                    'BEGINNER': 'badge-beginner',
-                    'INTERMEDIATE': 'badge-intermediate',
-                    'ADVANCED': 'badge-advanced'
-                };
+                if (data.content.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.className = 'col-span-full text-center text-on-surface-variant py-8';
+                    empty.textContent = 'No topics yet. Check back soon!';
+                    grid.appendChild(empty);
+                    return;
+                }
 
-                data.content.forEach(topic => {
-                    const card = document.createElement('div');
-                    card.className = 'topic-card bg-surface-container-lowest border-2 border-outline-variant rounded-xl overflow-hidden hover:border-primary hover:-translate-y-1 cursor-pointer transition-all';
-                    card.onclick = () => window.location.href = `topic-detail.html?id=${topic.id}`;
-
-                    card.innerHTML = `
-                        <img src="${imageSrc(topic.imageUrl)}" alt="${topic.title}" class="w-full h-40 object-cover" loading="lazy"/>
-                        <div class="p-6">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-headline-md text-headline-md text-on-surface">${topic.title}</h3>
-                                <span class="px-3 py-1 rounded-full font-label-sm text-label-sm ${badgeColors[topic.level]}">${topic.level}</span>
-                            </div>
-                            <p class="font-body-md text-body-md text-on-surface-variant">${topic.description}</p>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
+                data.content.forEach(topic => grid.appendChild(buildTopicCard(topic)));
             } catch (error) {
-                console.error('Failed to load topics:', error);
-                document.getElementById('topicsGrid').innerHTML = `
-                    <div class="col-span-full text-center py-8">
-                        <p class="text-on-surface-variant mb-4">Unable to load topics</p>
-                        <button onclick="location.reload()" class="px-6 py-3 bg-primary text-on-primary rounded-2xl focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2">Try Again</button>
-                    </div>
-                `;
+                console.error('[loadTopics]', error);
+                grid.replaceChildren();
+
+                const box = document.createElement('div');
+                box.className = 'col-span-full text-center py-8';
+
+                const msg = document.createElement('p');
+                msg.className = 'text-on-surface-variant mb-4';
+                msg.textContent = `Unable to load topics${error?.message ? ': ' + error.message : ''}`;
+
+                const retry = document.createElement('button');
+                retry.className = 'px-6 py-3 bg-primary text-on-primary rounded-2xl focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2';
+                retry.textContent = 'Try Again';
+                retry.addEventListener('click', loadTopics);
+
+                box.append(msg, retry);
+                grid.appendChild(box);
             }
         }
 
