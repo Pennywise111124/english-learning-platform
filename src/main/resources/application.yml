@@ -11,8 +11,8 @@ spring:
       max-request-size: 10MB
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/english_learning_db
-    username: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/english_learning_db}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
 
   jpa:
@@ -44,10 +44,12 @@ jwt:
 
 app:
   upload:
-    dir: ./uploads
+    dir: ${UPLOAD_DIR:./uploads}
     max-file-size-mb: 5
     audio-max-file-size-mb: 10
     allowed-content-types: image/jpeg,image/png,image/jpg
+  cors:
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:*}  
   ai:
     base-url: https://api.xkiro.com/v1
     api-key: ${XKIRO_API_KEY}
@@ -73,6 +75,16 @@ app:
     register-per-hour: 5
     chat-per-minute: 20
     trusted-proxy: ${RATE_LIMIT_TRUSTED_PROXY:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 logging:
   level:

@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    show-sql: false
+logging:
+  level:
+    org.springframework.web: INFO
+    org.springframework.messaging: INFO
+    org.springframework.orm.jpa.JpaTransactionManager: INFO
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

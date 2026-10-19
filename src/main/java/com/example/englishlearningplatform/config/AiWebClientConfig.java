@@ -14,26 +14,27 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableConfigurationProperties({ AiProperties.class, GamificationProperties.class, QuizProperties.class,
-        RateLimitProperties.class })
+                RateLimitProperties.class, CorsProperties.class })
 public class AiWebClientConfig {
 
-    @Bean
-    public WebClient xkiroWebClient(AiProperties props) {
-        HttpClient httpClient = HttpClient.create()
-                // Connect timeout: thời gian tối đa để MỞ được kết nối TCP tới xKiro.
-                // Nếu handshake không xong trong khoảng này -> fail ngay, không chờ thêm.
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, props.getConnectTimeoutMs())
-                // Read timeout: SAU KHI đã kết nối xong, thời gian tối đa chờ dữ liệu response.
-                // Cơ chế khác hẳn connect timeout — kết nối mở nhanh nhưng model xử lý chậm
-                // vẫn phải bị chặn ở đây. Đúng yêu cầu FR-2.6 (2 timeout riêng biệt).
-                .doOnConnected(conn -> conn.addHandlerLast(
-                        new ReadTimeoutHandler(props.getReadTimeoutMs(), TimeUnit.MILLISECONDS)));
+        @Bean
+        public WebClient xkiroWebClient(AiProperties props) {
+                HttpClient httpClient = HttpClient.create()
+                                // Connect timeout: thời gian tối đa để MỞ được kết nối TCP tới xKiro.
+                                // Nếu handshake không xong trong khoảng này -> fail ngay, không chờ thêm.
+                                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, props.getConnectTimeoutMs())
+                                // Read timeout: SAU KHI đã kết nối xong, thời gian tối đa chờ dữ liệu response.
+                                // Cơ chế khác hẳn connect timeout — kết nối mở nhanh nhưng model xử lý chậm
+                                // vẫn phải bị chặn ở đây. Đúng yêu cầu FR-2.6 (2 timeout riêng biệt).
+                                .doOnConnected(conn -> conn.addHandlerLast(
+                                                new ReadTimeoutHandler(props.getReadTimeoutMs(),
+                                                                TimeUnit.MILLISECONDS)));
 
-        return WebClient.builder()
-                .baseUrl(props.getBaseUrl())
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                .build();
-    }
+                return WebClient.builder()
+                                .baseUrl(props.getBaseUrl())
+                                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
+                                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                                .build();
+        }
 }

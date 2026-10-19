@@ -16,11 +16,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
     private final StompErrorHandler stompErrorHandler;
+    private final CorsProperties corsProperties;
 
     public WebSocketConfig(StompAuthChannelInterceptor stompAuthChannelInterceptor,
-            StompErrorHandler stompErrorHandler) {
+            StompErrorHandler stompErrorHandler, CorsProperties corsProperties) {
         this.stompAuthChannelInterceptor = stompAuthChannelInterceptor;
         this.stompErrorHandler = stompErrorHandler;
+        this.corsProperties = corsProperties;
     }
 
     @Override
@@ -28,8 +30,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setErrorHandler(stompErrorHandler);
 
         registry.addEndpoint("/ws/chat")
-                .setAllowedOriginPatterns("*") // TODO: siết lại domain thật khi có Frontend deploy, tránh "*" ở
-                                               // production
+                .setAllowedOriginPatterns(corsProperties.allowedOriginPatterns().toArray(String[]::new))
                 .withSockJS();
     }
 

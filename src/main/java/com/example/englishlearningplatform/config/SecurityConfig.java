@@ -29,13 +29,15 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JsonAccessDeniedHandler accessDeniedHandler;
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
+    private final CorsProperties corsProperties;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
             JsonAccessDeniedHandler accessDeniedHandler,
-            JsonAuthenticationEntryPoint authenticationEntryPoint) {
+            JsonAuthenticationEntryPoint authenticationEntryPoint, CorsProperties corsProperties) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.accessDeniedHandler = accessDeniedHandler;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.corsProperties = corsProperties;
     }
 
     @Bean
@@ -51,7 +53,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOriginPatterns(corsProperties.allowedOriginPatterns());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -83,6 +85,7 @@ public class SecurityConfig {
                                 "/api/topics/*/flashcards", "/api/topics/*/quizzes")
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/actuator/health/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

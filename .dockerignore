@@ -1,0 +1,14 @@
+.git
+.claude
+.impeccable
+.vscode
+target/
+uploads/
+frontend/
+design-reference/
+docs/
+*.md
+openapi.json
+ngrok.exe
+run-backend.bat
+.env
