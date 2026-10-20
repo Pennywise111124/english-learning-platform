@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-english_learning_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thiếu POSTGRES_PASSWORD trong .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    mem_limit: 384m
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .
+    restart: unless-stopped
+    mem_limit: 2g
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-english_learning_db}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:?Thiếu JWT_SECRET trong .env}
+      XKIRO_API_KEY: ${XKIRO_API_KEY:?Thiếu XKIRO_API_KEY trong .env}
+      UPLOAD_DIR: /app/uploads
+      CORS_ALLOWED_ORIGIN_PATTERNS: https://${DOMAIN:?Thiếu DOMAIN trong .env}
+      RATE_LIMIT_TRUSTED_PROXY: "true"
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/liveness" ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 60s
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?Thiếu DOMAIN trong .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

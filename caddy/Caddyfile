@@ -1,0 +1,35 @@
+{$DOMAIN} {
+	encode gzip
+
+	request_body {
+		max_size 10MB
+	}
+
+	# Endpoint nội bộ, không cho ra Internet
+	handle /actuator/* {
+		respond 404
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8080 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	handle /uploads/* {
+		reverse_proxy backend:8080
+	}
+
+	# Caddy tự xử lý nâng cấp WebSocket
+	handle /ws/* {
+		reverse_proxy backend:8080 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	handle {
+		root * /srv
+		header Cache-Control "no-cache"
+		file_server
+	}
+}
