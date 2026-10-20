@@ -3,7 +3,7 @@
  * Yêu cầu chat.html đã load 2 thư viện global trước: SockJS, StompJs (qua CDN).
  */
 
-import { getToken } from './auth.js';
+import { ensureFreshToken } from './api.js';
 import { API_BASE_URL } from './config.js';
 
 let client = null;
@@ -18,7 +18,11 @@ export function connectChat({ onError, onDisconnected } = {}) {
   connectedPromise = new Promise((resolve, reject) => {
     client = new StompJs.Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws/chat`),
-      connectHeaders: { Authorization: `Bearer ${getToken()}` },
+      connectHeaders: {},
+      beforeConnect: async (c) => {
+        const token = await ensureFreshToken();
+        c.connectHeaders = { Authorization: `Bearer ${token}` };
+      },
       reconnectDelay: 5000,
       onConnect: () => {
         // Kênh lỗi riêng cho user, subscribe 1 lần duy nhất cho cả phiên (không theo từng conversation)

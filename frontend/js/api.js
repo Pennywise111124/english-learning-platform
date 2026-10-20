@@ -30,6 +30,30 @@ async function doRefresh() {
   return refreshPromise;
 }
 
+function tokenSecondsLeft(token) {
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '=')));
+    return typeof payload.exp === 'number' ? payload.exp - Date.now() / 1000 : 0;
+  } catch {
+    return 0; 
+  }
+}
+
+export async function ensureFreshToken(minSecondsLeft = 30) {
+  const token = getToken();
+  if (!token) return null;
+  if (tokenSecondsLeft(token) > minSecondsLeft) return token;
+
+  const refreshed = await doRefresh();
+  if (!refreshed) {
+    clearAuth();
+    window.location.href = 'index.html?auth=login';
+    throw new Error('Unauthorized');
+  }
+  return getToken();
+}
+
 function buildQuery(params) {
   if (!params) return '';
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
