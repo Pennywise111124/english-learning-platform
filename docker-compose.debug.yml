@@ -1,0 +1,7 @@
+services:
+  backend:
+    environment:
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
